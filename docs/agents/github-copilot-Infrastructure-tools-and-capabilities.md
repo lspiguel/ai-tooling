@@ -1,4 +1,4 @@
-# Available Tools
+# Github Copilot’s Infrastructure, Tools, and Capabilities
 
 This document lists all available tools, grouped by category, with brief descriptions of their functions, parameters, and outputs.
 
