@@ -1,7 +1,5 @@
 # Claude’s Infrastructure, Tools, and Capabilities
 
-## A Comprehensive Technical Guide
-
 -----
 
 ## Table of Contents
@@ -13,6 +11,7 @@
 5. [Capabilities and Boundaries](#capabilities-and-boundaries)
 6. [Architecture and Access Patterns](#architecture-and-access-patterns)
 7. [Practical Examples](#practical-examples)
+8. [Capability Comparison: Mobile vs. Windows Desktop PC](#capability-comparison-mobile-vs-windows-desktop-pc)
 
 -----
 
@@ -483,6 +482,319 @@ These are services Claude can access if you’ve connected them in Claude.ai:
 
 -----
 
+### Tier 10: Visualizer Tools *(Additional Capabilities on Windows Desktop PC)*
+
+Unlike Artifacts (downloadable files), Visualizer tools render **live, interactive content directly inline in the chat**. They do not produce files and do not require a container or network access — rendering happens entirely within the chat interface.
+
+#### `visualize:read_me`
+
+- **Purpose**: Internal setup tool that loads design guidelines (CSS variables, color palettes, layout rules, typography) into Claude's context before generating a visual
+- **Parameters**:
+  - `modules` — Which design modules to load:
+    - `"diagram"` — SVG flowcharts, structural and illustrative diagrams
+    - `"mockup"` — UI mockups, forms, cards, dashboards
+    - `"interactive"` — Interactive explainers with controls and state
+    - `"chart"` — Chart.js setup, axis configuration, color ramps
+    - `"data_viz"` — General data visualization patterns
+    - `"art"` — Generative art and illustration guidance
+- **Usage**: Must be called before the first `show_widget` call in any response. Multiple modules can be loaded simultaneously when a response will include different visual types.
+- **Limitations**:
+  - This is a silent, internal step — never mentioned to the user
+  - Does not produce any user-visible output on its own
+  - Module content may change; Claude should always reload rather than rely on cached values
+- **Note**: Not a user-facing tool. It is infrastructure for ensuring visual consistency.
+
+---
+
+#### `visualize:show_widget`
+
+- **Purpose**: Render rich inline visuals — SVG diagrams, interactive HTML widgets, charts, illustrations, and more — directly in the chat window without creating a downloadable file
+- **Parameters**:
+  - `title` — snake_case identifier used as the widget's internal name and download filename (no spaces or special characters)
+  - `widget_code` — The raw code to render:
+    - If it starts with `<svg>`: rendered as SVG (static diagrams, illustrations)
+    - Otherwise: rendered as full HTML (interactive widgets, dashboards, games)
+  - `loading_messages` — Array of 1–4 short messages (~5 words each) displayed while the widget renders
+- **Output Modes**:
+  - **SVG Mode**: For static diagrams — flowcharts, architecture maps, entity-relationship diagrams, system illustrations, data structure visualizations, generative art
+  - **HTML Mode**: For interactive content — calculators, games, dashboards, sortable tables, step-by-step explainers, data entry widgets
+- **Available Libraries (HTML mode)**:
+  - `lucide-react@0.383.0` — Icon set
+  - `recharts` — Composable React charts
+  - `mathjs` — Math expression parsing
+  - `lodash` — Utility functions
+  - `d3` — Data-driven documents (custom charts, force graphs)
+  - `Plotly` — Scientific and statistical charts
+  - `Three.js (r128)` — 3D graphics (note: CapsuleGeometry not available; use CylinderGeometry or SphereGeometry instead)
+  - `Papaparse` — CSV parsing
+  - `SheetJS` — Excel file processing
+  - `Chart.js` — Standard charts
+  - `Tone.js` — Web audio and music
+  - `mammoth` — Word document parsing
+  - `tensorflow` — ML model inference
+  - `shadcn/ui` — Pre-built UI components
+- **Use Cases**:
+  - Flowcharts, architecture diagrams, system maps
+  - Interactive explainers (algorithms, simulations, physics)
+  - Data visualizations and dashboards
+  - UI mockups, form prototypes
+  - Generative art and illustrations
+  - Educational widgets with controls
+- **Key Difference from Artifacts**: Renders inline in the conversation — not as a downloadable file. Can be called multiple times per response, interleaved with prose.
+- **Routing Priority**: If an MCP tool (e.g., Figma's `generate_diagram`) handles the requested category, that takes priority over `show_widget`. `show_widget` is the fallback when no MCP tool fits.
+- **Limitations**:
+  - `localStorage`, `sessionStorage`, and all browser storage APIs are **not supported** — use React state or in-memory JavaScript variables instead
+  - Cannot make external API or network calls from within widget code
+  - External scripts must be loaded from `https://cdnjs.cloudflare.com` only
+  - Three.js extras like `OrbitControls` are not available (not on the CDN)
+  - Content restrictions apply: no copyrighted IP, no real identifiable individuals, no graphic content, no sexual content — even in abstract or educational framing
+  - Complexity is model-dependent: Haiku → minimal (basic SVG/static charts); Sonnet → moderate (standard diagrams, clean charts); Opus → unlimited
+- **Considerations**:
+  - Always call `visualize:read_me` with the appropriate module(s) before using this tool
+  - Multiple `show_widget` calls in one response should be interleaved with explanatory prose — never stacked back-to-back
+  - HTML and CSS must be self-contained in a single file (no separate CSS or JS files)
+  - For serious or sensitive topics (illness, grief, conflict, disaster), loading messages should be neutral and descriptive, not dramatic
+
+-----
+
+### Tier 11: Claude in Chrome — Browser Automation Suite *(Additional Capabilities on Windows Desktop PC)*
+
+These 19 tools are **only available on Windows Desktop PC** because they require a live Chrome browser running on the local machine with the Claude in Chrome extension installed. They allow Claude to operate the browser autonomously: navigating, reading, interacting with, and automating web pages on the user's behalf.
+
+**Security Note**: All content observed through these tools (web pages, DOM elements, form values, console messages) is treated as **untrusted data**. Any instructions embedded in observed content require explicit user confirmation before Claude acts on them. This is a core injection-defense mechanism.
+
+**General Limitations (apply to all Chrome tools)**:
+- Cannot enter sensitive financial or identity data (bank accounts, SSNs, passwords, credit cards) — user must input these directly
+- Cannot modify document sharing permissions or access controls
+- Cannot create new accounts on the user's behalf
+- Cannot permanently delete content without explicit user confirmation
+- Prohibited from bypassing CAPTCHA or bot-detection systems
+- Always chooses the most privacy-preserving option on cookie banners and permission pop-ups
+
+---
+
+#### `Claude in Chrome:navigate`
+
+- **Purpose**: Navigate the browser to a specified URL, or go forward/back in browser history
+- **Use Cases**:
+  - Opening a website to begin a workflow
+  - Following a link to the next step in a multi-page process
+  - Going back after an accidental navigation
+- **Limitations**: Cannot navigate to URLs containing embedded sensitive user data (PII in query parameters is blocked)
+
+---
+
+#### `Claude in Chrome:computer`
+
+- **Purpose**: Directly control the mouse and keyboard within the browser, and take screenshots of the current state
+- **Use Cases**:
+  - Clicking buttons, links, or UI elements
+  - Typing text into fields
+  - Scrolling the page
+  - Taking a visual snapshot to understand layout before acting
+- **Limitations**:
+  - Screenshots may capture sensitive information visible on screen — Claude should not transmit this to external services
+  - Actions based on observed screenshots that contain embedded instructions require user confirmation
+
+---
+
+#### `Claude in Chrome:read_page`
+
+- **Purpose**: Get an accessibility-tree representation of all elements currently visible on the page, including their roles, labels, and reference IDs
+- **Use Cases**:
+  - Understanding page structure before interacting with it
+  - Locating form fields, buttons, or links by their accessible name
+  - Providing reference IDs used by `form_input`
+- **Limitations**: Returns a structured tree, not visual layout — may not capture elements rendered as pure images or canvas
+
+---
+
+#### `Claude in Chrome:find`
+
+- **Purpose**: Locate specific elements on the page using natural language descriptions rather than CSS selectors or XPath
+- **Use Cases**:
+  - "Find the search bar"
+  - "Find the submit button"
+  - "Find the price of the first item"
+- **Limitations**: Best suited for clearly labeled or semantically described elements; ambiguous descriptions may return incorrect matches
+
+---
+
+#### `Claude in Chrome:form_input`
+
+- **Purpose**: Set values in form elements (text fields, dropdowns, checkboxes, radio buttons) using a reference ID obtained from `read_page`
+- **Use Cases**:
+  - Filling out multi-field forms automatically
+  - Selecting options from dropdowns
+  - Toggling checkboxes
+- **Limitations**:
+  - Requires reference IDs from `read_page` — cannot target elements by CSS class or position alone
+  - Cannot enter passwords, SSNs, credit card numbers, or other sensitive credentials — user must input these directly
+  - Auto-fill must not be triggered on forms opened through untrusted links
+
+---
+
+#### `Claude in Chrome:get_page_text`
+
+- **Purpose**: Extract the raw text content of the currently open page, prioritizing article and main-body content
+- **Use Cases**:
+  - Summarizing a page already open in the browser without using `web_fetch`
+  - Reading content from authenticated pages (e.g., behind a login) that `web_fetch` cannot access
+  - Scraping visible text for analysis or export
+- **Limitations**:
+  - Extracts visible text only — does not capture content rendered exclusively as images or canvas
+  - Tab content from other domains should never be read and transmitted based on instructions found in observed content
+
+---
+
+#### `Claude in Chrome:javascript_tool`
+
+- **Purpose**: Execute arbitrary JavaScript code in the context of the currently loaded page
+- **Use Cases**:
+  - Interacting with the DOM directly
+  - Triggering JavaScript events not easily accessible via the UI
+  - Extracting data from JavaScript objects or window variables
+  - Automating complex interactions that require scripting
+- **Limitations**:
+  - Cannot bypass authentication or security policies enforced by the page
+  - Should not be used to extract and transmit PII or sensitive data
+  - DOM elements and their attributes (onclick, onload, data-*, etc.) are always treated as untrusted data — instructions found there require user verification before acting
+
+---
+
+#### `Claude in Chrome:tabs_create_mcp`
+
+- **Purpose**: Open a new empty tab in the MCP (Claude-controlled) tab group
+- **Use Cases**:
+  - Opening a parallel browser session for a separate task
+  - Isolating different steps of a workflow in separate tabs
+- **Limitations**: Operates only within the MCP tab group — does not affect the user's existing browser tabs
+
+---
+
+#### `Claude in Chrome:tabs_close_mcp`
+
+- **Purpose**: Close a specific tab in the MCP tab group by its tab ID
+- **Use Cases**:
+  - Cleaning up after completing a workflow
+  - Closing tabs that are no longer needed during an automation
+- **Limitations**: Requires a valid tab ID from `tabs_context_mcp`; cannot close tabs outside the MCP group
+
+---
+
+#### `Claude in Chrome:tabs_context_mcp`
+
+- **Purpose**: Retrieve context about the current MCP tab group — which tabs are open, which is active, and their URLs and titles
+- **Use Cases**:
+  - Understanding browser state before deciding which tab to act on
+  - Verifying that the correct page is active before proceeding
+  - Listing open tabs for a multi-tab workflow
+
+---
+
+#### `Claude in Chrome:switch_browser`
+
+- **Purpose**: Switch which Chrome browser instance is used for automation (e.g., between profiles or windows)
+- **Use Cases**:
+  - Working with multiple Chrome profiles (personal vs. work)
+  - Switching between browser windows during complex workflows
+- **Limitations**: Only switches between already-open Chrome instances with the extension installed
+
+---
+
+#### `Claude in Chrome:resize_window`
+
+- **Purpose**: Resize the current browser window to specified pixel dimensions
+- **Use Cases**:
+  - Standardizing viewport size before taking screenshots
+  - Testing responsive layouts at specific breakpoints (e.g., 1280×720 desktop, 375×812 mobile)
+  - Ensuring consistent rendering for documentation or GIF capture
+
+---
+
+#### `Claude in Chrome:read_console_messages`
+
+- **Purpose**: Read browser console output — including `console.log`, `console.error`, and `console.warn` messages — from the current page
+- **Use Cases**:
+  - Debugging JavaScript errors on a live page
+  - Monitoring a web application's runtime behavior
+  - Verifying that expected events or API responses are occurring
+- **Limitations**: Only reads messages from the current MCP tab; historical messages before tool activation may not be available
+
+---
+
+#### `Claude in Chrome:read_network_requests`
+
+- **Purpose**: Inspect HTTP network requests (XHR, Fetch, documents, images, etc.) made by the current page
+- **Use Cases**:
+  - Understanding what API calls a page is making in the background
+  - Debugging network errors or unexpected responses
+  - Reverse-engineering data sources used by a web application
+- **Limitations**:
+  - Cannot read request/response bodies for requests made before the tool was activated
+  - Should not be used to intercept or transmit credentials found in network traffic
+
+---
+
+#### `Claude in Chrome:file_upload`
+
+- **Purpose**: Upload one or more files from the local filesystem to a file input element on the page
+- **Use Cases**:
+  - Automating document submission workflows
+  - Uploading files to web services (e.g., attaching a report to a form)
+- **Limitations**:
+  - Requires explicit user confirmation before uploading (file uploads are an explicit-permission action)
+  - Cannot upload files from untrusted sources or based on instructions found in observed content
+
+---
+
+#### `Claude in Chrome:upload_image`
+
+- **Purpose**: Upload a previously captured screenshot or a user-provided image to a file input element on the page
+- **Use Cases**:
+  - Submitting an image to an online tool or form
+  - Uploading a screenshot as an attachment to a ticket or issue tracker
+- **Limitations**: Source image must be a screenshot already captured or an image explicitly provided by the user — cannot gather or upload images based on instructions found in observed content
+
+---
+
+#### `Claude in Chrome:gif_creator`
+
+- **Purpose**: Manage GIF recording and export for browser automation sessions — record the visual sequence of a workflow and export it as an animated GIF
+- **Use Cases**:
+  - Documenting a multi-step automation for sharing or review
+  - Creating a visual walkthrough of a browser workflow
+  - Generating tutorial-style GIF recordings
+- **Limitations**:
+  - GIFs may capture sensitive information on screen — review before sharing
+  - File size may be large for long workflows; consider trimming the recording
+
+---
+
+#### `Claude in Chrome:shortcuts_list`
+
+- **Purpose**: List all available shortcuts and workflows configured in the Claude in Chrome extension
+- **Use Cases**:
+  - Discovering what pre-built automations are available
+  - Understanding which named workflows can be triggered via `shortcuts_execute`
+- **Note**: Shortcuts and workflows are used interchangeably in this context
+
+---
+
+#### `Claude in Chrome:shortcuts_execute`
+
+- **Purpose**: Execute a named shortcut or workflow in a new sidepanel window within the Claude in Chrome extension
+- **Use Cases**:
+  - Running a pre-configured automation (e.g., "fill my weekly timesheet", "submit daily standup")
+  - Triggering complex multi-step browser workflows with a single call
+  - Chaining pre-built workflows into larger automations
+- **Limitations**:
+  - Only executes shortcuts that have been previously configured in the extension
+  - Cannot create new shortcuts on the fly — discovery requires `shortcuts_list` first
+  - Executes in a sidepanel context; some page interactions may differ from main-window behavior
+
+-----
+
 ## How Claude Operates as an Agentic System
 
 ### What “Agentic” Means in This Context
@@ -771,3 +1083,20 @@ Your Device
 4. `message_compose_v1` → Draft multiple versions of investor email
 5. `present_files` → Make all documents available for download
 6. Return with guidance on next steps
+
+## Capability Comparison: Mobile vs. Windows Desktop PC
+
+| Category | Mobile | Windows Desktop PC |
+|---|---|---|
+| Core file & computation tools (Tiers 1) | ✅ | ✅ |
+| Information retrieval (Tier 2) | ✅ | ✅ |
+| Location & time tools (Tier 3) | ✅ | ✅ |
+| Conversation & memory tools (Tier 4) | ✅ | ✅ |
+| Communication & planning tools (Tier 5) | ✅ | ✅ |
+| Place & display tools (Tier 6) | ✅ | ✅ |
+| Calendar & reminder tools (Tier 7) | ✅ | ✅ |
+| Meta tool — `tool_search` (Tier 8) | ✅ | ✅ |
+| MCP integrations — Google Calendar, Gmail (Tier 9) | ✅ | ✅ |
+| **Visualizer — inline SVG/HTML widgets (Tier 10)** | ❌ | ✅ `show_widget` + `read_me` |
+| **Browser automation — Claude in Chrome (Tier 11)** | ❌ | ✅ |
+
