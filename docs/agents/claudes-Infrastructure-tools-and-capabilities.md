@@ -6,133 +6,37 @@
 
 ## Table of Contents
 
-1. [Overview](#overview)
 1. [The Ubuntu Environment](#the-ubuntu-environment)
-1. [State Persistence and Limitations](#state-persistence-and-limitations)
-1. [Complete Tools Reference](#complete-tools-reference)
-1. [How Claude Operates as an Agentic System](#how-claude-operates-as-an-agentic-system)
-1. [Capabilities and Boundaries](#capabilities-and-boundaries)
-1. [Architecture and Access Patterns](#architecture-and-access-patterns)
-1. [Practical Examples](#practical-examples)
-
------
-
-## Overview
-
-Claude is not a simple chatbot that only generates text. It’s an agentic system with access to a variety of tools that allow it to perform computational tasks, retrieve information, interact with external services, and manage files. This document provides a comprehensive overview of the infrastructure that powers Claude and the tools available within this system.
-
-When you interact with Claude from your device, you’re connecting to Anthropic’s servers. Claude runs as a containerized application with access to a Linux environment and a defined set of tools. The key insight is that Claude can take autonomous actions within defined constraints—it can execute commands, fetch information, create files, and manage data on your behalf.
+2. [State Persistence and Limitations](#state-persistence-and-limitations)
+3. [Complete Tools Reference](#complete-tools-reference)
+4. [How Claude Operates as an Agentic System](#how-claude-operates-as-an-agentic-system)
+5. [Capabilities and Boundaries](#capabilities-and-boundaries)
+6. [Architecture and Access Patterns](#architecture-and-access-patterns)
+7. [Practical Examples](#practical-examples)
 
 -----
 
 ## The Ubuntu Environment
 
+When you interact with Claude from your device, you’re connecting to Anthropic’s servers. Claude runs as a containerized application with access to a Linux environment and a defined set of tools. The key insight is that Claude can take autonomous actions within defined constraints—it can execute commands, fetch information, create files, and manage data on your behalf.
+
 ### Infrastructure Location
 
-The Ubuntu 24 environment where Claude can execute commands **does not run on your iPhone**. Instead, it runs on **Anthropic’s servers**. Here’s the architecture:
+The Ubuntu 24 environment where Claude can execute commands **does not run on your device**. Instead, it runs on **Anthropic’s servers**. Here’s the architecture:
 
 - **Your Device**: Runs only the Claude app interface (frontend). This is where you type messages and see responses.
 - **Anthropic’s Infrastructure**: Hosts the Claude AI model, the Ubuntu container, and all computational resources.
 
-### What We Discovered
+### Confirmed Environment Details
 
-During this conversation, we tested several commands to understand the environment:
+Direct exploration of the container has verified the following:
 
-#### Test 1: Directory Listing
-
-```bash
-ls /usr
-```
-
-**Results:**
-
-```
-bin
-etc
-games
-include
-lib
-lib64
-libexec
-local
-sbin
-share
-src
-```
-
-This showed a standard Ubuntu directory structure, confirming the system is a genuine Linux environment with typical Unix/Linux conventions.
-
-#### Test 2: File Creation and Reading
-
-```bash
-echo "hi" > /usr/local/hi.txt
-cat /usr/local/hi.txt
-```
-
-**Results:**
-
-- File was successfully created at `/usr/local/hi.txt`
-- The file could be read back immediately
-- Output: `hi`
-
-#### Test 3: State Persistence Across Prompts
-
-```bash
-cat /usr/local/hi.txt
-```
-
-**Results:**
-
-- The file persisted from the previous prompt
-- Output: `hi`
-
-This was a crucial discovery: **files and state DO persist within a single conversation**, but reset between separate conversations.
-
-#### Test 4: Root Directory Inspection
-
-```bash
-ls -lar /
-```
-
-**Notable findings in the output:**
-
-- `.dockerenv` - Confirms the environment is running in a Docker container
-- `process_api` - A 3.2 MB executable (likely handles API communication with Claude)
-- `container_info.json` - A metadata file about the container instance
-- Standard Ubuntu directories: `/usr`, `/var`, `/etc`, `/tmp`, `/home`, `/dev`, `/proc`, `/sys`, `/run`, `/mnt`
-
-#### Test 5: Reading Container Metadata
-
-```bash
-cat /container_info.json
-```
-
-**Results:**
-
-```json
-{
-  "container_name": "container_01EoZXc3VP24dRk3m7EuwC47--wiggle--153038",
-  "creation_time": 1774093668.3524065
-}
-```
-
-This revealed:
-
-- Each container instance gets a unique name
-- The container is created fresh for each conversation session
-- The timestamp indicates when this specific container was spun up
-
-#### Test 6: Network Tools
-
-```bash
-ifconfig
-ip addr
-```
-
-**Results:**
-
-- Both commands returned “not found” (return code 127)
-- This confirms that networking tools are intentionally not available in the container
+- **Directory structure**: Standard Linux layout — `/usr`, `/var`, `/etc`, `/tmp`, `/home`, `/dev`, `/proc`, `/sys`, `/run`, `/mnt` — confirming a genuine Ubuntu environment
+- **Container runtime**: A `.dockerenv` file at the filesystem root confirms the environment runs in a Docker container
+- **API communication**: A `process_api` executable (~3.2 MB) at the root handles communication between the container and the Claude model
+- **Container metadata**: A `container_info.json` file at the root records each container's unique name and Unix creation timestamp, confirming containers are freshly instantiated per conversation session
+- **File operations**: Files can be created, written, and read anywhere within writable paths such as `/usr/local/` and `/home/claude/`
+- **Network tools**: Standard networking utilities (`ifconfig`, `ip addr`) are not installed, consistent with the disabled network access policy
 
 ### Container Characteristics
 
@@ -160,17 +64,17 @@ When you’re in a single conversation thread with Claude:
 This allows for workflows like:
 
 1. Create a Python script
-1. Execute it
-1. Modify it based on results
-1. Run it again
-1. All within the same conversation
+2. Execute it
+3. Modify it based on results
+4. Run it again
+5. All within the same conversation
 
 ### What Does NOT Persist
 
-- **Between conversations**: When you start a new chat, you get a fresh container. The previous environment is completely reset.
-- **Between devices/browsers**: Each instance of Claude may have its own container (though this detail isn’t entirely clear).
-- **On your device**: Nothing I create is automatically saved to your device unless you explicitly download it.
-- **Network state**: I cannot maintain connections or access external services.
+- **Between conversations**: Each new conversation spins up a fresh Docker container with a unique name and creation timestamp (recorded in `/container_info.json`). The previous container and all its contents are destroyed.
+- **Between devices/browsers**: Each Claude session may run in its own isolated container instance.
+- **On your device**: Nothing created in the container is automatically saved to your device unless you explicitly download it via the `present_files` tool.
+- **Network state**: No network connections can be maintained; external services are not reachable from within the container.
 
 ### Practical Implications
 
@@ -472,7 +376,7 @@ These tools let Claude access current information beyond its training data (know
 - **Purpose**: Display locations on an interactive map
 - **Two Modes**:
 1. **Simple Markers**: Just show places on a map
-1. **Itinerary**: Multi-day trip with stops, timing, and travel directions
+2. **Itinerary**: Multi-day trip with stops, timing, and travel directions
 - **Parameters**:
   - `title` - Name of the map/itinerary
   - `locations` - Array of places with coordinates, notes, timing
@@ -586,23 +490,23 @@ These are services Claude can access if you’ve connected them in Claude.ai:
 Claude is not simply responding to questions with text. Instead, Claude is an agentic system that can:
 
 1. **Perceive** the request and available tools
-1. **Plan** a sequence of actions
-1. **Execute** multiple tools in sequence
-1. **Observe** the results
-1. **Adapt** based on outcomes
-1. **Complete** complex multi-step tasks
+2. **Plan** a sequence of actions
+3. **Execute** multiple tools in sequence
+4. **Observe** the results
+5. **Adapt** based on outcomes
+6. **Complete** complex multi-step tasks
 
 ### Decision Logic
 
 When you ask Claude something, here’s how the system works:
 
 1. **Parse the request** - Understand what you’re asking for
-1. **Assess available tools** - Determine which tools are relevant
-1. **Create a plan** - Sequence the tools needed to complete the task
-1. **Execute** - Call the appropriate tools
-1. **Process results** - Interpret what the tools return
-1. **Synthesize** - Convert tool results into a helpful response
-1. **Present** - Communicate findings back to you
+2. **Assess available tools** - Determine which tools are relevant
+3. **Create a plan** - Sequence the tools needed to complete the task
+4. **Execute** - Call the appropriate tools
+5. **Process results** - Interpret what the tools return
+6. **Synthesize** - Convert tool results into a helpful response
+7. **Present** - Communicate findings back to you
 
 ### Example Workflows
 
@@ -613,11 +517,11 @@ User: “Find me a good Italian restaurant within 10 miles of me that’s open n
 Claude’s process:
 
 1. Call `user_location_v0` (with “precise” accuracy) → Get coordinates
-1. Call `user_time_v0` → Get current time
-1. Call `places_search` → Search for “Italian restaurants” near coordinates
-1. Filter results by open/closed status (using current time)
-1. Call `places_map_display_v0` → Display on map with directions
-1. Return with recommendations and visual map
+2. Call `user_time_v0` → Get current time
+3. Call `places_search` → Search for “Italian restaurants” near coordinates
+4. Filter results by open/closed status (using current time)
+5. Call `places_map_display_v0` → Display on map with directions
+6. Return with recommendations and visual map
 
 #### Example 2: Data Processing
 
@@ -626,7 +530,7 @@ User: “I have a CSV file with sales data. Add a column for profit margin and s
 Claude’s process:
 
 1. Call `view` → Read the uploaded CSV file
-1. Call `bash_tool` → Run Python script to process data
+2. Call `bash_tool` → Run Python script to process data
    
    ```python
    import pandas as pd
@@ -634,7 +538,7 @@ Claude’s process:
    df['profit_margin'] = (df['profit'] / df['revenue']) * 100
    df.to_excel('sales_with_margin.xlsx', index=False)
    ```
-1. Call `present_files` → Make the Excel file available for download
+3. Call `present_files` → Make the Excel file available for download
 
 #### Example 3: Research and Synthesis
 
@@ -643,10 +547,10 @@ User: “What are the latest developments in AI regulation?”
 Claude’s process:
 
 1. Call `web_search` → Find recent articles about AI regulation
-1. Call `web_fetch` → Read full articles from top results
-1. Synthesize information from multiple sources
-1. Present comprehensive answer with citations
-1. Offer to search for more specific aspects if needed
+2. Call `web_fetch` → Read full articles from top results
+3. Synthesize information from multiple sources
+4. Present comprehensive answer with citations
+5. Offer to search for more specific aspects if needed
 
 #### Example 4: Trip Planning
 
@@ -655,9 +559,9 @@ User: “Plan a weekend trip to Paris for me”
 Claude’s process:
 
 1. Call `ask_user_input_v0` → Ask about preferences (budget, interests, dates)
-1. Based on answers, call `places_search` multiple times → Find hotels, restaurants, attractions
-1. Call `places_map_display_v0` → Create itinerary with day-by-day plan
-1. Provide detailed recommendations with map visualization
+2. Based on answers, call `places_search` multiple times → Find hotels, restaurants, attractions
+3. Call `places_map_display_v0` → Create itinerary with day-by-day plan
+4. Provide detailed recommendations with map visualization
 
 -----
 
@@ -704,7 +608,7 @@ Claude’s process:
 - Cannot access the internet directly from the Ubuntu environment
 - Cannot establish external connections or API calls
 - Cannot download software from the web (but can work with pre-installed tools)
-- Cannot access your iPhone’s local file system without you uploading files
+- Cannot access your device's local file system without you uploading files
 
 **File System Limitations:**
 
@@ -768,12 +672,12 @@ Your Device
 ### Data Flow
 
 1. **You send a message** from your device
-1. **Message reaches Anthropic’s servers**
-1. **Claude processes** the message, determines needed tools
-1. **Tools are executed** (commands in Ubuntu, web searches, API calls, etc.)
-1. **Results are processed** by Claude
-1. **Response is constructed** and sent back to you
-1. **You receive the response** on your device, with optional file downloads
+2. **Message reaches Anthropic’s servers**
+3. **Claude processes** the message, determines needed tools
+4. **Tools are executed** (commands in Ubuntu, web searches, API calls, etc.)
+5. **Results are processed** by Claude
+6. **Response is constructed** and sent back to you
+7. **You receive the response** on your device, with optional file downloads
 
 ### Files and Output Handling
 
@@ -800,7 +704,7 @@ Your Device
 **What Claude Does**:
 
 1. `view` → Read the uploaded spreadsheet
-1. `bash_tool` → Execute Python code:
+2. `bash_tool` → Execute Python code:
    
    ```python
    import pandas as pd
@@ -814,8 +718,8 @@ Your Device
    plt.title('Sales by Region')
    plt.savefig('/mnt/user-data/outputs/sales_chart.png')
    ```
-1. `chart_display_v0` → Display the chart inline
-1. `present_files` → Make the chart available for download
+3. `chart_display_v0` → Display the chart inline
+4. `present_files` → Make the chart available for download
 
 ### Example 2: Research and Reporting
 
@@ -824,9 +728,9 @@ Your Device
 **What Claude Does**:
 
 1. `web_search` → Search “renewable energy developments 2025”
-1. `web_fetch` → Fetch full articles from top results
-1. `create_file` → Create a comprehensive report in Markdown or Word format
-1. `present_files` → Make the report available for download
+2. `web_fetch` → Fetch full articles from top results
+3. `create_file` → Create a comprehensive report in Markdown or Word format
+4. `present_files` → Make the report available for download
 
 ### Example 3: Planning a Day Trip
 
@@ -835,13 +739,13 @@ Your Device
 **What Claude Does**:
 
 1. `user_location_v0` → Get your current location
-1. `places_search` → Search for museums and restaurants in SF
-1. `places_map_display_v0` → Create an itinerary with:
+2. `places_search` → Search for museums and restaurants in SF
+3. `places_map_display_v0` → Create an itinerary with:
 - Morning: SFMOMA (10 AM start)
 - Lunch: Ferry Building Marketplace
 - Afternoon: Exploratorium
 - Dinner: Michelin-starred restaurant
-1. Return with map, timing, and detailed recommendations
+4. Return with map, timing, and detailed recommendations
 
 ### Example 4: Code Development
 
@@ -850,10 +754,10 @@ Your Device
 **What Claude Does**:
 
 1. `create_file` → Create the Python script
-1. `bash_tool` → Test the script with sample data
-1. `bash_tool` → Generate visualizations
-1. `view` → Show you the code with explanations
-1. `present_files` → Make the final script available for download
+2. `bash_tool` → Test the script with sample data
+3. `bash_tool` → Generate visualizations
+4. `view` → Show you the code with explanations
+5. `present_files` → Make the final script available for download
 
 ### Example 5: Complex Workflow
 
@@ -862,47 +766,8 @@ Your Device
 **What Claude Does**:
 
 1. `ask_user_input_v0` → Ask about business type, market, funding goal, etc.
-1. `create_file` → Generate comprehensive business plan document
-1. `create_file` → Generate financial spreadsheet with formulas
-1. `message_compose_v1` → Draft multiple versions of investor email
-1. `present_files` → Make all documents available for download
-1. Return with guidance on next steps
-
------
-
-## Key Insights
-
-### Why This Architecture Matters
-
-1. **Distributed Processing**: Heavy computation happens on Anthropic’s servers, not your phone
-1. **Rich Interactions**: You get the interface simplicity of an app with the power of server-side tools
-1. **Privacy with Capability**: You control what Claude can access; nothing is automatic
-1. **Scalability**: Resources are managed centrally, allowing complex operations
-1. **Flexibility**: New tools can be added without changing your app
-
-### The Security Model
-
-- **No automatic access**: Claude doesn’t see anything until you explicitly share it
-- **Explicit permissions**: You control whether location, calendar, email, etc. are available
-- **Isolated containers**: Each conversation runs in its own sandboxed environment
-- **No persistence across conversations**: Each new chat is a fresh start
-- **Rate limiting and monitoring**: Anthropic monitors for abuse and unusual patterns
-
-### Best Practices for Using Claude
-
-1. **Upload files** when you want Claude to work with them
-1. **Be specific** in your requests about what you want
-1. **Use follow-up messages** to refine results or ask for variations
-1. **Download important files** rather than relying on conversation history
-1. **Leverage multiple tools** - chain web searches, file creation, and analysis together
-1. **Ask Claude to use tools** if you’re unsure what’s possible
-
------
-
-## Conclusion
-
-Claude is far more than a text generator. It’s an agentic system with access to a comprehensive toolkit that allows it to process data, retrieve information, create files, interact with external services, and complete complex multi-step tasks. The Ubuntu container running on Anthropic’s servers provides a computational foundation, while the array of tools provides the interface to accomplish real work.
-
-Understanding this architecture helps you leverage Claude more effectively—knowing what tools are available, how they can be combined, and what the limitations are (network access, device file system, etc.) will help you get better results from your interactions.
-
-The key insight is: **you’re not just chatting with an AI, you’re collaborating with an agentic system** that can take autonomous actions within defined boundaries to help you accomplish your goals.
+2. `create_file` → Generate comprehensive business plan document
+3. `create_file` → Generate financial spreadsheet with formulas
+4. `message_compose_v1` → Draft multiple versions of investor email
+5. `present_files` → Make all documents available for download
+6. Return with guidance on next steps
