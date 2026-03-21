@@ -34,7 +34,8 @@ Direct exploration of the container has verified the following:
 - **Container runtime**: A `.dockerenv` file at the filesystem root confirms the environment runs in a Docker container
 - **API communication**: A `process_api` executable (~3.2 MB) at the root handles communication between the container and the Claude model
 - **Container metadata**: A `container_info.json` file at the root records each container's unique name and Unix creation timestamp, confirming containers are freshly instantiated per conversation session
-- **File operations**: Files can be created, written, and read anywhere within writable paths such as `/usr/local/` and `/home/claude/`
+- **File operations**: Files can be created, written, and read anywhere within writable paths such as `/usr/local/` and `/home/claude/`, uses `/mnt/user-data/uploads/` and `/mnt/user-data/outputs/` as the
+bridge between the agent's container and the user.
 - **Network tools**: Standard networking utilities (`ifconfig`, `ip addr`) are not installed, consistent with the disabled network access policy
 
 ### Container Characteristics
