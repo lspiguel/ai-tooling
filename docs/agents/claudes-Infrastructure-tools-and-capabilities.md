@@ -55,7 +55,7 @@ Direct exploration of the container has verified the following:
 
 When you’re in a single conversation thread with Claude:
 
-- **Files I create** persist in the Ubuntu environment
+- **Files created by Claude** persist in the Ubuntu environment
 - **Commands executed** can build upon previous commands
 - **Data structures** in memory persist across prompts
 - **Working files** remain accessible in subsequent messages
