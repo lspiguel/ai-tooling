@@ -21,7 +21,7 @@
 
 Claude is not a simple chatbot that only generates text. It’s an agentic system with access to a variety of tools that allow it to perform computational tasks, retrieve information, interact with external services, and manage files. This document provides a comprehensive overview of the infrastructure that powers Claude and the tools available within this system.
 
-When you interact with Claude from your iPhone (or any device), you’re connecting to Anthropic’s servers. Claude runs as a containerized application with access to a Linux environment and a defined set of tools. The key insight is that Claude can take autonomous actions within defined constraints—it can execute commands, fetch information, create files, and manage data on your behalf.
+When you interact with Claude from your device, you’re connecting to Anthropic’s servers. Claude runs as a containerized application with access to a Linux environment and a defined set of tools. The key insight is that Claude can take autonomous actions within defined constraints—it can execute commands, fetch information, create files, and manage data on your behalf.
 
 -----
 
@@ -31,7 +31,7 @@ When you interact with Claude from your iPhone (or any device), you’re connect
 
 The Ubuntu 24 environment where Claude can execute commands **does not run on your iPhone**. Instead, it runs on **Anthropic’s servers**. Here’s the architecture:
 
-- **Your iPhone/Device**: Runs only the Claude app interface (frontend). This is where you type messages and see responses.
+- **Your Device**: Runs only the Claude app interface (frontend). This is where you type messages and see responses.
 - **Anthropic’s Infrastructure**: Hosts the Claude AI model, the Ubuntu container, and all computational resources.
 
 ### What We Discovered
@@ -169,7 +169,7 @@ This allows for workflows like:
 
 - **Between conversations**: When you start a new chat, you get a fresh container. The previous environment is completely reset.
 - **Between devices/browsers**: Each instance of Claude may have its own container (though this detail isn’t entirely clear).
-- **On your device**: Nothing I create is automatically saved to your iPhone unless you explicitly download it.
+- **On your device**: Nothing I create is automatically saved to your device unless you explicitly download it.
 - **Network state**: I cannot maintain connections or access external services.
 
 ### Practical Implications
@@ -260,7 +260,7 @@ These tools are always available and don’t require loading.
 - **Parameters**:
   - `filepaths` - Array of file paths to present
 - **How it Works**: Files are automatically moved to `/mnt/user-data/outputs/` and become downloadable
-- **Important**: This is the mechanism for getting files from Claude’s environment to your iPhone
+- **Important**: This is the mechanism for getting files from Claude’s environment to your device
 - **Use Cases**:
   - Sharing generated documents
   - Providing code files
@@ -715,7 +715,7 @@ Claude’s process:
 
 **Device Limitations:**
 
-- Cannot install new software on your iPhone
+- Cannot install new software on your device
 - Cannot modify your device settings
 - Cannot access other apps or their data (except through enabled integrations)
 - Cannot run code natively on your device (only in the container)
@@ -744,7 +744,7 @@ Claude operates within a clear permission model:
 ### The Complete Flow
 
 ```
-Your iPhone/Device
+Your Device
     ↓
     └→ Claude App (Interface)
          ↓
@@ -767,13 +767,13 @@ Your iPhone/Device
 
 ### Data Flow
 
-1. **You send a message** from your iPhone
+1. **You send a message** from your device
 1. **Message reaches Anthropic’s servers**
 1. **Claude processes** the message, determines needed tools
 1. **Tools are executed** (commands in Ubuntu, web searches, API calls, etc.)
 1. **Results are processed** by Claude
 1. **Response is constructed** and sent back to you
-1. **You receive the response** on your iPhone, with optional file downloads
+1. **You receive the response** on your device, with optional file downloads
 
 ### Files and Output Handling
 
