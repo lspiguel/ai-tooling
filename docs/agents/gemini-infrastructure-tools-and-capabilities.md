@@ -1,0 +1,715 @@
+# Gemini’s Infrastructure, Tools, and Capabilities
+
+-----
+
+## Table of Contents
+
+1. [The Execution Environment](#the-execution-environment)
+1. [State Persistence and Limitations](#state-persistence-and-limitations)
+1. [Complete Tools Reference](#complete-tools-reference)
+1. [How Gemini Operates as an Agentic System](#how-gemini-operates-as-an-agentic-system)
+1. [Capabilities and Boundaries](#capabilities-and-boundaries)
+1. [Architecture and Access Patterns](#architecture-and-access-patterns)
+1. [Practical Examples](#practical-examples)
+1. [Capability Comparison: Subscription Tiers](#capability-comparison-subscription-tiers)
+
+-----
+
+## The Execution Environment
+
+Gemini’s reasoning runs on Google’s specialized TPU v6 clusters, but its tool execution (code, file manipulation) operates within a secure, containerized sandbox separate from the model itself.
+
+### Infrastructure Location
+
+The execution sandbox **does not run on the user’s device**. It runs on Google’s cloud infrastructure:
+
+- **User’s Device**: Runs only the Gemini app interface (web, mobile, or API client). This is where messages are typed and responses displayed.
+- **Google’s Infrastructure**: Hosts the Gemini model on TPU clusters, the execution sandbox, managed proxies for external tools, and all generative media clusters.
+
+### Confirmed Environment Details
+
+Empirical exploration of the Gemini execution container confirmed the following:
+
+- **Operating System**: Minimalist **Debian-based Linux** (Kernel 5.15+)
+- **Hardware Abstraction**: 8 virtual CPU cores (GenuineIntel, model masked for security), approximately 1 GB RAM
+- **Architecture**: 64-bit x86_64 with AVX2 and AES acceleration
+- **Connectivity**: **Air-gapped** — the execution sandbox has no outbound internet access (`curl`, `wget`, and Python `requests` will all fail)
+- **Software Stack**: Standard GNU userland utilities (stripped to essentials) and **Python 3.11+**
+- **File operations**: Files can be created and read within `/tmp`; changes to the root filesystem (`/`) may be discarded between execution calls
+
+### Container Characteristics
+
+- **Operating System**: Debian-based Linux (Kernel 5.15+)
+- **Container Runtime**: Isolated, ephemeral container on Google infrastructure
+- **Working Directory**: `/tmp` (guaranteed for user-generated files)
+- **Network Access**: Air-gapped (no outbound internet from the sandbox)
+- **System Access**: Limited to container resources only; 8 vCPU, ~1 GB RAM
+- **Execution Limit**: 30-second runtime cap per code block
+- **Persistence**: Files in `/tmp` persist within a session; container destroyed on idle (~60 minutes) or manual reset
+
+-----
+
+## State Persistence and Limitations
+
+### What Persists Within a Session
+
+Within a single active chat session with Gemini:
+
+- **Files created in `/tmp`** persist across multiple prompts
+- **Commands executed** can build upon previous results
+- **Data structures** remain accessible for incremental processing
+- **Chat history** retains tool outputs and prior context
+
+This allows for workflows like:
+
+1. Upload or create a dataset
+1. Run a Python script to process it
+1. Modify the script based on results
+1. Generate a visualization
+1. All within the same session
+
+### What Does NOT Persist
+
+- **Between sessions**: Once the session idles (typically 60+ minutes) or is manually reset, the container is destroyed. No files or state carry over to new chat threads.
+- **Ephemeral root**: Only `/tmp` is guaranteed for user-generated files; modifications elsewhere on the root filesystem may be discarded between execution calls.
+- **On the user’s device**: Nothing created in the sandbox is automatically saved to the user’s device unless explicitly downloaded.
+- **Network state**: No network connections can be established from within the sandbox.
+
+### Practical Implications
+
+If you want to preserve work across sessions:
+
+- **Download generated files** to your device when they are produced
+- **Re-upload data** when starting a new session
+- **Include context** in each new conversation (paste code, describe prior work)
+
+-----
+
+## Complete Tools Reference
+
+### Tier 1: Analytical and Technical Tools
+
+These tools handle computation, code execution, and real-time information retrieval.
+
+#### Python Interpreter (Code Execution)
+
+- **Purpose**: Execute Python code in a secure, stateful sandbox for calculations, data processing, and file manipulation
+- **Key Parameters**:
+  - `code` (String): The Python script to be executed
+- **Outputs**: Standard output (STDOUT), error logs (STDERR), and generated files or plots
+- **Use Cases**:
+  - Mathematical calculations and statistical analysis
+  - Data processing (CSV, JSON, text, etc.)
+  - Generating charts and visualizations
+  - Testing code logic
+  - File format conversions (e.g., HEIC to PNG)
+- **Limitations**:
+  - No outbound internet access (air-gapped sandbox)
+  - 30-second runtime limit per code block
+  - 1 GB RAM cap
+  - Python 3.11+ only (no Node.js, Bash scripting environment, etc.)
+- **Example**: “Calculate the 95th percentile of this 10,000-row CSV and generate a histogram of the distribution.”
+
+#### Google Search Grounding
+
+- **Purpose**: Retrieve the most current information, news, and data from the live web
+- **Key Parameters**:
+  - `queries` (List[String]): Specific search terms used to find information
+- **Outputs**: A set of search snippets, source titles, and URLs
+- **Use Cases**:
+  - Finding current news and events
+  - Verifying or fact-checking information
+  - Looking up stock prices, sports results, or real-time data
+  - Researching topics beyond the training data cutoff
+- **Limitations**:
+  - Subject to availability of public web data
+  - Cannot access paywalled or private content
+  - Returns snippets, not full page content
+  - Subject to “Thinking” quotas if complex synthesis is required
+- **Permission**: Implicit (active by default), but toggleable in Extensions menu
+- **Routing**: Proxied through Google Search API — Gemini does not browse sites directly
+- **Example**: “Find the current stock price of Alphabet Inc. and the summary of their latest quarterly earnings call.”
+
+-----
+
+### Tier 2: Generative Media Tools
+
+These are specialized models for creating images, video, and music — distinct from Gemini’s text reasoning.
+
+#### Nano Banana 2 (Image Generation)
+
+- **Purpose**: Generate, edit, and compose high-quality images from text or image prompts
+- **Key Parameters**:
+  - `prompt` (String): Visual description of the desired image
+  - `aspect_ratio` (String): Controls dimensions (e.g., “16:9”, “1:1”, “9:16”)
+  - `reference_images` (List[Image]): Up to 14 images for style or character consistency
+- **Outputs**: High-resolution image file (PNG/JPG), up to 2K resolution
+- **Use Cases**:
+  - Creating illustrations, hero images, and marketing visuals
+  - Style transfer using reference images
+  - Concept art and prototyping
+- **Limitations**:
+  - Cannot generate identifiable real-world private individuals
+  - Restricted generation of copyrighted characters in certain contexts
+  - Subject to daily usage caps (see Tier comparison below)
+- **Permission**: Implicitly enabled for subscribers; subject to safety filters
+- **Routing**: Connects to specialized generative clusters within Google’s infrastructure (not the public internet)
+- **Example**: “Generate a professional hero image for a cyber-security website featuring a translucent blue shield over a server rack, 16:9 ratio.”
+
+#### Veo 3.1 (Video Generation)
+
+- **Purpose**: Create high-fidelity cinematic videos with natively generated synchronized audio
+- **Key Parameters**:
+  - `prompt` (String): Description of scene, motion, and lighting
+  - `duration` (Integer): Length of clip (up to 60 seconds)
+  - `audio_cue` (String): Specific instructions for background sound or foley
+- **Outputs**: 4K MP4 video file with integrated audio
+- **Use Cases**:
+  - Creating product demos and promotional clips
+  - Generating cinematic B-roll
+  - Prototyping video concepts
+- **Limitations**:
+  - High computational cost
+  - Limited daily uses depending on subscription tier (e.g., 5/day for Ultra)
+  - Not available on the Free tier
+- **Permission**: Implicitly enabled for paid subscribers
+- **Routing**: Internal specialized generative clusters
+- **Example**: “Create a 10-second drone shot of a futuristic Tokyo at night in the rain, with the sound of distant hovering vehicles and splashing water.”
+
+#### Lyria 3 (Music Generation)
+
+- **Purpose**: Produce 30-second high-fidelity music tracks with professional arrangements and optional vocals
+- **Key Parameters**:
+  - `genre` (String): Musical style (e.g., “Lo-fi Hip Hop”, “Synthwave”)
+  - `tempo` (Integer): BPM (Beats Per Minute)
+  - `lyrics` (String): Optional text for AI-performed vocals
+- **Outputs**: High-quality audio file (WAV/MP3) with SynthID watermarking
+- **Use Cases**:
+  - Creating background music for videos or presentations
+  - Generating jingles or audio branding
+  - Prototyping musical ideas
+- **Limitations**:
+  - Tracks limited to 30-second segments
+  - Subject to daily usage caps by tier
+- **Permission**: Implicitly enabled for subscribers
+- **Routing**: Internal specialized generative clusters
+- **Example**: “Generate a 30-second upbeat indie-pop track with acoustic guitar and female vocals about starting a new journey.”
+
+-----
+
+### Tier 3: Interactive and Contextual Tools
+
+These tools bridge the gap between the AI and the user’s physical or digital world.
+
+#### Gemini Live (Conversational Mode)
+
+- **Purpose**: Enable real-time, free-flowing voice interaction with the ability to interrupt
+- **Key Parameters**:
+  - `voice_profile` (String): Selects the persona/tone of the AI
+  - `interruptibility` (Boolean): Allows the user to speak over the AI
+- **Outputs**: Real-time synthesized speech and low-latency responses
+- **Use Cases**:
+  - Hands-free conversations while driving or walking
+  - Mock interviews and conversational practice
+  - Real-time brainstorming sessions
+- **Limitations**:
+  - Requires stable mobile data or Wi-Fi connection
+  - Available on iOS/Android only
+- **Example**: “Talk me through a mock interview for a Product Manager role while I’m driving to work.”
+
+#### Multimodal Vision (Camera/Screen Sharing)
+
+- **Purpose**: Analyze live video feeds or screen captures to provide contextual assistance
+- **Key Parameters**:
+  - `input_type` (Enum): Specifies source — rear camera, front camera, or screen
+- **Outputs**: Textual analysis or spoken guidance based on visual input
+- **Use Cases**:
+  - Identifying physical objects or components through the camera
+  - Troubleshooting hardware by showing it to Gemini
+  - Getting contextual assistance based on what’s on screen
+- **Limitations**:
+  - Privacy guardrails prevent recording of sensitive personal information (e.g., passwords on screen)
+  - Requires device camera or screen-sharing access
+- **Example**: “Look at this circuit board through my camera and tell me which capacitor looks blown.”
+
+-----
+
+### Tier 4: Workspace and Personal Data Tools
+
+These tools access the user’s Google ecosystem and require explicit opt-in.
+
+#### Google Calendar
+
+- **Purpose**: View, create, and manage calendar events
+- **Permission**: Requires explicit enablement of Workspace Extensions in Gemini settings
+- **Routing**: Managed proxy — Gemini sends structured requests to a secure Google intermediary; raw credentials are never exposed to the model
+- **Rate Limits**: Approximately 10–20 retrieval actions per minute
+- **Use Cases**:
+  - Checking upcoming events
+  - Scheduling new meetings
+  - Summarizing the week ahead
+
+#### Gmail
+
+- **Purpose**: Read, search, and manage email messages
+- **Permission**: Requires explicit enablement of Workspace Extensions
+- **Routing**: Managed proxy (same as Calendar)
+- **Rate Limits**: Approximately 10–20 retrieval actions per minute
+- **Use Cases**:
+  - Summarizing recent emails from a specific sender
+  - Drafting replies
+  - Searching for specific messages or threads
+
+#### Google Drive
+
+- **Purpose**: Access, search, and retrieve files stored in Google Drive
+- **Permission**: Requires explicit enablement of Workspace Extensions
+- **Routing**: Managed proxy
+- **Use Cases**:
+  - Finding and summarizing documents
+  - Referencing stored files during conversation
+  - Extracting data from spreadsheets or docs
+
+#### Google Keep
+
+- **Purpose**: Access and manage notes and lists
+- **Permission**: Requires explicit enablement of Workspace Extensions
+- **Routing**: Managed proxy
+- **Use Cases**:
+  - Retrieving saved notes
+  - Adding items to lists
+
+-----
+
+### Tier 5: Live Information and Utility Tools
+
+These tools provide real-time data from Google’s service ecosystem.
+
+#### Google Maps
+
+- **Purpose**: Location search, directions, and place information
+- **Permission**: Implicit (active by default), toggleable in Extensions menu
+- **Routing**: Proxied API
+- **Rate Limits**: Approximately 25–50 queries per day (Free tier)
+- **Use Cases**:
+  - Finding nearby restaurants, services, or attractions
+  - Getting directions and travel time estimates
+  - Exploring a destination before a trip
+
+#### Google Flights
+
+- **Purpose**: Search for flight options, prices, and schedules
+- **Permission**: Implicit, toggleable
+- **Routing**: Proxied API
+- **Rate Limits**: Part of daily query cap (~25–50 for Free tier)
+- **Use Cases**:
+  - Comparing flight options for upcoming travel
+  - Finding cheapest dates to fly
+
+#### Google Hotels
+
+- **Purpose**: Search for hotel availability, pricing, and reviews
+- **Permission**: Implicit, toggleable
+- **Routing**: Proxied API
+- **Rate Limits**: Part of daily query cap
+- **Use Cases**:
+  - Finding accommodation for a trip
+  - Comparing hotel prices and ratings
+
+-----
+
+### Tier 6: Meta-Tools and Discovery
+
+#### Model Context Protocol (MCP)
+
+- **Purpose**: Discover and connect to local or third-party tools and data sources at runtime
+- **Key Parameters**:
+  - `server_url` (String): The endpoint for the MCP host
+  - `resource_path` (String): The specific file or database to query
+- **Outputs**: A JSON manifest of available functions and data structures
+- **Use Cases**:
+  - Accessing a private company database
+  - Connecting to custom enterprise tools
+  - Extending Gemini’s capabilities with bespoke integrations
+- **Limitations**:
+  - Requires a host server to be running and authorized by the user
+  - Requires explicit user authorization for each individual server/resource
+- **Routing**: Can be direct (local resources) or proxied (remote cloud databases)
+- **Rate Limits**: Up to 1,000 requests per day for authenticated CLI users
+- **Example**: “Query the local MCP server to see if I have access to the customer database for this project.”
+
+-----
+
+## How Gemini Operates as an Agentic System
+
+### What “Agentic” Means in This Context
+
+Gemini is not simply a text-completion engine. It operates as a **Reasoning Agent** that follows a “Plan-Act-Verify” cycle:
+
+1. **Parse** the request and map intent to available tools
+1. **Plan** a sequence of actions (generating a “Thought Signature” for multi-step tasks)
+1. **Execute** tool calls, receiving results after each step
+1. **Re-evaluate** subsequent steps based on new data
+1. **Verify** outputs through modulated reasoning before committing to a final answer
+1. **Present** the synthesized result to the user
+
+### Tool Loading and Activation
+
+Gemini uses two mechanisms to transition from general chat to specialized tool use:
+
+#### 1. Implicit Intent Detection (Automatic Loading)
+
+In consumer-facing Gemini, a high-level supervisory “Router” layer monitors conversation for intent signals:
+
+- **Trigger**: The Router detects that the user’s request requires external data or specialized processing (e.g., “What is the current price of gold?”)
+- **Action**: The appropriate tool (e.g., Google Search Grounding) is automatically attached. No explicit meta-tool call is needed.
+- **Lifecycle**: Once the question is answered, the tool may be detached to conserve resources, but the retrieved information remains in chat history.
+
+#### 2. Explicit Orchestration (Meta-Tool Discovery)
+
+In developer-focused environments (Gemini API with Function Calling or MCP):
+
+- **Trigger**: A developer connects Gemini to an external toolbox (MCP server or API definitions)
+- **Discovery**: Gemini calls a **List Tools** meta-tool, receiving a manifest of available capabilities
+- **Loading**: Tool signatures (instructions on how to call them) are kept ready; Gemini generates structured **Tool Call Requests** (JSON) when needed
+- **Execution**: The platform executes the call externally and returns results to Gemini’s context
+
+#### 3. Conditional “Thinking” Escalation
+
+For complex tasks, Gemini can internally trigger a deeper reasoning mode:
+
+- **Trigger**: A hard question (logic puzzle, complex architectural decision) exceeds a complexity threshold
+- **Effect**: A “Deep Think” or “System 2” processing mode is activated, reallocating internal compute for chain-of-thought verification before committing to an answer
+- **User experience**: A slight delay or “Thinking…” status indicator may appear
+
+### Summary of Activation Triggers
+
+|Trigger Type            |How It’s Loaded            |Example                                            |
+|------------------------|---------------------------|---------------------------------------------------|
+|**Linguistic Clues**    |Automatically by the Router|“Search for…”, “Draw a…”, “Play…”                  |
+|**Manifest Discovery**  |Via Meta-tool (MCP/API)    |Accessing a private company database               |
+|**Error/Failure**       |Re-loading or Retrying     |If a Python script fails, debugger logic may engage|
+|**Complexity Threshold**|Internal Escalation        |Solving an International Math Olympiad problem     |
+
+### Example Workflows
+
+#### Example 1: Research and Synthesis
+
+User: “What are the latest developments in AI regulation?”
+
+Gemini’s process:
+
+1. Router detects need for current information → activates Google Search Grounding
+1. Multiple search queries are issued for recent articles
+1. Results are synthesized using modulated reasoning
+1. Comprehensive answer is presented with source citations
+
+#### Example 2: Data Processing
+
+User: “I have a CSV with sales data. Calculate totals by region and generate a chart.”
+
+Gemini’s process:
+
+1. Python Interpreter is activated
+1. Code is generated to load, process, and group the data
+1. Visualization code produces a chart
+1. Results (chart and summary) are presented to the user
+
+#### Example 3: Creative Media Production
+
+User: “Create a 10-second promo video of a futuristic city at night with synthwave music.”
+
+Gemini’s process:
+
+1. Veo 3.1 is invoked with scene description and audio cue
+1. Lyria 3 generates a 30-second synthwave track (trimmed to match)
+1. Video and audio are combined and delivered as MP4
+
+#### Example 4: Multi-Tool Chaining
+
+User: “Search for a recipe, then write a Python script to scale the ingredients for 50 people.”
+
+Gemini’s process:
+
+1. Google Search Grounding retrieves the recipe
+1. Gemini extracts ingredient data from the results
+1. Python Interpreter generates and runs a scaling script
+1. Scaled ingredient list is presented to the user
+
+-----
+
+## Capabilities and Boundaries
+
+### What Gemini CAN Do
+
+**Computational:**
+
+- Execute Python scripts (stateful within a session)
+- Process and transform data (CSV, JSON, text, images)
+- Perform calculations and statistical analysis
+- Generate charts, plots, and visualizations
+
+**Informational:**
+
+- Search the live web for current information (via Google Search Grounding)
+- Access Google Maps, Flights, and Hotels data
+- Access personal Google Workspace data (Calendar, Gmail, Drive, Keep) with permission
+- Connect to external tools and databases via MCP
+
+**Creative / Generative:**
+
+- Generate high-resolution images (Nano Banana 2)
+- Create cinematic video with synchronized audio (Veo 3.1)
+- Produce music tracks with vocals and instrumentals (Lyria 3)
+- Engage in real-time voice conversation (Gemini Live)
+- Analyze live camera feeds and screen content (Multimodal Vision)
+
+**Practical:**
+
+- Draft messages and documents
+- Perform multi-step reasoning with chain-of-thought verification
+- Produce structured JSON output for programmatic integration
+- Process and convert file formats (e.g., HEIC to PNG)
+
+### What Gemini CANNOT Do
+
+**Network Limitations (Execution Sandbox):**
+
+- Cannot access the internet from the Python sandbox (air-gapped)
+- Cannot establish external connections or API calls from within the container
+- Cannot download software or packages from the web at runtime
+- `curl`, `wget`, and Python `requests` will all fail in the sandbox
+
+**Execution Limitations:**
+
+- 30-second runtime limit per code block
+- 1 GB RAM cap in the execution sandbox
+- Only Python 3.11+ is available (no Bash scripting environment, no Node.js)
+- No equivalent of a general-purpose `bash_tool` for arbitrary shell commands
+
+**File System Limitations:**
+
+- Cannot modify files on the user’s local device directly
+- Only `/tmp` is guaranteed for user-generated files within the sandbox
+- Changes to the root filesystem may be discarded between execution calls
+- No file presentation/download mechanism equivalent to Claude’s `present_files` tool (relies on inline display or user-initiated download)
+
+**Persistence Limitations:**
+
+- Cannot “check back later” or run tasks while the user is offline
+- Session container is destroyed after ~60 minutes idle or manual reset
+- No data carries over to new chat threads
+
+**Device Limitations:**
+
+- Cannot install software on the user’s device
+- Cannot modify device settings
+- Cannot access other apps or their data (except through enabled Workspace Extensions)
+
+**Policy Limitations:**
+
+- Cannot generate harmful, illegal, or sexually explicit content
+- Cannot provide legally binding advice or medical diagnoses
+- Cannot generate identifiable real-world private individuals in images
+- Cannot bypass safety filters regardless of prompt framing
+
+### Permission Model
+
+Gemini operates under a tiered permission framework:
+
+|Access Type           |Permission Model                    |Examples                                            |
+|----------------------|------------------------------------|----------------------------------------------------|
+|**Default (Implicit)**|Active by default, toggleable       |Google Search, Maps, Flights, Hotels                |
+|**Explicit Opt-In**   |Requires user enablement in settings|Calendar, Gmail, Drive, Keep (Workspace Extensions) |
+|**Subscription-Gated**|Available based on paid tier        |Image generation, Video generation, Music generation|
+|**User-Authorized**   |Requires per-resource authorization |MCP server connections, custom tools                |
+|**Air-Gapped**        |No permission can override          |Python sandbox internet access (always blocked)     |
+
+-----
+
+## Architecture and Access Patterns
+
+### The Complete Flow
+
+```
+User's Device
+    ↓
+    └→ Gemini App (Web / Mobile / API Client)
+         ↓
+         └→ Google's Infrastructure
+              ├→ Gemini Model (TPU v6 Clusters)
+              │   ├→ Router (Intent Detection Layer)
+              │   └→ Modulated Reasoning (Thinking Escalation)
+              ├→ Execution Sandbox
+              │   ├→ Python 3.11+ Interpreter
+              │   ├→ File system (/tmp for user files)
+              │   └→ Air-gapped (no outbound network)
+              ├→ Managed Proxies
+              │   ├→ Google Search API
+              │   ├→ Google Maps / Flights / Hotels APIs
+              │   └→ Workspace APIs (Calendar, Gmail, Drive, Keep)
+              ├→ Generative Media Clusters
+              │   ├→ Nano Banana 2 (Image)
+              │   ├→ Veo 3.1 (Video)
+              │   └→ Lyria 3 (Music)
+              └→ External Integrations (via MCP)
+                  └→ User-authorized servers and databases
+```
+
+### Data Flow
+
+1. **User sends a message** from their device
+1. **Message reaches Google’s infrastructure**
+1. **Router analyzes intent** and determines which tools are needed
+1. **Tools are activated**: Python sandbox for code, managed proxies for web/API, generative clusters for media
+1. **Results are returned** to Gemini’s context
+1. **Gemini synthesizes** a response from tool outputs and reasoning
+1. **Response is delivered** to the user’s device, with optional file/media downloads
+
+### Security Model
+
+Security is managed through a “Defense in Depth” strategy:
+
+- **Managed Proxies**: All external tool calls (Search, Maps, Workspace) are routed through Google-managed proxies. Gemini never sees raw user credentials or cookies.
+- **Safety Layer**: A secondary model inspects Gemini’s proposed tool calls. If an attempt is made to generate malware or extract PII, the call is blocked before execution.
+- **Air-Gap Enforcement**: The Python sandbox is physically isolated from Google’s internal networks and the public internet.
+- **Workspace Scoping**: Even with Workspace Extensions enabled, Gemini only accesses specific files or threads when the user’s prompt implies a need — it cannot browse data in the background.
+
+### Container Lifecycle
+
+- **Creation**: A container is provisioned when code execution is first needed in a session
+- **Duration**: Persists for the duration of the active session
+- **Idle Timeout**: Approximately 60 minutes of inactivity triggers destruction
+- **Reset**: Manual session reset also destroys the container
+- **Isolation**: Each session gets its own isolated container
+
+-----
+
+## Practical Examples
+
+### Example 1: Data Analysis Pipeline
+
+**Request**: “Calculate the 95th percentile of this 10,000-row CSV and generate a histogram.”
+
+**What Gemini Does**:
+
+1. Python Interpreter is activated
+1. Code is generated:
+   
+   ```python
+   import pandas as pd
+   import matplotlib.pyplot as plt
+   
+   df = pd.read_csv('uploaded_data.csv')
+   p95 = df['value'].quantile(0.95)
+   print(f"95th percentile: {p95}")
+   
+   plt.figure(figsize=(10, 6))
+   plt.hist(df['value'], bins=50)
+   plt.axvline(p95, color='red', linestyle='--', label=f'P95: {p95}')
+   plt.legend()
+   plt.savefig('histogram.png')
+   ```
+1. Chart and result are presented inline
+
+### Example 2: Real-Time Research
+
+**Request**: “What are the current headlines for the 2026 Tokyo Summit?”
+
+**What Gemini Does**:
+
+1. Google Search Grounding is activated by the Router
+1. Search queries are issued for recent summit coverage
+1. Results are synthesized with source citations
+1. Comprehensive summary is delivered
+
+### Example 3: Creative Media Production
+
+**Request**: “Generate a professional hero image for a cyber-security website with a translucent blue shield over a server rack, 16:9.”
+
+**What Gemini Does**:
+
+1. Nano Banana 2 is invoked with the prompt and aspect ratio
+1. High-resolution image is generated on Google’s generative clusters
+1. Image is delivered to the user
+
+### Example 4: Multi-Tool Workflow
+
+**Request**: “Search for a pasta recipe, then write a Python script to scale ingredients for 50 people.”
+
+**What Gemini Does**:
+
+1. Google Search Grounding retrieves a recipe with ingredient list
+1. Gemini extracts structured ingredient data
+1. Python Interpreter generates a scaling script
+1. Scaled results are presented with the original recipe context
+
+### Example 5: Workspace Integration
+
+**Request**: “Summarize my last email from Sarah and add a follow-up reminder to my calendar.”
+
+**What Gemini Does**:
+
+1. Gmail Workspace Extension retrieves the email thread from Sarah
+1. Gemini summarizes the key points
+1. Google Calendar Extension creates a follow-up event
+1. Confirmation is presented to the user
+
+-----
+
+## Capability Comparison: Subscription Tiers
+
+### Usage Quotas by Tier (2026)
+
+|Resource                  |Free     |AI Pro      |AI Ultra           |
+|--------------------------|---------|------------|-------------------|
+|**Images (Nano Banana 2)**|20 / day |100 / day   |1,000 / day        |
+|**Video (Veo 3.1)**       |None     |3 / day     |5 / day            |
+|**Music (Lyria 3)**       |10 / day |50 / day    |100 / day          |
+|**Prompts**               |~30 / day|Higher limit|Highest limit      |
+|**Python Execution**      |Available|Available   |Available          |
+|**Google Search**         |Available|Available   |Available          |
+|**Workspace Extensions**  |Available|Available   |Available          |
+|**MCP Connections**       |Limited  |Available   |Up to 1,000 req/day|
+
+### Execution Sandbox Constraints (All Tiers)
+
+|Constraint                |Value                       |
+|--------------------------|----------------------------|
+|**Runtime per code block**|30 seconds                  |
+|**RAM**                   |~1 GB                       |
+|**vCPUs**                 |8                           |
+|**Network from sandbox**  |None (air-gapped)           |
+|**File persistence**      |Within session only (`/tmp`)|
+|**Session idle timeout**  |~60 minutes                 |
+
+-----
+
+## Appendix: Key Differences from Claude
+
+For reference, here are the most significant architectural and capability differences between Gemini 3 Flash and Claude (as documented in the companion reference):
+
+|Dimension                   |Claude                                                                      |Gemini 3 Flash                                           |
+|----------------------------|----------------------------------------------------------------------------|---------------------------------------------------------|
+|**Execution environment**   |Ubuntu 24 (Docker), general-purpose bash                                    |Debian-based Linux, Python-only sandbox                  |
+|**Shell access**            |Full bash shell (`bash_tool`)                                               |No general shell; Python interpreter only                |
+|**Runtime language support**|Python, JavaScript, Bash, and more                                          |Python 3.11+ only                                        |
+|**File bridge**             |`/mnt/user-data/uploads/` and `/mnt/user-data/outputs/` with `present_files`|`/tmp` only; no structured upload/output bridge          |
+|**Network from container**  |Disabled                                                                    |Air-gapped                                               |
+|**Web access**              |`web_search` + `web_fetch` (managed tools)                                  |Google Search Grounding (managed proxy)                  |
+|**Image generation**        |Not natively available                                                      |Nano Banana 2 (built-in)                                 |
+|**Video generation**        |Not available                                                               |Veo 3.1 (built-in)                                       |
+|**Music generation**        |Not available                                                               |Lyria 3 (built-in)                                       |
+|**Voice conversation**      |Not available in this interface                                             |Gemini Live (iOS/Android)                                |
+|**Camera/screen analysis**  |Not available                                                               |Multimodal Vision (mobile)                               |
+|**Browser automation**      |Claude in Chrome (Windows Desktop PC)                                       |Not available                                            |
+|**Inline visualizations**   |`show_widget` (SVG/HTML, Windows Desktop PC)                                |Not available (relies on Python plots)                   |
+|**Place/map tools**         |`places_search` + `places_map_display`                                      |Google Maps via proxy                                    |
+|**Recipe display**          |Interactive `recipe_display` widget                                         |Not available as a native widget                         |
+|**Calendar/Reminders**      |Deferred tools + MCP integrations                                           |Workspace Extensions (explicit opt-in)                   |
+|**Memory system**           |Cross-conversation memory with user edits                                   |Session-scoped only; no persistent memory across sessions|
+|**Execution time limit**    |No stated hard limit                                                        |30 seconds per code block                                |
+|**RAM**                     |Not explicitly limited in documentation                                     |~1 GB                                                    |
+|**Container idle timeout**  |Persists for conversation duration                                          |~60 minutes                                              |
+|**Tool loading model**      |Deferred tools via `tool_search`                                            |Implicit Intent Detection via Router                     |
+|**MCP support**             |Server-side (Google Calendar, Gmail)                                        |User-authorized servers (local or remote)                |
