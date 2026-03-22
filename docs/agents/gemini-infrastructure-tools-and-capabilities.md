@@ -87,7 +87,7 @@ If you want to preserve work across sessions:
 
 ## Complete Tools Reference
 
-### Tier 1: Analytical and Technical Tools
+### Analytical and Technical Tools
 
 These tools handle computation, code execution, and real-time information retrieval.
 
@@ -132,7 +132,7 @@ These tools handle computation, code execution, and real-time information retrie
 
 -----
 
-### Tier 2: Generative Media Tools
+### Generative Media Tools
 
 These are specialized models for creating images, video, and music — distinct from Gemini’s text reasoning.
 
@@ -151,7 +151,7 @@ These are specialized models for creating images, video, and music — distinct 
 - **Limitations**:
   - Cannot generate identifiable real-world private individuals
   - Restricted generation of copyrighted characters in certain contexts
-  - Subject to daily usage caps (see Tier comparison below)
+  - Subject to daily usage caps (see Subscription Tiers section below)
 - **Permission**: Implicitly enabled for subscribers; subject to safety filters
 - **Routing**: Connects to specialized generative clusters within Google’s infrastructure (not the public internet)
 - **Example**: “Generate a professional hero image for a cyber-security website featuring a translucent blue shield over a server rack, 16:9 ratio.”
@@ -197,7 +197,7 @@ These are specialized models for creating images, video, and music — distinct 
 
 -----
 
-### Tier 3: Interactive and Contextual Tools
+### Interactive and Contextual Tools
 
 These tools bridge the gap between the AI and the user’s physical or digital world.
 
@@ -234,7 +234,7 @@ These tools bridge the gap between the AI and the user’s physical or digital w
 
 -----
 
-### Tier 4: Workspace and Personal Data Tools
+### Workspace and Personal Data Tools
 
 These tools access the user’s Google ecosystem and require explicit opt-in.
 
@@ -281,7 +281,7 @@ These tools access the user’s Google ecosystem and require explicit opt-in.
 
 -----
 
-### Tier 5: Live Information and Utility Tools
+### Live Information and Utility Tools
 
 These tools provide real-time data from Google’s service ecosystem.
 
@@ -318,7 +318,7 @@ These tools provide real-time data from Google’s service ecosystem.
 
 -----
 
-### Tier 6: Meta-Tools and Discovery
+### Meta-Tools and Discovery
 
 #### Model Context Protocol (MCP)
 
