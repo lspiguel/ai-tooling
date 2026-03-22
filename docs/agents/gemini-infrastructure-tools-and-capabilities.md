@@ -684,34 +684,3 @@ Security is managed through a “Defense in Depth” strategy:
 |**Network from sandbox**  |None (air-gapped)           |
 |**File persistence**      |Within session only (`/tmp`)|
 |**Session idle timeout**  |~60 minutes                 |
-
------
-
-## Appendix: Key Differences from Claude
-
-For reference, here are the most significant architectural and capability differences between Gemini 3 Flash and Claude (as documented in the companion reference):
-
-|Dimension                   |Claude                                                                      |Gemini 3 Flash                                           |
-|----------------------------|----------------------------------------------------------------------------|---------------------------------------------------------|
-|**Execution environment**   |Ubuntu 24 (Docker), general-purpose bash                                    |Debian-based Linux, Python-only sandbox                  |
-|**Shell access**            |Full bash shell (`bash_tool`)                                               |No general shell; Python interpreter only                |
-|**Runtime language support**|Python, JavaScript, Bash, and more                                          |Python 3.11+ only                                        |
-|**File bridge**             |`/mnt/user-data/uploads/` and `/mnt/user-data/outputs/` with `present_files`|`/tmp` only; no structured upload/output bridge          |
-|**Network from container**  |Disabled                                                                    |Air-gapped                                               |
-|**Web access**              |`web_search` + `web_fetch` (managed tools)                                  |Google Search Grounding (managed proxy)                  |
-|**Image generation**        |Not natively available                                                      |Nano Banana 2 (built-in)                                 |
-|**Video generation**        |Not available                                                               |Veo 3.1 (built-in)                                       |
-|**Music generation**        |Not available                                                               |Lyria 3 (built-in)                                       |
-|**Voice conversation**      |Not available in this interface                                             |Gemini Live (iOS/Android)                                |
-|**Camera/screen analysis**  |Not available                                                               |Multimodal Vision (mobile)                               |
-|**Browser automation**      |Claude in Chrome (Windows Desktop PC)                                       |Not available                                            |
-|**Inline visualizations**   |`show_widget` (SVG/HTML, Windows Desktop PC)                                |Not available (relies on Python plots)                   |
-|**Place/map tools**         |`places_search` + `places_map_display`                                      |Google Maps via proxy                                    |
-|**Recipe display**          |Interactive `recipe_display` widget                                         |Not available as a native widget                         |
-|**Calendar/Reminders**      |Deferred tools + MCP integrations                                           |Workspace Extensions (explicit opt-in)                   |
-|**Memory system**           |Cross-conversation memory with user edits                                   |Session-scoped only; no persistent memory across sessions|
-|**Execution time limit**    |No stated hard limit                                                        |30 seconds per code block                                |
-|**RAM**                     |Not explicitly limited in documentation                                     |~1 GB                                                    |
-|**Container idle timeout**  |Persists for conversation duration                                          |~60 minutes                                              |
-|**Tool loading model**      |Deferred tools via `tool_search`                                            |Implicit Intent Detection via Router                     |
-|**MCP support**             |Server-side (Google Calendar, Gmail)                                        |User-authorized servers (local or remote)                |
