@@ -473,45 +473,47 @@ Gemini’s process:
 
 ### What Gemini CANNOT Do
 
-**Network Limitations (Execution Sandbox):**
+Gemini’s limitations fall into three distinct categories: technical “walls” (hard architectural constraints), safety “guardrails” (policy-enforced blocks), and user-controlled “gates” (locked until the user grants access).
 
-- Cannot access the internet from the Python sandbox (air-gapped)
-- Cannot establish external connections or API calls from within the container
-- Cannot download software or packages from the web at runtime
-- `curl`, `wget`, and Python `requests` will all fail in the sandbox
+#### 1. Technically Impossible (Architectural Walls)
 
-**Execution Limitations:**
+These are hard constraints of Gemini’s current architecture that cannot be bypassed regardless of the prompt.
 
-- 30-second runtime limit per code block
-- 1 GB RAM cap in the execution sandbox
-- Only Python 3.11+ is available (no Bash scripting environment, no Node.js)
-- No equivalent of a general-purpose `bash_tool` for arbitrary shell commands
+- **Air-Gapped Sandbox**: While Gemini can search the web using a managed tool, the Python execution environment is strictly air-gapped. It cannot ping a server, curl an API, or download a library at runtime from within a script. `curl`, `wget`, and Python `requests` will all fail.
+- **No Real-Time Physical World Action**: Gemini has no physical presence. It cannot order a pizza, buy a stock, or send a physical package. It can only prepare data or draft requests for the user to execute.
+- **No Infinite Memory**: While Gemini has a large context window (up to 2M tokens in some tiers), it eventually loses access to the beginning of very long conversations. There is no permanent, lifelong memory of every interaction unless the user explicitly saves information.
+- **Non-Deterministic Output**: Gemini cannot guarantee the exact same word-for-word response twice. Its nature is probabilistic, not a rigid lookup.
+- **Execution Constraints**: 30-second runtime limit per code block, ~1 GB RAM cap, Python 3.11+ only (no Bash scripting environment, no Node.js, no general-purpose `bash_tool`).
+- **File System Constraints**: Only `/tmp` is guaranteed for user-generated files; changes to the root filesystem may be discarded between execution calls. No file presentation/download mechanism equivalent to Claude’s `present_files` tool.
+- **Persistence Constraints**: Session container is destroyed after ~60 minutes idle or on manual reset. No data carries over to new chat threads.
 
-**File System Limitations:**
+#### 2. Disallowed by Policy (Safety Guardrails)
 
-- Cannot modify files on the user’s local device directly
-- Only `/tmp` is guaranteed for user-generated files within the sandbox
-- Changes to the root filesystem may be discarded between execution calls
-- No file presentation/download mechanism equivalent to Claude’s `present_files` tool (relies on inline display or user-initiated download)
+These are things Gemini is technically capable of but that a secondary “Safety Layer” will block to prevent harm.
 
-**Persistence Limitations:**
+- **Generating Malicious Code**: Gemini will not write functional malware, ransomware, or scripts designed to exploit specific vulnerabilities (e.g., SQL injection attacks).
+- **PII Exfiltration**: Gemini is programmed to avoid generating or extracting Personally Identifiable Information (social security numbers, private home addresses, credit card details), even if they appear in a dataset being analyzed.
+- **Harmful Content**: Gemini cannot generate sexually explicit material, promote self-harm, or provide instructions for illegal acts (e.g., building prohibited weapons).
+- **Professional Advice**: Gemini can provide information and summarize documents but is prohibited from giving professional advice — it cannot diagnose a disease, prescribe legal action for a specific lawsuit, or give a definitive “Buy” signal on a stock.
+- **Image Safety**: Gemini cannot generate identifiable real-world private individuals or copyrighted characters in restricted contexts.
 
-- Cannot “check back later” or run tasks while the user is offline
-- Session container is destroyed after ~60 minutes idle or manual reset
-- No data carries over to new chat threads
+#### 3. Requires User Action or Permission (Gates)
 
-**Device Limitations:**
+These are locked capabilities that only the user can activate.
 
-- Cannot install software on the user’s device
-- Cannot modify device settings
-- Cannot access other apps or their data (except through enabled Workspace Extensions)
+- **Accessing Workspace Data**: Gemini cannot see Gmail, Calendar, or Drive files by default. The user must explicitly enable “Google Workspace Extensions” and, in some cases, grant per-document read permission.
+- **Local File System Access**: Gemini cannot write or delete files on the user’s actual computer. It can only create them in the cloud sandbox; the user must then download or save them.
+- **Persistent Agent Tasks**: Gemini cannot “go away and work for 3 hours” then message the user when done. It operates on a request-response basis. For long-running agentic tasks, the user must remain active in the session or use a developer-tier API.
+- **Third-Party Integrations**: To interact with services like GitHub, Slack, or Jira, the user must authorize a specific Extension or MCP Server and provide the necessary API keys.
+- **Device-Level Access**: Gemini cannot install software on the user’s device, modify device settings, or access other apps or their data (except through enabled Workspace Extensions).
 
-**Policy Limitations:**
+#### Constraint Summary
 
-- Cannot generate harmful, illegal, or sexually explicit content
-- Cannot provide legally binding advice or medical diagnoses
-- Cannot generate identifiable real-world private individuals in images
-- Cannot bypass safety filters regardless of prompt framing
+|Category      |The “Wall”    |Example Blocked Request                     |
+|--------------|--------------|--------------------------------------------|
+|**Technical** |Architecture  |“Download this file using a Python script.” |
+|**Policy**    |Safety Filters|“Write a bypass for this password prompt.”  |
+|**Permission**|User Control  |“Check my emails for a flight confirmation.”|
 
 ### Permission Model
 
