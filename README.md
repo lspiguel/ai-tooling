@@ -17,7 +17,17 @@ A curated repository of AI workflows, prompts, configurations, and references or
 
 ## AI Tool Taxonomy
 
-Tools are organized by their **deployment context and execution model** — that is, where the AI runs, how it integrates into a workflow, and what kind of actions it can take. This is distinct from autonomy-level classifications (chatbot → copilot → agent → digital employee)[^1], which describe *how much* an AI can do, not *where or how* it operates. A complementary deployment-context breakdown for coding tools specifically is maintained by Artificial Analysis.[^2]
+Tools are organized by their **deployment context and execution model** — that is, where the AI runs, how it integrates into a workflow, how it is context aware, and what kind of actions it can take. This is distinct from autonomy-level classifications (chatbot → copilot → agent → digital employee)[^1], which describe *how much* an AI can do, not *where or how* it operates. An example of this type of comparison for AI tools is maintained by Artificial Analysis[^2].
+
+In the specific case of consulting, project and development work the **main issue for AI tooling is how to provide context**. AI is not useful if it is not aware of things like:
+- Phase within a plan (are we planning and no work has been done yet? are we in maintenance mode and we have a multi-year user base? somewhere in the middle?)
+- What's already built (are there components already in place? what columns does this table have? artifacts already built)
+- Overall design (which can be at the Enterprise level, module level, and specific design patterns to be used)
+- Plans in place (epics, features, user stories, documentation that describes from a functional perspective what has been done, what's planned to be built and when)
+- Existing constraints (which tools can be used, security restrictions, licensing, budget, capacity;  is there a code freeze?)
+- Tools (including development, design, project management and other tools)
+
+This **context** is the grounding that an AI needs to provide answers and build artifacts that work. Tools are then classified by how they can operate in context, and the actions that they can carry out.
 
 ### 1. Embedded Coding Assistants
 
