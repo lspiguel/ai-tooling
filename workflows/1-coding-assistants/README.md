@@ -1,8 +1,8 @@
-# Embedded Coding Assistants — D365 CE Workflows
+# Coding Assistants & Agentic Environments — D365 CE Workflows
 
-AI living inside the development environment (VS Code, Visual Studio). Primarily GitHub Copilot Chat with inline suggestions and optional agentic mode.
+AI tools integrated into a developer's working environment — either embedded in an existing IDE/editor or operating as a dedicated AI-first IDE or CLI agent. Covers the full spectrum from inline suggestion and chat to fully autonomous multi-file, multi-step task execution with build and test feedback loops.
 
-**Primary tools:** GitHub Copilot Chat (VS Code), GitHub Copilot (Visual Studio)
+**Primary tools:** GitHub Copilot Chat (VS Code), GitHub Copilot (Visual Studio), Claude Code (CLI), Cursor, Windsurf, Aider
 
 ---
 
@@ -504,6 +504,23 @@ for the current Power Platform version.
 ```
 Are there any tables, fields, flows, or web resources in this solution
 that appear to have no references in forms, views, plugins, or other flows?
+```
+
+---
+
+## CI/CD and Automation
+
+### AI-Powered Code Review (GitHub Actions)
+
+**AI:** Claude Code / Agentic CLI
+**Concept:** Integrate a GitHub Actions workflow that runs on Pull Requests and uses an AI API call to review plugin or Azure Function changes against internal best practices before a human reviewer picks up the PR.
+
+**Generate the action:**
+```
+Create a GitHub Actions workflow that triggers on pull requests targeting main.
+For each changed .cs file, call the Anthropic API to review the code
+against these rules: [paste rules from AGENTS.md or best-practices.md].
+Post the findings as a PR comment. Use a repository secret for the API key.
 ```
 
 ---
