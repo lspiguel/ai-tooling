@@ -1,5 +1,5 @@
-$inputPath = "c:\Users\lspig\Git-Home\CS-Group-Context\13535 - Add market type mapping and logic for customer creation. Power Platform part\08584257780208540590313714654CU00.json"
-$outputPath = "c:\Users\lspig\Git-Home\CS-Group-Context\13535 - Add market type mapping and logic for customer creation. Power Platform part\08584257780208540590313714654CU00.zip"
+$inputPath = "in.json"
+$outputPath = "out.zip"
 
 $json = Get-Content -Raw $inputPath | ConvertFrom-Json
 
