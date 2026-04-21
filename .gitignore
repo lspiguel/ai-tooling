@@ -1,0 +1,11 @@
+# AI tooling configuration
+.claude/
+.cursor/
+.aider/
+.aider.tags.cache.v3/
+.copilot/
+.continue/
+.codeium/
+.supermaven/
+.tabnine/
+.windsurf/
