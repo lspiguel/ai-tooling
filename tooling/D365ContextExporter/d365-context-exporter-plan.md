@@ -228,13 +228,13 @@ The following artifacts will be built. Each row maps to a concrete deliverable.
 | 21 | `filters.py` | Python module | `/python/` | Shared Jinja2 filters |
 | 22 | `requirements.txt` | Python deps | `/python/` | Pinned versions |
 | 23 | `context-exporter.schema.json` | JSON Schema | `/schema/` | IDE IntelliSense for project configs |
-| 24 | `entity-dictionary.j2` | Jinja2 | `Context-Exporter/config/transformations/` | See catalog below |
-| 25 | `security-model.j2` | Jinja2 | `Context-Exporter/config/transformations/` | See catalog below |
-| 26 | `optionsets.j2` | Jinja2 | `Context-Exporter/config/transformations/` | See catalog below |
-| 27 | `forms-and-views.j2` | Jinja2 | `Context-Exporter/config/transformations/` | See catalog below |
-| 28 | `solution-inventory.j2` | Jinja2 | `Context-Exporter/config/transformations/` | See catalog below |
-| 28 | `config/queries/*.fetch.xml` | FetchXML | `Context-Exporter/config/queries/` | One per query, shared |
-| 29 | `Sample.context-exporter-config.json` | JSON | `Context-Exporter/config/` | Sample project config |
+| 24 | `entity-dictionary.j2` | Jinja2 | `config/transformations/` (solution root) | See catalog below |
+| 25 | `security-model.j2` | Jinja2 | `config/transformations/` (solution root) | See catalog below |
+| 26 | `optionsets.j2` | Jinja2 | `config/transformations/` (solution root) | See catalog below |
+| 27 | `forms-and-views.j2` | Jinja2 | `config/transformations/` (solution root) | See catalog below |
+| 28 | `solution-inventory.j2` | Jinja2 | `config/transformations/` (solution root) | See catalog below |
+| 28 | `config/queries/*.fetch.xml` | FetchXML | `config/queries/` (solution root) | One per query, shared |
+| 29 | `Sample.context-exporter-config.json` | JSON | `config/` (solution root) | Sample project config |
 | 30 | `README.md` | Markdown | repo root | User + developer docs |
 | 31 | `D365ContextExporter.nuspec` | NuGet spec | project root | For XrmToolBox Tool Library listing |
 | 32 | Unit test project | C# project | `/Tests/D365ContextExporter.Tests/` | Moq-based |
@@ -336,8 +336,22 @@ Practitioners add new transformations by dropping a `.j2` file into `config/tran
 Placed into the repository following the standard layout:
 
 ```
-/Assemblies/XrmToolboxPlugins/D365ContextExporter/
+/tooling/D365ContextExporter/
   D365ContextExporter.sln
+  config/                               ← sample base directory; solution root doubles as the Context-Exporter dir
+    Sample.context-exporter-config.json
+    queries/
+      entities-attributes.fetch.xml
+      security-roles.fetch.xml
+      optionsets-global.fetch.xml
+    transformations/
+      entity-dictionary.j2
+      security-model.j2
+      optionsets.j2
+      forms-and-views.j2
+      solution-inventory.j2
+  output/                               ← created on first run
+  runs/                                 ← created on first run
   D365ContextExporter/
     D365ContextExporter.csproj
     ContextExporterPluginControl.cs
@@ -373,21 +387,6 @@ Placed into the repository following the standard layout:
       transform.py
       filters.py
       requirements.txt
-    Context-Exporter/                     ← default base directory, ships as sample
-      config/
-        Sample.context-exporter-config.json
-        queries/
-          entities-attributes.fetch.xml
-          security-roles.fetch.xml
-          optionsets-global.fetch.xml
-        transformations/
-          entity-dictionary.j2
-          security-model.j2
-          optionsets.j2
-          forms-and-views.j2
-          solution-inventory.j2
-      output/                             ← created on first run
-      runs/                               ← created on first run
     schema/
       context-exporter.schema.json
     stylecop.json
@@ -401,7 +400,7 @@ Placed into the repository following the standard layout:
   d365contextexporter-build.yml
 ```
 
-The `python/`, `Context-Exporter/`, and `schema/` folders are packed into the XrmToolBox plugin's output directory at build time via MSBuild `CopyToOutputDirectory` items so they travel with the assembly.
+The `python/` and `schema/` folders (inside the C# project) are packed into the XrmToolBox plugin's output directory at build time via MSBuild `CopyToOutputDirectory` items so they travel with the assembly. The `config/`, `output/`, and `runs/` folders live at the solution root and are not shipped with the plugin — they are the developer's own Context-Exporter working directory, checked in as the sample/default configuration.
 
 ## Implementation Phases
 
@@ -461,7 +460,7 @@ Following the project's testing conventions (Moq-based, no Fakes frameworks):
 
 - Built as a signed NuGet package following the XrmToolBox Tool Library convention.
 - The `.nuspec` tags must include `XrmToolBox` to appear in the Tool Library.
-- Because the plugin bundles Python helpers and a sample Context-Exporter directory, the nuspec explicitly includes `python/**`, `Context-Exporter/**`, `schema/**` as `content` files. These are copied alongside the assembly when XrmToolBox extracts the plugin package.
+- Because the plugin bundles Python helpers and a schema directory, the nuspec explicitly includes `python/**` and `schema/**` as `content` files. These are copied alongside the assembly when XrmToolBox extracts the plugin package. The `config/` sample directory lives at the solution root and is not shipped in the nupkg — users author their own configs locally.
 - Assembly version, file version, and NuGet version are kept in sync via the ADO `Assembly Info` task so the plugin passes the Tool Library validation criteria.
 - ADO pipeline (`/Pipeline/d365contextexporter-build.yml`) modeled on the standard Azure Function build template but targeting pack rather than deploy.
 

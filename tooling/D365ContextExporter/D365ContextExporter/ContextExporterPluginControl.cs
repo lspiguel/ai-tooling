@@ -18,6 +18,7 @@ namespace D365ContextExporter
     public partial class ContextExporterPluginControl : PluginControlBase
     {
         private CancellationTokenSource? _cts;
+        private bool _initialized;
 
         /// <summary>Initialises a new instance of <see cref="ContextExporterPluginControl"/>.</summary>
         public ContextExporterPluginControl()
@@ -41,6 +42,7 @@ namespace D365ContextExporter
         private void ContextExporterPluginControl_Load(object sender, EventArgs e)
         {
             dirPicker.LoadSettings();
+            _initialized = true;
             if (!string.IsNullOrEmpty(dirPicker.SelectedDirectory))
             {
                 projectPicker.LoadProjects(dirPicker.SelectedDirectory);
@@ -49,7 +51,7 @@ namespace D365ContextExporter
 
         private void ContextExporterPluginControl_VisibleChanged(object sender, EventArgs e)
         {
-            if (!Visible)
+            if (_initialized && !Visible)
             {
                 dirPicker.SaveSettings();
             }

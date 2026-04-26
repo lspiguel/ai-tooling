@@ -28,6 +28,17 @@ Create the following directory tree. All paths are relative to the repo root.
 ```
 /tooling/D365ContextExporter/
   D365ContextExporter.sln
+  config/                             ← sample base directory (solution root = Context-Exporter working dir)
+    Sample.context-exporter-config.json
+    queries/
+      security-roles.fetch.xml
+      solutions.fetch.xml
+    transformations/
+      entity-dictionary.j2
+      forms-and-views.j2
+      optionsets.j2
+      security-model.j2
+      solution-inventory.j2
   D365ContextExporter/
     D365ContextExporter.csproj
     ContextExporterPluginControl.cs
@@ -60,7 +71,7 @@ Create the following directory tree. All paths are relative to the repo root.
       PathResolverTests.cs
 ```
 
-The `Utils/`, `Queries/`, `python/`, `Context-Exporter/`, and `schema/` folders are **not created in Phase 1** — they are stubs or out-of-scope for this sprint.
+The `Utils/`, `Queries/`, `python/`, and `schema/` folders are **not created in Phase 1** — they are stubs or out-of-scope for this sprint. The `config/` folder at the solution root is already in place (moved from `sample-config/` during Phase 1).
 
 ---
 
@@ -661,11 +672,8 @@ Perform these steps manually before closing the Phase 1 PR:
    - On next restart of the plugin (close and reopen without restarting XrmToolBox) the path is restored from settings.
 
 6. **Project list populates:**
-   - Create a minimal `config/` subfolder with one `.context-exporter-config.json` file:
-     ```json
-     { "project": "PhaseOneTest", "version": "1.0.0", "transformation": "entity-dictionary.j2", "queries": [] }
-     ```
-   - The project combo box shows "PhaseOneTest".
+   - Point the plugin at the solution root (`tooling/D365ContextExporter/`) as the base directory — the `config/` folder with `Sample.context-exporter-config.json` is already there.
+   - The project combo box shows "Sample".
 
 7. **Connection and stub run:**
    - Connect to any Dataverse org in XrmToolBox.
