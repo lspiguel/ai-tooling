@@ -1,26 +1,28 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
-using D365ContextExporter.Orchestration;
-using D365ContextExporter.Models;
-using D365ContextExporter.UI;
-
-using McTools.Xrm.Connection;
-
-using Microsoft.Xrm.Sdk;
-
-using XrmToolBox.Extensibility;
+// <copyright file="ContextExporterPluginControl.cs" company="Luciano Spiguel">
+// Copyright (c) Luciano Spiguel. All Rights Reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+// </copyright>
 
 namespace D365ContextExporter
 {
+    using System;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using D365ContextExporter.Models;
+    using D365ContextExporter.Orchestration;
+    using McTools.Xrm.Connection;
+    using Microsoft.Xrm.Sdk;
+    using XrmToolBox.Extensibility;
+
     /// <summary>Root plugin control hosted by XrmToolBox.</summary>
     public partial class ContextExporterPluginControl : PluginControlBase
     {
         private CancellationTokenSource? _cts;
         private bool _initialized;
 
-        /// <summary>Initialises a new instance of <see cref="ContextExporterPluginControl"/>.</summary>
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ContextExporterPluginControl"/> class.Initialises a new instance of <see cref="ContextExporterPluginControl"/>.
+        /// </summary>
         public ContextExporterPluginControl()
         {
             InitializeComponent();

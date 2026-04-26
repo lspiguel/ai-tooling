@@ -1,11 +1,16 @@
-using System;
-using System.IO;
-using System.Windows.Forms;
-
-using D365ContextExporter.Properties;
+// <copyright file="BaseDirectoryPickerControl.cs" company="Luciano Spiguel">
+// Copyright (c) Luciano Spiguel. All Rights Reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+// </copyright>
 
 namespace D365ContextExporter.UI
 {
+    using System;
+    using System.IO;
+    using System.Windows.Forms;
+
+    using D365ContextExporter.Properties;
+
     /// <summary>
     /// A label, a read-only text box, and a Browse button that lets the user pick
     /// the Context-Exporter base directory. Persists the selection across sessions.
@@ -18,7 +23,9 @@ namespace D365ContextExporter.UI
         /// <summary>Gets the currently selected base directory, or an empty string when none is set.</summary>
         public string SelectedDirectory { get; private set; } = string.Empty;
 
-        /// <summary>Initialises a new instance of <see cref="BaseDirectoryPickerControl"/>.</summary>
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BaseDirectoryPickerControl"/> class.Initialises a new instance of <see cref="BaseDirectoryPickerControl"/>.
+        /// </summary>
         public BaseDirectoryPickerControl()
         {
             InitializeComponent();

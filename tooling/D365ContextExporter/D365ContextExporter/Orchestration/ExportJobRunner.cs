@@ -1,19 +1,26 @@
-using System;
-using System.Threading;
-
-using D365ContextExporter.Models;
-
-using Microsoft.Xrm.Sdk;
+// <copyright file="ExportJobRunner.cs" company="Luciano Spiguel">
+// Copyright (c) Luciano Spiguel. All Rights Reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+// </copyright>
 
 namespace D365ContextExporter.Orchestration
 {
+    using System;
+    using System.Threading;
+
+    using D365ContextExporter.Models;
+
+    using Microsoft.Xrm.Sdk;
+
     /// <summary>Orchestrates a single export run. Phase 1: stub that logs the loaded config.</summary>
     internal sealed class ExportJobRunner
     {
         private readonly IOrganizationService _service;
         private readonly Action<string> _log;
 
-        /// <summary>Initialises a new runner bound to the given Dataverse connection and log sink.</summary>
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ExportJobRunner"/> class.Initialises a new runner bound to the given Dataverse connection and log sink.
+        /// </summary>
         /// <param name="service">The connected Dataverse service (not used in Phase 1).</param>
         /// <param name="log">Delegate called for each log line; must be thread-safe.</param>
         public ExportJobRunner(IOrganizationService service, Action<string> log)

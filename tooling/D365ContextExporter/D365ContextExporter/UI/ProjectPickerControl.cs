@@ -1,11 +1,16 @@
-using System;
-using System.Windows.Forms;
-
-using D365ContextExporter.Helpers;
-using D365ContextExporter.Models;
+// <copyright file="ProjectPickerControl.cs" company="Luciano Spiguel">
+// Copyright (c) Luciano Spiguel. All Rights Reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+// </copyright>
 
 namespace D365ContextExporter.UI
 {
+    using System;
+    using System.Windows.Forms;
+
+    using D365ContextExporter.Helpers;
+    using D365ContextExporter.Models;
+
     /// <summary>
     /// A label and a combo box that lists available projects discovered under a base directory.
     /// Raises <see cref="ProjectSelected"/> when the user picks a project.
@@ -20,7 +25,9 @@ namespace D365ContextExporter.UI
         /// <summary>Gets the currently loaded export job, or <see langword="null"/> when none is selected.</summary>
         public ExportJob? SelectedJob { get; private set; }
 
-        /// <summary>Initialises a new instance of <see cref="ProjectPickerControl"/>.</summary>
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ProjectPickerControl"/> class.Initialises a new instance of <see cref="ProjectPickerControl"/>.
+        /// </summary>
         public ProjectPickerControl()
         {
             InitializeComponent();
