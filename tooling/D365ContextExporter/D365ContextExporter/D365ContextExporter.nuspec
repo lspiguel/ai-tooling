@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>D365ContextExporter</id>
+    <version>$version$</version>
+    <title>D365 CE Context Exporter</title>
+    <authors>YourName</authors>
+    <owners>YourName</owners>
+    <description>
+      XrmToolBox plugin that executes FetchXML and Web API queries against a Dataverse environment,
+      serialises results to an intermediate JSON file, and invokes a Python/Jinja2 post-processor
+      to produce Markdown grounding files for non-agentic AI assistants.
+    </description>
+    <tags>XrmToolBox Documentation AI Markdown D365 Dataverse Grounding</tags>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectUrl>https://github.com/YourOrg/YourRepo</projectUrl>
+  </metadata>
+  <files>
+    <file src="bin\Release\net48\D365ContextExporter.dll" target="lib\net48" />
+    <!-- python/, Context-Exporter/, schema/ added in Phase 3 -->
+  </files>
+</package>

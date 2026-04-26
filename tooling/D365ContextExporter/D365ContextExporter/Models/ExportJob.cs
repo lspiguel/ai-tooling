@@ -1,0 +1,56 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+
+using Newtonsoft.Json;
+
+namespace D365ContextExporter.Models
+{
+    /// <summary>Represents a loaded project configuration file.</summary>
+    public sealed class ExportJob
+    {
+        /// <summary>Gets or sets the project name.</summary>
+        [JsonProperty("project")]
+        public string Project { get; set; } = string.Empty;
+
+        /// <summary>Gets or sets the schema version of this config file.</summary>
+        [JsonProperty("version")]
+        public string Version { get; set; } = "1.0.0";
+
+        /// <summary>Gets or sets the Jinja2 template filename used to transform query results.</summary>
+        [JsonProperty("transformation")]
+        public string Transformation { get; set; } = string.Empty;
+
+        /// <summary>Gets or sets the list of queries to execute.</summary>
+        [JsonProperty("queries")]
+        public List<QueryDefinition> Queries { get; set; } = new List<QueryDefinition>();
+
+        /// <summary>Gets or sets the Python runtime settings.</summary>
+        [JsonProperty("python")]
+        public PythonSettings Python { get; set; } = new PythonSettings();
+
+        /// <summary>Gets or sets key/value pairs injected as front-matter into the output document.</summary>
+        [JsonProperty("frontMatter")]
+        public Dictionary<string, string> FrontMatter { get; set; } = new Dictionary<string, string>();
+
+        /// <summary>Gets or sets the full path to the config file from which this job was loaded.</summary>
+        [JsonIgnore]
+        public string ConfigFilePath { get; set; } = string.Empty;
+
+        /// <summary>Loads and deserialises an export job from a JSON config file.</summary>
+        /// <param name="configFilePath">Absolute path to the <c>*.context-exporter-config.json</c> file.</param>
+        /// <returns>The deserialised <see cref="ExportJob"/> with <see cref="ConfigFilePath"/> set.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the file deserialises to null.</exception>
+        public static ExportJob Load(string configFilePath)
+        {
+            var json = File.ReadAllText(configFilePath);
+            var job = JsonConvert.DeserializeObject<ExportJob>(json)
+                      ?? throw new InvalidOperationException($"Failed to deserialise {configFilePath}");
+            job.ConfigFilePath = configFilePath;
+            return job;
+        }
+
+        /// <inheritdoc/>
+        public override string ToString() => $"{Project} v{Version} ({Queries.Count} queries)";
+    }
+}
