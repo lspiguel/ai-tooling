@@ -83,17 +83,35 @@ Key properties for the main project: `TargetFramework=net48`, `UseWindowsForms=t
 
 Test project targets `net48` as well. Packages: `NUnit`, `NUnit3TestAdapter`, `Microsoft.NET.Test.Sdk`, `Moq`.
 
+### 3.1 Debugging with XrmToolBox Source
+
+To enable full step-through debugging (including XrmToolBox internals), the XrmToolBox source projects are added to `D365ContextExporter.sln` rather than maintaining a separate solution.
+
+**Projects added to the solution** (from `d:\Git\XrmToolBox\`):
+
+- `XrmToolBox\XrmToolBox.csproj` — the host application; set as the **startup project**
+- `XrmToolBox.Extensibility\XrmToolBox.Extensibility.csproj`
+- `XrmToolBox.AutoUpdater\XrmToolBox.AutoUpdater.csproj`
+- `XrmToolBox.ToolLibrary\XrmToolBox.ToolLibrary.csproj`
+
+These projects are not part of the deliverable — they are local developer tooling only and should not be committed to the solution file if the repo is shared. Use a local `.sln` override or a developer-specific solution file if needed.
+
+**Plugin deployment via post-build event** in `D365ContextExporter.csproj`:
+
+```
+xcopy /y "$(TargetDir)$(TargetFileName)" "$(SolutionDir)..\..\XrmToolBox\XrmToolBox\bin\$(Configuration)\Plugins\"
+xcopy /y "$(TargetDir)$(TargetName).pdb"  "$(SolutionDir)..\..\XrmToolBox\XrmToolBox\bin\$(Configuration)\Plugins\"
+```
+
+This copies the plugin DLL and PDB into XrmToolBox's `Plugins\` output folder on every build. The PDB is required for breakpoints to resolve in the plugin code.
+
+**Project dependency:** In *Solution → Project Dependencies*, set `XrmToolBox` to depend on `D365ContextExporter` so the plugin is always built before the host launches.
+
+**XrmToolBox post-build fix:** The XrmToolBox project's post-build event originally used `$(SolutionDir)Commands\*.Command.xml`, which breaks when loaded from a different solution. This was changed to use `$(MSBuildProjectDirectory)\..\Commands\*.Command.xml` so the path is always relative to the XrmToolBox project file regardless of which solution hosts it.
+
 ---
 
-## 4. StyleCop Configuration
-
-`stylecop.json` at the plugin project root. Settings: XML doc headers off, `documentInterfaces` off, `usingDirectivesPlacement` outside namespace, Hungarian prefixes disallowed.
-
-Zero StyleCop warnings is the bar for Phase 1 — no `#pragma` suppressions without an explanatory comment.
-
----
-
-## 5. Models
+## 4. Models
 
 Plain C# DTOs in `Models/`. No business logic. Deserialised from `*.context-exporter-config.json` by `ExportJob.Load(path)`.
 
@@ -104,9 +122,9 @@ Plain C# DTOs in `Models/`. No business logic. Deserialised from `*.context-expo
 
 ---
 
-## 6. Helpers
+## 5. Helpers
 
-### 6.1 `Helpers/PathResolver.cs`
+### 5.1 `Helpers/PathResolver.cs`
 
 Static helper used by `ProjectPickerControl` to locate `config/*.context-exporter-config.json` and by the runner to resolve query/template paths.
 
@@ -114,39 +132,39 @@ Static helper used by `ProjectPickerControl` to locate `config/*.context-exporte
 - `DiscoverProjectConfigs(baseDir)` — enumerates `*.context-exporter-config.json` under `<baseDir>/config/`; returns empty if the directory does not exist.
 - `ProjectNameFromPath(configFilePath)` — strips the `.context-exporter-config` suffix from the filename to yield the display name.
 
-Unit tests for this class are written in the test project (see §10).
+Unit tests for this class are written in the test project (see §9).
 
 ---
 
-## 7. Orchestration Layer (Stub)
+## 6. Orchestration Layer (Stub)
 
-### 7.1 `Orchestration/ExportJobRunner.cs`
+### 6.1 `Orchestration/ExportJobRunner.cs`
 
 Stub in Phase 1 — logs the loaded config without executing any queries. Constructor takes `IOrganizationService` and an `Action<string>` log delegate. `Run(job, baseDir, cancellationToken)` logs the project name, config path, and each query definition, then writes a completion line. Full implementation deferred to Phase 2.
 
 ---
 
-## 8. UI Controls
+## 7. UI Controls
 
 All controls are WinForms `UserControl` subclasses. Phase 1 layouts are functional but not polished.
 
-### 8.1 `UI/BaseDirectoryPickerControl`
+### 7.1 `UI/BaseDirectoryPickerControl`
 
 Read-only `TextBox` + "Browse…" `Button` in a `TableLayoutPanel`. Clicking Browse opens a `FolderBrowserDialog`; on confirmation it updates `SelectedDirectory`, persists to `Settings.Default.BaseDirectory`, and fires `DirectoryChanged`. `LoadSettings()` / `SaveSettings()` restore and persist the path between sessions.
 
-### 8.2 `UI/ProjectPickerControl`
+### 7.2 `UI/ProjectPickerControl`
 
 `ComboBox` (`DropDownList`) + "↺" refresh `Button`. `LoadProjects(baseDir)` calls `PathResolver.DiscoverProjectConfigs`, populates the combo with display names (file path stored as `Tag`). On selection change, calls `ExportJob.Load(path)`, sets `SelectedJob`, and fires `ProjectSelected`. JSON errors clear the selection and show a `MessageBox`.
 
-### 8.3 `UI/ExportProgressControl` (stub shell)
+### 7.3 `UI/ExportProgressControl` (stub shell)
 
 Single `RichTextBox rtbLog` docked to `Fill`, read-only, Consolas 9 pt. Exposes `AppendLog(message)` and `ClearLog()`. Progress bars and cancel button deferred to Phase 3.
 
 ---
 
-## 9. Main Plugin Control
+## 8. Main Plugin Control
 
-### 9.1 `ContextExporterPluginControl.cs`
+### 8.1 `ContextExporterPluginControl.cs`
 
 This is the root `UserControl` that XrmToolBox hosts. It must:
 
@@ -257,9 +275,9 @@ This class requires the `[Export]` attribute from `System.ComponentModel.Composi
 
 ---
 
-## 10. Unit Tests
+## 9. Unit Tests
 
-### 10.1 `HelpersTests/PathResolverTests.cs`
+### 9.1 `HelpersTests/PathResolverTests.cs`
 
 Cover these cases in NUnit:
 
@@ -277,7 +295,7 @@ Use `Path.GetTempPath()` + `Directory.CreateTempSubdirectory()` for file-system 
 
 ---
 
-## 11. NuSpec
+## 10. NuSpec
 
 Create `D365ContextExporter.nuspec` in the plugin project root. This will be used in Phase 4 for Tool Library submission, but should be correct from the start so the `dotnet pack` dry run in the Phase 1 exit check passes.
 
@@ -310,7 +328,7 @@ The `$version$` token is replaced by MSBuild during `dotnet pack` from the `<Ver
 
 ---
 
-## 12. Exit Criteria and Verification Steps
+## 11. Exit Criteria and Verification Steps
 
 Perform these steps manually before closing the Phase 1 PR:
 
@@ -353,7 +371,7 @@ Perform these steps manually before closing the Phase 1 PR:
 
 ---
 
-## 13. What is Explicitly Out of Scope for Phase 1
+## 12. What is Explicitly Out of Scope for Phase 1
 
 The following items appear in the master plan but are **not started in this phase**:
 
