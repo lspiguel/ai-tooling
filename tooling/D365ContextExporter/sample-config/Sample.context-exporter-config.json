@@ -1,0 +1,48 @@
+{
+  "$schema": "../../schema/context-exporter.schema.json",
+  "project": "Sample",
+  "version": "1.0.0",
+  "frontMatter": {
+    "generatedBy": "D365 CE Context Exporter",
+    "purpose": "AI assistant grounding context"
+  },
+  "python": {
+    "interpreter": "auto",
+    "venv": "%LOCALAPPDATA%/D365ContextExporter/venv"
+  },
+  "transformation": "entity-dictionary.j2",
+  "queries": [
+    {
+      "id": "entity-attributes",
+      "type": "webapi",
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName,PrimaryIdAttribute,PrimaryNameAttribute,OwnershipType,IsCustomEntity&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,IsCustomAttribute,RequiredLevel)",
+      "resultKey": "entityAttributes",
+      "maxRecords": 500
+    },
+    {
+      "id": "optionsets-global",
+      "type": "webapi",
+      "path": "GlobalOptionSetDefinitions?$select=Name,DisplayName,OptionSetType,Options",
+      "resultKey": "globalOptionSets"
+    },
+    {
+      "id": "security-roles",
+      "type": "fetchxml",
+      "source": "security-roles.fetch.xml",
+      "resultKey": "securityRoles"
+    },
+    {
+      "id": "forms-and-views",
+      "type": "webapi",
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName&$expand=SystemForms($select=Name,Type,IsDefault),SavedQueries($select=Name,QueryType,IsDefault,ColumnSetXml)",
+      "resultKey": "formsAndViews",
+      "maxRecords": 200
+    },
+    {
+      "id": "solutions",
+      "type": "fetchxml",
+      "source": "solutions.fetch.xml",
+      "resultKey": "solutions"
+    }
+  ]
+}
