@@ -5,7 +5,7 @@ using D365ContextExporter.Models;
 
 using Microsoft.Xrm.Sdk;
 
-namespace D365ContextExporter.Business
+namespace D365ContextExporter.Orchestration
 {
     /// <summary>Orchestrates a single export run. Phase 1: stub that logs the loaded config.</summary>
     internal sealed class ExportJobRunner

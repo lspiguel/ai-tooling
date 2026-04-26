@@ -33,7 +33,7 @@ Create the following directory tree. All paths are relative to the repo root.
     ContextExporterPluginControl.cs
     ContextExporterPluginControl.Designer.cs
     ContextExporterPluginControl.resx
-    Business/
+    Orchestration/
       ExportJobRunner.cs              ← stub in phase 1
     Models/
       ExportJob.cs
@@ -336,9 +336,9 @@ Unit tests for this class are written in the test project (see §10).
 
 ---
 
-## 7. Business Layer (Stub)
+## 7. Orchestration Layer (Stub)
 
-### 7.1 `Business/ExportJobRunner.cs`
+### 7.1 `Orchestration/ExportJobRunner.cs`
 
 In Phase 1 this is a stub that only logs the loaded config. It will be fully implemented in Phase 2.
 
@@ -346,7 +346,7 @@ In Phase 1 this is a stub that only logs the loaded config. It will be fully imp
 using D365ContextExporter.Models;
 using Microsoft.Xrm.Sdk;
 
-namespace D365ContextExporter.Business
+namespace D365ContextExporter.Orchestration
 {
     /// <summary>Orchestrates a single export run. Phase 1: stub that logs the loaded config.</summary>
     internal sealed class ExportJobRunner

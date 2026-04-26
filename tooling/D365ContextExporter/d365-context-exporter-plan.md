@@ -167,7 +167,7 @@ Key principles:
 Following the standard folder/namespace pattern, with the plugin name `D365ContextExporter`:
 
 - **`D365ContextExporter` (root project)** — the plugin class itself (`ContextExporterPluginControl : PluginControlBase, IXrmToolBoxPluginControl`). Hosts the UI, wires events, owns nothing else.
-- **`Business/`** — orchestration logic.
+- **`Orchestration/`** — orchestration logic.
   - `ExportJobRunner` — takes a loaded `ExportJob` and executes it end to end.
   - `IntermediateJsonBuilder` — assembles the intermediate JSON document from per-query results.
   - `PythonInvoker` — shells out to `python.exe`, captures stdout/stderr, surfaces failures.
@@ -208,9 +208,9 @@ The following artifacts will be built. Each row maps to a concrete deliverable.
 | 1 | `D365ContextExporter.sln` | VS Solution | `/Assemblies/XrmToolboxPlugins/D365ContextExporter/` | Standard repo layout |
 | 2 | `D365ContextExporter.csproj` | C# project | same | SDK-style, `net48`, StyleCop on |
 | 3 | `ContextExporterPluginControl.cs` | C# / UserControl | project root | The `IXrmToolBoxPluginControl` |
-| 4 | `ExportJobRunner.cs` | C# static class | `Business/` | Orchestration |
-| 5 | `IntermediateJsonBuilder.cs` | C# static class | `Business/` | Shapes the JSON contract |
-| 6 | `PythonInvoker.cs` | C# class | `Business/` | Subprocess management |
+| 4 | `ExportJobRunner.cs` | C# static class | `Orchestration/` | Orchestration |
+| 5 | `IntermediateJsonBuilder.cs` | C# static class | `Orchestration/` | Shapes the JSON contract |
+| 6 | `PythonInvoker.cs` | C# class | `Orchestration/` | Subprocess management |
 | 7 | `FetchXmlQueryRunner.cs` | C# static class | `Queries/` | Paging, error wrapping |
 | 8 | `WebApiQueryRunner.cs` | C# class | `Queries/` | Uses `HttpClient`, reuses bearer |
 | 9 | `MetadataQueryRunner.cs` | C# static class | `Queries/` | `RetrieveAllEntitiesRequest` etc. |
@@ -341,7 +341,7 @@ Placed into the repository following the standard layout:
   D365ContextExporter/
     D365ContextExporter.csproj
     ContextExporterPluginControl.cs
-    Business/
+    Orchestration/
       ExportJobRunner.cs
       IntermediateJsonBuilder.cs
       PythonInvoker.cs
@@ -394,7 +394,7 @@ Placed into the repository following the standard layout:
     D365ContextExporter.nuspec
   D365ContextExporter.Tests/
     D365ContextExporter.Tests.csproj
-    BusinessTests/
+    OrchestrationTests/
     QueriesTests/
     HelpersTests/
 /Pipeline/
