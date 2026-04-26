@@ -17,15 +17,15 @@ namespace D365ContextExporter
     /// <summary>Root plugin control hosted by XrmToolBox.</summary>
     public partial class ContextExporterPluginControl : PluginControlBase
     {
-        private CancellationTokenSource? _cts;
-        private bool _initialized;
+        private CancellationTokenSource? cts;
+        private bool initialized;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ContextExporterPluginControl"/> class.Initialises a new instance of <see cref="ContextExporterPluginControl"/>.
         /// </summary>
         public ContextExporterPluginControl()
         {
-            InitializeComponent();
+            this.InitializeComponent();
         }
 
         /// <summary>Called by XrmToolBox when the user connects to an org or switches connection.</summary>
@@ -37,72 +37,72 @@ namespace D365ContextExporter
             object parameter)
         {
             base.UpdateConnection(newService, detail, actionName, parameter);
-            progressControl.AppendLog($"Connected: {detail.WebApplicationUrl}");
-            projectPicker.LoadProjects(dirPicker.SelectedDirectory);
+            this.progressControl.AppendLog($"Connected: {detail.WebApplicationUrl}");
+            this.projectPicker.LoadProjects(this.dirPicker.SelectedDirectory);
         }
 
         private void ContextExporterPluginControl_Load(object sender, EventArgs e)
         {
-            dirPicker.LoadSettings();
-            _initialized = true;
-            if (!string.IsNullOrEmpty(dirPicker.SelectedDirectory))
+            this.dirPicker.LoadSettings();
+            this.initialized = true;
+            if (!string.IsNullOrEmpty(this.dirPicker.SelectedDirectory))
             {
-                projectPicker.LoadProjects(dirPicker.SelectedDirectory);
+                this.projectPicker.LoadProjects(this.dirPicker.SelectedDirectory);
             }
         }
 
         private void ContextExporterPluginControl_VisibleChanged(object sender, EventArgs e)
         {
-            if (_initialized && !Visible)
+            if (this.initialized && !this.Visible)
             {
-                dirPicker.SaveSettings();
+                this.dirPicker.SaveSettings();
             }
         }
 
         private void dirPicker_DirectoryChanged(object sender, string newDir)
         {
-            projectPicker.LoadProjects(newDir);
-            progressControl.AppendLog($"Base directory set: {newDir}");
+            this.projectPicker.LoadProjects(newDir);
+            this.progressControl.AppendLog($"Base directory set: {newDir}");
         }
 
         private void projectPicker_ProjectSelected(object sender, ExportJob? job)
         {
-            btnRun.Enabled = job != null && Service != null;
+            this.btnRun.Enabled = job != null && this.Service != null;
             if (job != null)
             {
-                progressControl.AppendLog($"Project selected: {job}");
+                this.progressControl.AppendLog($"Project selected: {job}");
             }
         }
 
         private void btnRun_Click(object sender, EventArgs e)
         {
-            if (Service == null || projectPicker.SelectedJob == null)
+            if (this.Service == null || this.projectPicker.SelectedJob == null)
             {
                 return;
             }
 
-            btnRun.Enabled = false;
-            _cts = new CancellationTokenSource();
+            this.btnRun.Enabled = false;
+            this.cts = new CancellationTokenSource();
 
-            var job = projectPicker.SelectedJob;
-            var baseDir = dirPicker.SelectedDirectory;
+            var job = this.projectPicker.SelectedJob;
+            var baseDir = this.dirPicker.SelectedDirectory;
 
             Task.Run(
                 () =>
                 {
                     var runner = new ExportJobRunner(
-                        Service,
-                        msg => BeginInvoke((Action)(() => progressControl.AppendLog(msg))));
-                    runner.Run(job, baseDir, _cts.Token);
+                        this.Service,
+                        msg => this.BeginInvoke((Action)(() => this.progressControl.AppendLog(msg))));
+                    runner.Run(job, baseDir, this.cts.Token);
                 },
-                _cts.Token).ContinueWith(t =>
+                this.cts.Token).ContinueWith(t =>
                 {
-                    BeginInvoke((Action)(() =>
+                    this.BeginInvoke((Action)(() =>
                     {
-                        btnRun.Enabled = true;
+                        this.btnRun.Enabled = true;
                         if (t.IsFaulted)
                         {
-                            progressControl.AppendLog($"ERROR: {t.Exception?.GetBaseException().Message}");
+                            this.progressControl.AppendLog($"ERROR: {t.Exception?.GetBaseException().Message}");
                         }
                     }));
                 });

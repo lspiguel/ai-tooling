@@ -17,19 +17,19 @@ namespace D365ContextExporter.UI
     /// </summary>
     public partial class BaseDirectoryPickerControl : UserControl
     {
-        /// <summary>Raised when the user selects a new directory. The event argument is the chosen path.</summary>
-        public event EventHandler<string>? DirectoryChanged;
-
-        /// <summary>Gets the currently selected base directory, or an empty string when none is set.</summary>
-        public string SelectedDirectory { get; private set; } = string.Empty;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="BaseDirectoryPickerControl"/> class.Initialises a new instance of <see cref="BaseDirectoryPickerControl"/>.
         /// </summary>
         public BaseDirectoryPickerControl()
         {
-            InitializeComponent();
+            this.InitializeComponent();
         }
+
+        /// <summary>Raised when the user selects a new directory. The event argument is the chosen path.</summary>
+        public event EventHandler<string>? DirectoryChanged;
+
+        /// <summary>Gets the currently selected base directory, or an empty string when none is set.</summary>
+        public string SelectedDirectory { get; private set; } = string.Empty;
 
         /// <summary>Restores the previously persisted base directory from user settings.</summary>
         public void LoadSettings()
@@ -37,14 +37,14 @@ namespace D365ContextExporter.UI
             var saved = Settings.Default.BaseDirectory;
             if (!string.IsNullOrEmpty(saved) && Directory.Exists(saved))
             {
-                SetDirectory(saved);
+                this.SetDirectory(saved);
             }
         }
 
         /// <summary>Persists the current base directory to user settings.</summary>
         public void SaveSettings()
         {
-            Settings.Default.BaseDirectory = SelectedDirectory;
+            Settings.Default.BaseDirectory = this.SelectedDirectory;
             Settings.Default.Save();
         }
 
@@ -53,22 +53,22 @@ namespace D365ContextExporter.UI
             using var dialog = new FolderBrowserDialog
             {
                 Description = "Select the Context-Exporter base directory",
-                SelectedPath = SelectedDirectory,
+                SelectedPath = this.SelectedDirectory,
                 ShowNewFolderButton = false,
             };
 
             if (dialog.ShowDialog(this) == DialogResult.OK)
             {
-                SetDirectory(dialog.SelectedPath);
-                SaveSettings();
+                this.SetDirectory(dialog.SelectedPath);
+                this.SaveSettings();
             }
         }
 
         private void SetDirectory(string path)
         {
-            SelectedDirectory = path;
-            txtBaseDir.Text = path;
-            DirectoryChanged?.Invoke(this, path);
+            this.SelectedDirectory = path;
+            this.txtBaseDir.Text = path;
+            this.DirectoryChanged?.Invoke(this, path);
         }
     }
 }

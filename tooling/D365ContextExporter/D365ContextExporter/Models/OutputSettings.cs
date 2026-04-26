@@ -1,9 +1,14 @@
-using System.Collections.Generic;
-
-using Newtonsoft.Json;
+// <copyright file="OutputSettings.cs" company="Luciano Spiguel">
+// Copyright (c) Luciano Spiguel. All Rights Reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+// </copyright>
 
 namespace D365ContextExporter.Models
 {
+    using System.Collections.Generic;
+
+    using Newtonsoft.Json;
+
     /// <summary>Controls how query results are serialised to the intermediate JSON file.</summary>
     public sealed class OutputSettings
     {

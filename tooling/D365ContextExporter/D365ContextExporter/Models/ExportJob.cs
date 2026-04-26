@@ -1,11 +1,16 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-
-using Newtonsoft.Json;
+// <copyright file="ExportJob.cs" company="Luciano Spiguel">
+// Copyright (c) Luciano Spiguel. All Rights Reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+// </copyright>
 
 namespace D365ContextExporter.Models
 {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+
+    using Newtonsoft.Json;
+
     /// <summary>Represents a loaded project configuration file.</summary>
     public sealed class ExportJob
     {
@@ -51,6 +56,6 @@ namespace D365ContextExporter.Models
         }
 
         /// <inheritdoc/>
-        public override string ToString() => $"{Project} v{Version} ({Queries.Count} queries)";
+        public override string ToString() => $"{this.Project} v{this.Version} ({this.Queries.Count} queries)";
     }
 }

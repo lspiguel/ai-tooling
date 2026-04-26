@@ -1,10 +1,15 @@
-using System.ComponentModel.Composition;
-
-using XrmToolBox.Extensibility;
-using XrmToolBox.Extensibility.Interfaces;
+// <copyright file="D365ContextExporterPlugin.cs" company="Luciano Spiguel">
+// Copyright (c) Luciano Spiguel. All Rights Reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+// </copyright>
 
 namespace D365ContextExporter
 {
+    using System.ComponentModel.Composition;
+
+    using XrmToolBox.Extensibility;
+    using XrmToolBox.Extensibility.Interfaces;
+
     /// <summary>MEF export that registers this assembly as an XrmToolBox plugin.</summary>
     [Export(typeof(IXrmToolBoxPlugin))]
     [ExportMetadata("Name", "D365 CE Context Exporter")]

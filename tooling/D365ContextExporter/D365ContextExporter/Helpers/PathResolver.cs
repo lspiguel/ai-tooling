@@ -1,10 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+// <copyright file="PathResolver.cs" company="Luciano Spiguel">
+// Copyright (c) Luciano Spiguel. All Rights Reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+// </copyright>
 
 namespace D365ContextExporter.Helpers
 {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+
     /// <summary>File-system helpers used to locate project config files and resolve paths.</summary>
     public static class PathResolver
     {

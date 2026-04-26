@@ -1,7 +1,12 @@
-using Newtonsoft.Json;
+// <copyright file="PythonSettings.cs" company="Luciano Spiguel">
+// Copyright (c) Luciano Spiguel. All Rights Reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+// </copyright>
 
 namespace D365ContextExporter.Models
 {
+    using Newtonsoft.Json;
+
     /// <summary>Controls how the Python runtime is located and invoked.</summary>
     public sealed class PythonSettings
     {
