@@ -332,7 +332,7 @@ The `$version$` token is replaced by MSBuild during `dotnet pack` from the `<Ver
 
 Perform these steps manually before closing the Phase 1 PR:
 
-1. **Build succeeds with zero warnings** (including StyleCop warnings):
+1. **Build succeeds with zero warnings**:
    ```
    dotnet build D365ContextExporter.sln --configuration Release
    ```
