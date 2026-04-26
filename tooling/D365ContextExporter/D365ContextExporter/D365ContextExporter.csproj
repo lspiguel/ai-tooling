@@ -71,4 +71,8 @@
       <DependentUpon>ContextExporterPluginControl.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="xcopy /y &quot;$(TargetDir)$(TargetFileName)&quot; &quot;$(SolutionDir)..\..\..\..\Git\XrmToolBox\XrmToolBox\bin\$(Configuration)\Plugins\&quot;&#xD;&#xA;xcopy /y &quot;$(TargetDir)$(TargetName).pdb&quot; &quot;$(SolutionDir)..\..\..\..\Git\XrmToolBox\XrmToolBox\bin\$(Configuration)\Plugins\&quot;&#xD;&#xA;" />
+  </Target>
 </Project>
