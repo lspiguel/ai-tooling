@@ -413,7 +413,7 @@ Work is broken into four phases, each independently deliverable.
 - Implement `ContextExporterPluginControl` with minimum UI: connect to org, base directory picker, project list, run button, log panel.
 - Implement `ProjectPickerControl` — scans `config/*.context-exporter-config.json` and populates the project dropdown.
 - Wire `PluginControlBase.Service` through to a stub `ExportJobRunner` that just prints the selected project config.
-- Set up the ADO pipeline to build and pack a `.nupkg`.
+- Verify the `.nupkg` builds locally with `dotnet pack`.
 - **Exit criteria:** the plugin installs into XrmToolBox, loads, connects to a Dataverse org, shows the project list, and prints the loaded project config.
 
 ### Phase 2 — Query execution (sprint 2)
@@ -442,6 +442,7 @@ Work is broken into four phases, each independently deliverable.
 - Cancellation support (`CancellationToken` flowed through runners).
 - README with screenshots, quickstart, and sample configs.
 - `.nuspec` with proper tags (`XrmToolBox`, `Documentation`, `AI`, `Markdown`) for Tool Library listing.
+- Set up the GitHub Actions workflow to build and pack a `.nupkg`.
 - Submit to XrmToolBox Tool Library following Jonas Rapp's guidance on Nuget publishing.
 - **Exit criteria:** plugin installable from XrmToolBox Tool Library by anyone with the required Python prerequisites.
 
