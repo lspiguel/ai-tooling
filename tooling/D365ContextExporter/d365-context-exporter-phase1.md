@@ -77,223 +77,30 @@ The `Utils/`, `Queries/`, `python/`, and `schema/` folders are **not created in 
 
 ## 3. Solution and Project Setup
 
-### 3.1 Solution file
+Two projects in the solution: the main plugin (`D365ContextExporter.csproj`) and the test project (`D365ContextExporter.Tests.csproj`).
 
-Create `D365ContextExporter.sln` using Visual Studio's "New Solution" wizard or `dotnet new sln`. Add both projects.
+Key properties for the main project: `TargetFramework=net48`, `UseWindowsForms=true`, `Nullable=enable`. Packages: `XrmToolBoxPackage`, `Microsoft.PowerPlatform.Dataverse.Client`, `Newtonsoft.Json`, `StyleCop.Analyzers` (analyzer-only).
 
-### 3.2 Main project — `D365ContextExporter.csproj`
-
-SDK-style project file. Key properties:
-
-```xml
-<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
-  <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
-    <RootNamespace>D365ContextExporter</RootNamespace>
-    <AssemblyName>D365ContextExporter</AssemblyName>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <Version>1.0.0</Version>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-    <Platforms>AnyCPU</Platforms>
-    <!-- StyleCop -->
-    <CodeAnalysisRuleSet>$(MSBuildThisFileDirectory)stylecop.json</CodeAnalysisRuleSet>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>CS1591</NoWarn>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="XrmToolBoxPackage" Version="1.2025.*" />
-    <PackageReference Include="Microsoft.PowerPlatform.Dataverse.Client" Version="1.*" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.*" />
-    <PackageReference Include="StyleCop.Analyzers" Version="1.1.*">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-</Project>
-```
-
-Notes:
-- Use wildcard version ranges (`1.2025.*`) only in the plan — pin to exact versions in `packages.lock.json` once resolved.
-- `UseWindowsForms` is required for XrmToolBox plugins.
-- `Nullable>enable` is intentional — surfacing null-safety warnings now is cheaper than fixing them in phase 3.
-
-### 3.3 Test project — `D365ContextExporter.Tests.csproj`
-
-```xml
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
-    <IsPackable>false</IsPackable>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\D365ContextExporter\D365ContextExporter.csproj" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
-    <PackageReference Include="NUnit" Version="4.*" />
-    <PackageReference Include="NUnit3TestAdapter" Version="4.*" />
-    <PackageReference Include="Moq" Version="4.*" />
-  </ItemGroup>
-</Project>
-```
+Test project targets `net48` as well. Packages: `NUnit`, `NUnit3TestAdapter`, `Microsoft.NET.Test.Sdk`, `Moq`.
 
 ---
 
 ## 4. StyleCop Configuration
 
-Create `stylecop.json` in the plugin project root. Copy the shared `stylecop.json` from an adjacent plugin project in `tooling/`. If no shared file exists yet, use:
+`stylecop.json` at the plugin project root. Settings: XML doc headers off, `documentInterfaces` off, `usingDirectivesPlacement` outside namespace, Hungarian prefixes disallowed.
 
-```json
-{
-  "$schema": "https://raw.githubusercontent.com/DotNetAnalyzers/StyleCopAnalyzers/master/StyleCop.Analyzers/StyleCop.Analyzers/Settings/stylecop.schema.json",
-  "settings": {
-    "documentationRules": {
-      "xmlHeader": false,
-      "documentInterfaces": false
-    },
-    "orderingRules": {
-      "usingDirectivesPlacement": "outsideNamespace"
-    },
-    "namingRules": {
-      "allowCommonHungarianPrefixes": false
-    }
-  }
-}
-```
-
-All StyleCop violations must be zero warnings by the end of Phase 1 — do not suppress with `#pragma` without a comment explaining why.
+Zero StyleCop warnings is the bar for Phase 1 — no `#pragma` suppressions without an explanatory comment.
 
 ---
 
 ## 5. Models
 
-These are plain C# DTOs. No business logic. Deserialised from `*.context-exporter-config.json` by `ExportJob.Load()`.
+Plain C# DTOs in `Models/`. No business logic. Deserialised from `*.context-exporter-config.json` by `ExportJob.Load(path)`.
 
-### 5.1 `Models/ExportJob.cs`
-
-```csharp
-using Newtonsoft.Json;
-
-namespace D365ContextExporter.Models
-{
-    /// <summary>Represents a loaded project configuration file.</summary>
-    public sealed class ExportJob
-    {
-        [JsonProperty("project")]
-        public string Project { get; set; } = string.Empty;
-
-        [JsonProperty("version")]
-        public string Version { get; set; } = "1.0.0";
-
-        [JsonProperty("transformation")]
-        public string Transformation { get; set; } = string.Empty;
-
-        [JsonProperty("queries")]
-        public List<QueryDefinition> Queries { get; set; } = new();
-
-        [JsonProperty("python")]
-        public PythonSettings Python { get; set; } = new();
-
-        [JsonProperty("frontMatter")]
-        public Dictionary<string, string> FrontMatter { get; set; } = new();
-
-        /// <summary>Full path to the config file from which this job was loaded.</summary>
-        [JsonIgnore]
-        public string ConfigFilePath { get; set; } = string.Empty;
-
-        public static ExportJob Load(string configFilePath)
-        {
-            var json = File.ReadAllText(configFilePath);
-            var job = JsonConvert.DeserializeObject<ExportJob>(json)
-                      ?? throw new InvalidOperationException($"Failed to deserialise {configFilePath}");
-            job.ConfigFilePath = configFilePath;
-            return job;
-        }
-
-        public override string ToString() => $"{Project} v{Version} ({Queries.Count} queries)";
-    }
-}
-```
-
-### 5.2 `Models/QueryDefinition.cs`
-
-```csharp
-using Newtonsoft.Json;
-
-namespace D365ContextExporter.Models
-{
-    public sealed class QueryDefinition
-    {
-        [JsonProperty("id")]
-        public string Id { get; set; } = string.Empty;
-
-        /// <summary>One of: fetchxml, webapi, metadata.</summary>
-        [JsonProperty("type")]
-        public string Type { get; set; } = string.Empty;
-
-        /// <summary>For fetchxml queries: path to the .fetch.xml file (relative to config/queries/).</summary>
-        [JsonProperty("source")]
-        public string? Source { get; set; }
-
-        /// <summary>For webapi queries: the OData resource path (e.g. "GlobalOptionSetDefinitions").</summary>
-        [JsonProperty("path")]
-        public string? Path { get; set; }
-
-        [JsonProperty("resultKey")]
-        public string ResultKey { get; set; } = string.Empty;
-
-        /// <summary>Optional row cap for large result sets.</summary>
-        [JsonProperty("maxRecords")]
-        public int? MaxRecords { get; set; }
-    }
-}
-```
-
-### 5.3 `Models/PythonSettings.cs`
-
-```csharp
-using Newtonsoft.Json;
-
-namespace D365ContextExporter.Models
-{
-    public sealed class PythonSettings
-    {
-        /// <summary>
-        /// "auto" (default) uses discovery order: explicit &gt; venv &gt; py launcher &gt; PATH.
-        /// Any other value is treated as an absolute path to python.exe.
-        /// </summary>
-        [JsonProperty("interpreter")]
-        public string Interpreter { get; set; } = "auto";
-
-        /// <summary>Path to the venv directory. Supports %LOCALAPPDATA% and similar env vars.</summary>
-        [JsonProperty("venv")]
-        public string Venv { get; set; } = @"%LOCALAPPDATA%\D365ContextExporter\venv";
-    }
-}
-```
-
-### 5.4 `Models/OutputSettings.cs`
-
-```csharp
-using Newtonsoft.Json;
-
-namespace D365ContextExporter.Models
-{
-    public sealed class OutputSettings
-    {
-        /// <summary>Attribute logical name fragments that are stripped before JSON serialisation.</summary>
-        [JsonProperty("attributeDenyList")]
-        public List<string> AttributeDenyList { get; set; } = new()
-        {
-            "password", "secret", "token", "key",
-        };
-    }
-}
-```
+- **`ExportJob`** — top-level config: `Project`, `Version`, `Transformation`, `Queries`, `Python`, `FrontMatter`. `ConfigFilePath` is set after load (`[JsonIgnore]`). Static `Load(path)` reads the file and throws `InvalidOperationException` on null deserialisation.
+- **`QueryDefinition`** — per-query config: `Id`, `Type` (fetchxml / webapi / metadata), `Source` (FetchXML path), `Path` (Web API resource), `ResultKey`, optional `MaxRecords`.
+- **`PythonSettings`** — `Interpreter` (default `"auto"`) and `Venv` (default `%LOCALAPPDATA%\D365ContextExporter\venv`).
+- **`OutputSettings`** — `AttributeDenyList` defaulting to `["password", "secret", "token", "key"]`.
 
 ---
 
@@ -301,47 +108,11 @@ namespace D365ContextExporter.Models
 
 ### 6.1 `Helpers/PathResolver.cs`
 
-The only helper needed in Phase 1. Resolves paths relative to a base directory and expands environment variables. This is used by `ProjectPickerControl` to locate `config/*.context-exporter-config.json`.
+Static helper used by `ProjectPickerControl` to locate `config/*.context-exporter-config.json` and by the runner to resolve query/template paths.
 
-```csharp
-namespace D365ContextExporter.Helpers
-{
-    public static class PathResolver
-    {
-        /// <summary>Expands %VAR% and $VAR$ tokens, then resolves relative to baseDir.</summary>
-        public static string Resolve(string path, string baseDir)
-        {
-            var expanded = Environment.ExpandEnvironmentVariables(path);
-            return Path.IsPathRooted(expanded)
-                ? expanded
-                : Path.GetFullPath(Path.Combine(baseDir, expanded));
-        }
-
-        /// <summary>Returns all *.context-exporter-config.json files under baseDir/config/.</summary>
-        public static IEnumerable<string> DiscoverProjectConfigs(string baseDir)
-        {
-            var configDir = Path.Combine(baseDir, "config");
-            if (!Directory.Exists(configDir))
-            {
-                return Enumerable.Empty<string>();
-            }
-
-            return Directory.EnumerateFiles(configDir, "*.context-exporter-config.json",
-                SearchOption.TopDirectoryOnly);
-        }
-
-        /// <summary>Derives the project display name from the config filename.</summary>
-        public static string ProjectNameFromPath(string configFilePath)
-        {
-            var fileName = Path.GetFileNameWithoutExtension(configFilePath); // e.g. "Contoso.context-exporter-config"
-            const string suffix = ".context-exporter-config";
-            return fileName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)
-                ? fileName[..^suffix.Length]
-                : fileName;
-        }
-    }
-}
-```
+- `Resolve(path, baseDir)` — expands `%VAR%` tokens then resolves relative paths against `baseDir`; returns absolute paths unchanged.
+- `DiscoverProjectConfigs(baseDir)` — enumerates `*.context-exporter-config.json` under `<baseDir>/config/`; returns empty if the directory does not exist.
+- `ProjectNameFromPath(configFilePath)` — strips the `.context-exporter-config` suffix from the filename to yield the display name.
 
 Unit tests for this class are written in the test project (see §10).
 
@@ -351,126 +122,25 @@ Unit tests for this class are written in the test project (see §10).
 
 ### 7.1 `Orchestration/ExportJobRunner.cs`
 
-In Phase 1 this is a stub that only logs the loaded config. It will be fully implemented in Phase 2.
-
-```csharp
-using D365ContextExporter.Models;
-using Microsoft.Xrm.Sdk;
-
-namespace D365ContextExporter.Orchestration
-{
-    /// <summary>Orchestrates a single export run. Phase 1: stub that logs the loaded config.</summary>
-    internal sealed class ExportJobRunner
-    {
-        private readonly IOrganizationService _service;
-        private readonly Action<string> _log;
-
-        public ExportJobRunner(IOrganizationService service, Action<string> log)
-        {
-            _service = service;
-            _log = log;
-        }
-
-        public void Run(ExportJob job, string baseDir, CancellationToken cancellationToken)
-        {
-            _log($"[Phase 1 stub] Starting export for project: {job.Project}");
-            _log($"  Config: {job.ConfigFilePath}");
-            _log($"  Queries defined: {job.Queries.Count}");
-
-            foreach (var query in job.Queries)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                _log($"  - [{query.Type}] {query.Id} → resultKey: {query.ResultKey}");
-            }
-
-            _log($"[Phase 1 stub] Run complete. (No queries executed; Phase 2 will implement this.)");
-        }
-    }
-}
-```
+Stub in Phase 1 — logs the loaded config without executing any queries. Constructor takes `IOrganizationService` and an `Action<string>` log delegate. `Run(job, baseDir, cancellationToken)` logs the project name, config path, and each query definition, then writes a completion line. Full implementation deferred to Phase 2.
 
 ---
 
 ## 8. UI Controls
 
-All controls are WinForms `UserControl` subclasses. In Phase 1 the layouts are functional but not polished.
+All controls are WinForms `UserControl` subclasses. Phase 1 layouts are functional but not polished.
 
 ### 8.1 `UI/BaseDirectoryPickerControl`
 
-**Purpose:** Displays a label, a read-only text box showing the selected path, and a "Browse…" button. Persists the selected path to `Settings.Default.BaseDirectory`. Raises a `DirectoryChanged` event when the path changes.
-
-**Public surface:**
-
-```csharp
-public partial class BaseDirectoryPickerControl : UserControl
-{
-    public event EventHandler<string>? DirectoryChanged;
-
-    /// <summary>The currently selected base directory. Empty string if not yet set.</summary>
-    public string SelectedDirectory { get; private set; } = string.Empty;
-
-    public void LoadSettings();   // call on form load; restores persisted path
-    public void SaveSettings();   // call before form close
-}
-```
-
-**Layout (Designer):**
-- `TableLayoutPanel` — 2 columns (star, auto), 1 row.
-- Column 0: `TextBox txtBaseDir` (read-only, `Dock = Fill`, `BackColor = SystemColors.Window`).
-- Column 1: `Button btnBrowse` (text "Browse…", fixed width 80 px).
-- Label above the row: "Context-Exporter base directory:"
-
-**Behaviour:**
-- `btnBrowse_Click` opens a `FolderBrowserDialog`. On OK, sets `SelectedDirectory`, updates the text box, persists to `Settings.Default.BaseDirectory`, and fires `DirectoryChanged`.
-- `LoadSettings` reads `Settings.Default.BaseDirectory` and sets `SelectedDirectory` if the directory exists.
-
-**Settings:** Add `BaseDirectory` (type `string`, default `""`) to the project's `Settings.settings` file.
+Read-only `TextBox` + "Browse…" `Button` in a `TableLayoutPanel`. Clicking Browse opens a `FolderBrowserDialog`; on confirmation it updates `SelectedDirectory`, persists to `Settings.Default.BaseDirectory`, and fires `DirectoryChanged`. `LoadSettings()` / `SaveSettings()` restore and persist the path between sessions.
 
 ### 8.2 `UI/ProjectPickerControl`
 
-**Purpose:** Shows a label and a `ComboBox`. When given a base directory, scans `config/*.context-exporter-config.json` and populates the drop-down with project names. Raises a `ProjectSelected` event when the selection changes.
-
-**Public surface:**
-
-```csharp
-public partial class ProjectPickerControl : UserControl
-{
-    public event EventHandler<ExportJob?>? ProjectSelected;
-
-    /// <summary>The currently loaded job. Null if no project is selected or scan found nothing.</summary>
-    public ExportJob? SelectedJob { get; private set; }
-
-    /// <summary>Rescans config/ under baseDir and repopulates the combo box.</summary>
-    public void LoadProjects(string baseDir);
-}
-```
-
-**Layout (Designer):**
-- `TableLayoutPanel` — 2 columns (star, auto), 1 row.
-- Column 0: `ComboBox cmbProjects` (`DropDownStyle = DropDownList`, `Dock = Fill`).
-- Column 1: `Button btnRefresh` (text "↺", fixed width 32 px, tooltip "Refresh project list").
-- Label above: "Project:"
-- Placeholder text in combo when empty: "(no projects found)"
-
-**Behaviour:**
-- `LoadProjects(baseDir)` calls `PathResolver.DiscoverProjectConfigs(baseDir)`, derives display names via `PathResolver.ProjectNameFromPath`, populates `cmbProjects`. Stores the file path as the `ComboBoxItem.Tag`.
-- On `cmbProjects.SelectedIndexChanged`, loads the selected config via `ExportJob.Load(path)`, sets `SelectedJob`, and fires `ProjectSelected`.
-- `btnRefresh_Click` calls `LoadProjects` with the last-used base directory.
-- On any `JsonException` during load, clears `SelectedJob`, sets the combo back to index -1, and shows a `MessageBox` with the error.
+`ComboBox` (`DropDownList`) + "↺" refresh `Button`. `LoadProjects(baseDir)` calls `PathResolver.DiscoverProjectConfigs`, populates the combo with display names (file path stored as `Tag`). On selection change, calls `ExportJob.Load(path)`, sets `SelectedJob`, and fires `ProjectSelected`. JSON errors clear the selection and show a `MessageBox`.
 
 ### 8.3 `UI/ExportProgressControl` (stub shell)
 
-In Phase 1 this is a skeleton only — just an empty `UserControl` with a `RichTextBox` log panel and an `AppendLog(string message)` public method. Full implementation (progress bars, cancel button) is deferred to Phase 3.
-
-```csharp
-public partial class ExportProgressControl : UserControl
-{
-    public void AppendLog(string message);
-    public void ClearLog();
-}
-```
-
-Layout: single `RichTextBox rtbLog` docked to `Fill`, read-only, monospace font (Consolas 9pt).
+Single `RichTextBox rtbLog` docked to `Fill`, read-only, Consolas 9 pt. Exposes `AppendLog(message)` and `ClearLog()`. Progress bars and cancel button deferred to Phase 3.
 
 ---
 
