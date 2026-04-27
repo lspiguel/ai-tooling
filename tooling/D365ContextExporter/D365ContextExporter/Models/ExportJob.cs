@@ -38,6 +38,10 @@ namespace D365ContextExporter.Models
         [JsonProperty("frontMatter")]
         public Dictionary<string, string> FrontMatter { get; set; } = new Dictionary<string, string>();
 
+        /// <summary>Gets or sets the output serialization settings (deny list, etc.).</summary>
+        [JsonProperty("output")]
+        public OutputSettings Output { get; set; } = new OutputSettings();
+
         /// <summary>Gets or sets the full path to the config file from which this job was loaded.</summary>
         [JsonIgnore]
         public string ConfigFilePath { get; set; } = string.Empty;
