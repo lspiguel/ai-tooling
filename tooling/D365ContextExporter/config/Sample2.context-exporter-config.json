@@ -1,0 +1,34 @@
+{
+  "$schema": "../../schema/context-exporter.schema.json",
+  "project": "Sample",
+  "version": "1.0.0",
+  "frontMatter": {
+    "generatedBy": "D365 CE Context Exporter",
+    "purpose": "AI assistant grounding context"
+  },
+  "python": {
+    "interpreter": "auto",
+    "venv": "%LOCALAPPDATA%/D365ContextExporter/venv"
+  },
+  "transformation": "entity-dictionary.j2",
+  "queries": [
+    {
+      "id": "entity-attributes",
+      "type": "webapi",
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName,PrimaryIdAttribute,PrimaryNameAttribute,OwnershipType,IsCustomEntity&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,IsCustomAttribute,RequiredLevel)",
+      "resultKey": "entityAttributes"
+    },
+    {
+      "id": "security-roles",
+      "type": "fetchxml",
+      "source": "security-roles.fetch.xml",
+      "resultKey": "securityRoles"
+    },
+    {
+      "id": "solutions",
+      "type": "fetchxml",
+      "source": "solutions.fetch.xml",
+      "resultKey": "solutions"
+    }
+  ]
+}
