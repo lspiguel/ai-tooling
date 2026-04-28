@@ -97,10 +97,10 @@ The stub in `D365ContextExporter/Orchestration/ExportJobRunner.cs` will become r
 3. Adds a virtual `"_id"` key set to `entity.Id.ToString()` so templates always have a reliable row identifier.
 4. Returns a `List<Dictionary<string, object?>>`.
 
-**Dependencies (incoming):** Called from `IntermediateJsonBuilder` after `FetchXmlQueryRunner` returns raw entities.
-**Dependencies (outgoing):** `Microsoft.Xrm.Sdk` (Entity, EntityReference, OptionSetValue, Money, AliasedValue, EntityCollection), `D365ContextExporter.Models.OutputSettings`.
+**Dependencies (incoming):** Called from `ExportJobRunner` after `FetchXmlQueryRunner` returns raw entities.
+**Dependencies (outgoing):** `Microsoft.Xrm.Sdk` (Entity, EntityReference, OptionSetValue, Money, AliasedValue, EntityCollection).
 
-**Unit test coverage required:** Every Dataverse attribute type listed above, plus null handling, plus deny-list filtering, plus nested `AliasedValue` wrapping `EntityReference`.
+**Unit test coverage required:** Every Dataverse attribute type listed above, plus null handling, plus nested `AliasedValue` wrapping `EntityReference`.
 
 ---
 
@@ -109,7 +109,7 @@ The stub in `D365ContextExporter/Orchestration/ExportJobRunner.cs` will become r
 **Responsibility:** Assemble the `_meta` block plus all per-query result sets into a single `intermediate.json` document and write it (and the per-query raw files) to the run folder.
 
 **What it does:**
-1. Accepts the run directory path, the loaded `ExportJob`, the environment URL + org name (from `ConnectionDetail`), and a dictionary mapping each `query.ResultKey` to its already-serialized result (`JArray` or `List<Dictionary<string, object?>>`).
+1. Accepts the run directory path, the loaded `ExportJob`, the environment URL and org name as plain strings, and a dictionary mapping each `query.ResultKey` to its already-serialized result (`JArray` or `List<Dictionary<string, object?>>`).
 2. Writes each per-query result to `runs/<timestamp>/output.<queryId>.fetch.json` immediately after it is produced (called once per query, not all at once at the end).
 3. After all queries complete, assembles the combined document:
    ```json
@@ -157,15 +157,14 @@ This is the primary site of Phase 2 work. The Phase 1 stub is replaced with a re
    - `"fetchxml"` → `FetchXmlQueryRunner.Run(query, baseDir, cancellationToken)` → passes result entities through `EntityJsonSerializer` → produces a `List<Dictionary<string, object?>>` → hands to `IntermediateJsonBuilder.WriteQueryResult(...)`.
    - `"webapi"` → `WebApiQueryRunner.Run(query, cancellationToken)` → produces a `JArray` → hands to `IntermediateJsonBuilder.WriteQueryResult(...)`.
    - `"metadata"` → `MetadataQueryRunner.Run(query, cancellationToken)` → produces a `List<Dictionary<string, object?>>` → hands to `IntermediateJsonBuilder.WriteQueryResult(...)`.
-   - Unrecognized type → logs a warning and skips.
-4. After all queries, calls `IntermediateJsonBuilder.WriteIntermediate(runDir, job, connectionDetail, results)`.
+   - Unrecognized type → throws `NotSupportedException`, which is caught as a per-query failure (logged as error, added to the failures list).
+4. After all queries, calls `IntermediateJsonBuilder.WriteIntermediate(runDir, job, environmentUrl, orgName, results)`.
 5. Logs per-query timings and final output paths.
 6. On `OperationCanceledException`: logs cancellation, does not re-throw (caller checks token).
 7. On any other exception per query: logs the error, marks the query as failed, and continues with remaining queries. At the end, if any queries failed, throws an `AggregateException` so the UI can surface the partial-failure state.
 
 **How configuration drives it:**
 - `job.Queries` → the ordered list of queries to execute; dispatched by `query.Type`.
-- `job.Output` → passed to `EntityJsonSerializer` for the deny list.
 - `job.Python` / `job.Transformation` → read by Phase 3; ignored here.
 
 ---
