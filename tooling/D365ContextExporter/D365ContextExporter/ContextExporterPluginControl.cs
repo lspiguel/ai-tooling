@@ -92,6 +92,7 @@ namespace D365ContextExporter
                 {
                     var runner = new ExportJobRunner(
                         this.Service,
+                        this.ConnectionDetail,
                         msg => this.BeginInvoke((Action)(() => this.progressControl.AppendLog(msg))));
                     runner.Run(job, baseDir, this.cts.Token);
                 },

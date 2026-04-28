@@ -3,6 +3,10 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Specific project folder that need to be ignored
+# (contain temp files)
+/tooling/D365ContextExporter/runs
+
 # AI tooling configuration
 .claude/
 .cursor/

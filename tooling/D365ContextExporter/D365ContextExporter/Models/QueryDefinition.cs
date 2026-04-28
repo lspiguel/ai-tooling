@@ -5,6 +5,8 @@
 
 namespace D365ContextExporter.Models
 {
+    using System.Collections.Generic;
+
     using Newtonsoft.Json;
 
     /// <summary>Describes a single query to execute against Dataverse.</summary>
@@ -39,5 +41,19 @@ namespace D365ContextExporter.Models
         /// <summary>Gets or sets an optional row cap for large result sets.</summary>
         [JsonProperty("maxRecords")]
         public int? MaxRecords { get; set; }
+
+        /// <summary>
+        /// Gets or sets the list of OData field names for a <c>$select</c> clause on webapi queries.
+        /// When set, appended to <see cref="Path"/> as <c>$select=field1,field2</c>.
+        /// </summary>
+        [JsonProperty("select")]
+        public List<string>? Select { get; set; }
+
+        /// <summary>
+        /// Gets or sets the metadata dispatch key for <c>metadata</c> queries.
+        /// One of: <c>entities</c>, <c>attributes</c>, <c>optionsets</c>, <c>relationships</c>.
+        /// </summary>
+        [JsonProperty("metadataTarget")]
+        public string? MetadataTarget { get; set; }
     }
 }
