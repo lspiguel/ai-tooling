@@ -58,6 +58,20 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="python\transform.py" />
+    <EmbeddedResource Include="python\filters.py" />
+    <None Include="python\requirements.txt" />
+    <None Include="..\schema\**\*" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="content\schema\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="UI\OutputPreviewControl.Designer.cs">
+      <DependentUpon>OutputPreviewControl.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+
+  <ItemGroup>
     <EmbeddedResource Update="UI\BaseDirectoryPickerControl.resx">
       <DependentUpon>BaseDirectoryPickerControl.cs</DependentUpon>
     </EmbeddedResource>

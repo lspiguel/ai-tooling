@@ -30,7 +30,7 @@ namespace D365ContextExporter.Orchestration
             var token = result is JToken jt ? jt : JToken.FromObject(result);
 
             using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
-            using var sw = new StreamWriter(stream, Encoding.UTF8);
+            using var sw = new StreamWriter(stream, new UTF8Encoding(false));
             using var writer = new JsonTextWriter(sw) { Formatting = Formatting.Indented };
             token.WriteTo(writer);
         }
@@ -54,7 +54,7 @@ namespace D365ContextExporter.Orchestration
             var path = Path.Combine(runDir, "intermediate.json");
 
             using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
-            using var sw = new StreamWriter(stream, Encoding.UTF8);
+            using var sw = new StreamWriter(stream, new UTF8Encoding(false));
             using var writer = new JsonTextWriter(sw) { Formatting = Formatting.Indented };
 
             writer.WriteStartObject();

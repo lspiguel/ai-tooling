@@ -21,12 +21,13 @@ namespace D365ContextExporter.Orchestration
     using Microsoft.Xrm.Sdk;
     using Microsoft.Xrm.Tooling.Connector;
 
-    /// <summary>Orchestrates a single export run: executes all queries and writes the intermediate outputs.</summary>
+    /// <summary>Orchestrates a single export run: executes all queries, writes intermediate outputs, and invokes Python.</summary>
     internal sealed class ExportJobRunner
     {
         private readonly IOrganizationService service;
         private readonly ConnectionDetail connectionDetail;
         private readonly Action<string> log;
+        private readonly Action<int, int, string>? onProgress;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExportJobRunner"/> class.
@@ -34,18 +35,25 @@ namespace D365ContextExporter.Orchestration
         /// <param name="service">The connected Dataverse service.</param>
         /// <param name="connectionDetail">The XrmToolBox connection detail (supplies environment URL and org name).</param>
         /// <param name="log">Delegate called for each log line; must be thread-safe.</param>
-        public ExportJobRunner(IOrganizationService service, ConnectionDetail connectionDetail, Action<string> log)
+        /// <param name="onProgress">Optional delegate called with (current, total, queryId) after each query completes.</param>
+        public ExportJobRunner(
+            IOrganizationService service,
+            ConnectionDetail connectionDetail,
+            Action<string> log,
+            Action<int, int, string>? onProgress = null)
         {
             this.service = service;
             this.connectionDetail = connectionDetail;
             this.log = log;
+            this.onProgress = onProgress;
         }
 
-        /// <summary>Executes all queries defined in <paramref name="job"/> and writes the run outputs.</summary>
+        /// <summary>Executes all queries, writes intermediate JSON, and invokes Python to produce output.md.</summary>
         /// <param name="job">The loaded project configuration.</param>
         /// <param name="baseDir">The project base directory.</param>
         /// <param name="cancellationToken">Token used to observe cancellation requests.</param>
-        public void Run(ExportJob job, string baseDir, CancellationToken cancellationToken)
+        /// <returns>The run directory path where output.md was written.</returns>
+        public string Run(ExportJob job, string baseDir, CancellationToken cancellationToken)
         {
             this.log($"[Export] Starting project '{job.Project}' ({job.Queries.Count} queries).");
 
@@ -62,13 +70,16 @@ namespace D365ContextExporter.Orchestration
 
             var results = new Dictionary<string, object>();
             var failures = new List<Exception>();
+            var total = job.Queries.Count;
 
-            foreach (var query in job.Queries)
+            for (var i = 0; i < total; i++)
             {
+                var query = job.Queries[i];
+
                 if (cancellationToken.IsCancellationRequested)
                 {
                     this.log("[Export] Cancelled.");
-                    return;
+                    cancellationToken.ThrowIfCancellationRequested();
                 }
 
                 var sw = Stopwatch.StartNew();
@@ -87,11 +98,12 @@ namespace D365ContextExporter.Orchestration
                     IntermediateJsonBuilder.WriteQueryResult(runDir, query.Id, result);
                     results[query.ResultKey] = result;
                     this.log($"[Export] '{query.Id}' completed in {sw.Elapsed.TotalSeconds:F1}s.");
+                    this.onProgress?.Invoke(i + 1, total, query.Id);
                 }
                 catch (OperationCanceledException)
                 {
                     this.log("[Export] Cancelled.");
-                    return;
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -100,19 +112,23 @@ namespace D365ContextExporter.Orchestration
                 }
             }
 
-            if (results.Count > 0)
-            {
-                var intermediatePath = IntermediateJsonBuilder.WriteIntermediate(
-                    runDir, job, environmentUrl, orgName, results);
-                this.log($"[Export] Intermediate JSON written: {intermediatePath}");
-            }
-
             if (failures.Count > 0)
             {
                 throw new AggregateException($"{failures.Count} of {job.Queries.Count} queries failed.", failures);
             }
 
+            if (results.Count > 0)
+            {
+                var intermediatePath = IntermediateJsonBuilder.WriteIntermediate(
+                    runDir, job, environmentUrl, orgName, results);
+                this.log($"[Export] Intermediate JSON written: {intermediatePath}");
+
+                var invoker = new PythonInvoker(this.log);
+                invoker.Invoke(job, baseDir, runDir, cancellationToken);
+            }
+
             this.log($"[Export] Run complete. Outputs in: {runDir}");
+            return runDir;
         }
 
         private string GetToken()

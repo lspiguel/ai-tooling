@@ -5,15 +5,17 @@
 
 namespace D365ContextExporter.UI
 {
+    using System;
     using System.Windows.Forms;
 
-    /// <summary>
-    /// A read-only log panel. Phase 1 stub — progress bars and cancel button are deferred to Phase 3.
-    /// </summary>
+    /// <summary>A log panel with a cancel button and per-query progress indicator.</summary>
     public partial class ExportProgressControl : UserControl
     {
+        /// <summary>Raised when the user clicks the Cancel button.</summary>
+        public event EventHandler? CancelRequested;
+
         /// <summary>
-        /// Initializes a new instance of the <see cref="ExportProgressControl"/> class.Initialises a new instance of <see cref="ExportProgressControl"/>.
+        /// Initializes a new instance of the <see cref="ExportProgressControl"/> class.
         /// </summary>
         public ExportProgressControl()
         {
@@ -32,6 +34,29 @@ namespace D365ContextExporter.UI
         public void ClearLog()
         {
             this.rtbLog.Clear();
+        }
+
+        /// <summary>Updates the query progress label.</summary>
+        /// <param name="current">Current query index (1-based).</param>
+        /// <param name="total">Total number of queries.</param>
+        /// <param name="queryId">Identifier of the query just completed.</param>
+        public void SetProgress(int current, int total, string queryId)
+        {
+            this.lblProgress.Text = $"Query {current} / {total}";
+        }
+
+        /// <summary>Enables or disables the cancel button and toggles the status label.</summary>
+        /// <param name="running"><c>true</c> while an export is in progress; <c>false</c> when idle.</param>
+        public void SetRunning(bool running)
+        {
+            this.btnCancel.Enabled = running;
+            this.lblProgress.Text = running ? "Running…" : string.Empty;
+        }
+
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+            this.btnCancel.Enabled = false;
+            this.CancelRequested?.Invoke(this, EventArgs.Empty);
         }
     }
 }

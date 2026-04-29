@@ -7,8 +7,7 @@
     "purpose": "AI assistant grounding context"
   },
   "python": {
-    "interpreter": "auto",
-    "venv": "%LOCALAPPDATA%/D365ContextExporter/venv"
+    "interpreter": "auto"
   },
   "transformation": "entity-dictionary.j2",
   "queries": [
