@@ -1,0 +1,25 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="workflow">
+    <attribute name="workflowid" />
+    <attribute name="name" />
+    <attribute name="primaryentity" />
+    <attribute name="category" />
+    <attribute name="mode" />
+    <attribute name="statuscode" />
+    <attribute name="triggeroncreate" />
+    <attribute name="triggerondelete" />
+    <attribute name="triggeronupdateattributelist" />
+    <filter type="and">
+      <condition attribute="ismanaged" operator="eq" value="0" />
+      <condition attribute="type" operator="eq" value="1" />
+      <condition attribute="category" operator="in">
+        <value>0</value>
+        <value>2</value>
+        <value>5</value>
+      </condition>
+    </filter>
+    <order attribute="category" descending="false" />
+    <order attribute="primaryentity" descending="false" />
+    <order attribute="name" descending="false" />
+  </entity>
+</fetch>

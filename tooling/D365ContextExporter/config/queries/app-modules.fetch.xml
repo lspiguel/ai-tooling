@@ -1,0 +1,10 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="appmodule">
+    <attribute name="appmoduleid" />
+    <attribute name="name" />
+    <attribute name="uniquename" />
+    <attribute name="description" />
+    <attribute name="ismanaged" />
+    <order attribute="name" descending="false" />
+  </entity>
+</fetch>

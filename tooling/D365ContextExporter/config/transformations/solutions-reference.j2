@@ -1,0 +1,233 @@
+---
+{% for key, value in _meta.frontMatter.items() %}{{ key }}: {{ value }}
+{% endfor %}exportedAt: {{ _meta.exportedAtUtc }}
+environment: {{ _meta.environment.url }}
+---
+
+# {{ _meta.environment.orgName }} D365CE Customization Reference
+
+**Platform:** Dynamics 365 Customer Engagement
+
+## Solutions
+
+| Solution | Publisher | Version | Managed | Installed On |
+|---|---|---|---|---|
+{% for sol in solutions | sort(attribute="friendlyname") -%}
+| {{ sol.friendlyname }} | {{ sol["pub.publisherfriendlyname"] | default("—") }} | {{ sol.version | default("—") }} | {{ "Yes" if sol.ismanaged else "No" }} | {{ sol.installedon | default("—") | iso_date }} |
+{% endfor %}
+
+---
+
+## Field Type Legend
+
+`str`=nvarchar, `text`=ntext, `lkp`=lookup, `opt`=picklist, `multiopt`=multiselectpicklist, `bool`=bit, `int`=int, `dec`=decimal, `money`=money, `dt`=datetime, `img`=image, `pk`=primarykey
+Required: **R**=required, **r**=recommended, `-`=none
+
+---
+
+## Custom Entities
+
+{% set custom_ents = entities | selectattr("IsCustomEntity", "equalto", true) | rejectattr("IsVirtual", "equalto", true) | sort(attribute="LogicalName") | list -%}
+{% for entity in custom_ents -%}
+{% set dn = entity.DisplayName | display_label(entity.LogicalName) -%}
+{% set desc = entity.Description | display_label("") -%}
+{% set custom_attrs = entity.Attributes | default([]) | selectattr("IsCustomAttribute", "equalto", true) | list -%}
+{% if custom_attrs %}
+
+### {{ entity.LogicalName }} — "{{ dn }}"
+{% if entity.IsActivity | default(false) %}*(custom activity)*{% endif %}
+{% if desc %}{{ desc }}{% endif %}
+
+**Fields:**
+{% for attr in custom_attrs | sort(attribute="LogicalName") -%}
+{% set adn = attr.DisplayName | display_label(attr.LogicalName) -%}
+{% set req = (attr.RequiredLevel | default({})).Value | default("None") | req_indicator -%}
+- {{ attr.LogicalName }} | {{ adn }} | {{ attr.AttributeType | attr_type_abbrev }} | {{ req }}
+{% endfor %}
+**Forms:** {{ entity.SystemForms | format_forms }}
+**Views:** {{ entity.SavedQueries | format_views }}
+{% endif -%}
+{% endfor %}
+
+---
+
+## Standard Entity Extensions
+
+{% set std_ents = entities | rejectattr("IsCustomEntity", "equalto", true) | rejectattr("IsVirtual", "equalto", true) | sort(attribute="LogicalName") | list -%}
+{% for entity in std_ents -%}
+{% set custom_attrs = entity.Attributes | default([]) | selectattr("IsCustomAttribute", "equalto", true) | list -%}
+{% if custom_attrs -%}
+{% set dn = entity.DisplayName | display_label(entity.LogicalName) %}
+
+### {{ entity.LogicalName }} — "{{ dn }}"
+
+**Custom Fields:**
+{% for attr in custom_attrs | sort(attribute="LogicalName") -%}
+{% set adn = attr.DisplayName | display_label(attr.LogicalName) -%}
+{% set req = (attr.RequiredLevel | default({})).Value | default("None") | req_indicator -%}
+- {{ attr.LogicalName }} | {{ adn }} | {{ attr.AttributeType | attr_type_abbrev }} | {{ req }}
+{% endfor %}
+**Forms:** {{ entity.SystemForms | format_forms }}
+**Views:** {{ entity.SavedQueries | format_views }}
+{% endif -%}
+{% endfor %}
+
+---
+
+## Virtual Table Entities
+
+{% set virtual_ents = entities | selectattr("IsVirtual", "equalto", true) | sort(attribute="LogicalName") | list -%}
+{% if virtual_ents -%}
+{% for entity in virtual_ents -%}
+{% set dn = entity.DisplayName | display_label(entity.LogicalName) -%}
+{% set attrs = entity.Attributes | default([]) | sort(attribute="LogicalName") | list %}
+
+### {{ entity.LogicalName }} *(Virtual)*
+
+{{ dn }}
+
+**Fields:**
+{% for attr in attrs -%}
+{% set adn = attr.DisplayName | display_label(attr.LogicalName) -%}
+{% set req = (attr.RequiredLevel | default({})).Value | default("None") | req_indicator -%}
+- {{ attr.LogicalName }} | {{ adn }} | {{ attr.AttributeType | attr_type_abbrev }} | {{ req }}
+{% endfor %}
+{% endfor %}
+{% else -%}
+_No virtual table entities found._
+{% endif %}
+
+---
+
+## Option Sets (Global)
+
+| Logical Name | Display Name | Values |
+|---|---|---|
+{% for os in globalOptionSets | sort(attribute="Name") -%}
+{% set osdn = os.DisplayName | display_label(os.Name) -%}
+{% set opt_labels = [] -%}
+{% for opt in os.Options | default([]) | sort(attribute="Value") -%}
+  {%- set _ = opt_labels.append(opt.Label | display_label(opt.Value | string)) -%}
+{% endfor -%}
+| {{ os.Name }} | {{ osdn }} | {{ opt_labels | join(", ") }} |
+{% endfor %}
+
+---
+
+## Plugin Assemblies & SDK Steps
+
+### Assemblies
+
+| Assembly | Plugin Types |
+|---|---|
+{% for asm_name, rows in pluginAssemblies | group_by_key("name") -%}
+{% if asm_name -%}
+{% set type_names = rows | pluck("pt.typename") -%}
+| {{ asm_name }} | {{ type_names | length }} types: {{ type_names | join(", ") }} |
+{% endif -%}
+{% endfor %}
+
+### SDK Message Processing Steps
+
+| Step | Entity | Message | Stage | Mode |
+|---|---|---|---|---|
+{% for step in sdkSteps | sort(attribute="name") -%}
+| {{ step.name }} | {{ step["flt.primaryobjecttypecode"] | default("—") }} | {{ step["msg.name"] | default("—") }} | {{ step.stage | plugin_stage }} | {{ step.mode | plugin_mode }} |
+{% endfor %}
+
+---
+
+## Custom APIs
+
+{% set api_resp_map = {} -%}
+{% for api_name, rows in customApiResponses | group_by_key("uniquename") -%}
+  {%- set _ = api_resp_map.update({api_name: rows}) -%}
+{% endfor -%}
+
+| API | Request Params | Response |
+|---|---|---|
+{% for api_name, req_rows in customApiRequests | group_by_key("uniquename") -%}
+{% if api_name -%}
+{% set params = [] -%}
+{% for r in req_rows -%}
+  {%- set pname = r["req.uniquename"] -%}
+  {%- set ptype = r["req.type"] | api_param_type -%}
+  {%- if pname -%}{%- set _ = params.append(pname ~ "(" ~ ptype ~ ")") -%}{%- endif -%}
+{% endfor -%}
+{% set resp_rows = api_resp_map.get(api_name, []) -%}
+{% set resp_parts = [] -%}
+{% for r in resp_rows -%}
+  {%- set rname = r["resp.uniquename"] -%}
+  {%- set rtype = r["resp.type"] | api_param_type -%}
+  {%- if rname -%}{%- set _ = resp_parts.append(rname ~ "(" ~ rtype ~ ")") -%}{%- endif -%}
+{% endfor -%}
+| {{ api_name }} | {{ params | join(", ") if params else "—" }} | {{ resp_parts | join(", ") if resp_parts else "—" }} |
+{% endif -%}
+{% endfor %}
+
+---
+
+## Processes
+
+### Classic Workflows
+
+{% set classic_wfs = workflows | selectattr("category", "equalto", 0) | sort(attribute="name") | list -%}
+{% for entity_name, wfs in classic_wfs | group_by_key("primaryentity") -%}
+{% if entity_name %}
+
+#### {{ entity_name | title }}
+
+| Name | Trigger |
+|---|---|
+{% for wf in wfs | sort(attribute="name") -%}
+| {{ wf.name }} | {{ wf | classic_trigger }} |
+{% endfor %}
+{% endif -%}
+{% endfor %}
+
+### Cloud Flows
+
+| Name | Trigger |
+|---|---|
+{% set cloud_wfs = workflows | selectattr("category", "equalto", 5) | sort(attribute="name") | list -%}
+{% for wf in cloud_wfs -%}
+| {{ wf.name }}{% if wf.statuscode | default(2) != 2 %} *(inactive)*{% endif %} | {{ wf.name | flow_trigger }} |
+{% endfor %}
+
+### Business Rules
+
+{% set brs = workflows | selectattr("category", "equalto", 2) | list -%}
+{% for entity_name, rules in brs | group_by_key("primaryentity") -%}
+{% if entity_name %}
+**{{ entity_name }}:** {% for r in rules | sort(attribute="name") %}{{ r.name }}{% if not loop.last %}; {% endif %}{% endfor %}
+{% endif -%}
+{% endfor %}
+
+---
+
+## Security Roles
+
+{% set role_names = securityRoles | pluck("name") | sort | list -%}
+{% for name in role_names -%}
+- {{ name }}
+{% endfor %}
+
+---
+
+## App Modules
+
+| App | Type | Managed |
+|---|---|---|
+{% for app in appModules | sort(attribute="name") -%}
+| {{ app.name }} | {% if "canvas" in (app.uniquename | default("") | lower) %}Canvas{% else %}Model-Driven{% endif %} | {{ "Yes" if app.ismanaged else "No" }} |
+{% endfor %}
+
+---
+
+## Environment Variables
+
+| Variable | Display Name | Type |
+|---|---|---|
+{% for ev in envVars | sort(attribute="schemaname") -%}
+| {{ ev.schemaname }} | {{ ev.displayname | default("—") }} | {{ ev.type | envvar_type }} |
+{% endfor %}
