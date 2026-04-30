@@ -158,16 +158,20 @@ _No virtual table entities found._
 {% if api_name -%}
 {% set params = [] -%}
 {% for r in req_rows -%}
-  {%- set pname = r["req.uniquename"] -%}
-  {%- set ptype = r["req.type"] | api_param_type -%}
-  {%- if pname -%}{%- set _ = params.append(pname ~ "(" ~ ptype ~ ")") -%}{%- endif -%}
+  {%- set pname = r.get("req.uniquename") -%}
+  {%- if pname -%}
+    {%- set ptype = r["req.type"] | api_param_type -%}
+    {%- set _ = params.append(pname ~ "(" ~ ptype ~ ")") -%}
+  {%- endif -%}
 {% endfor -%}
 {% set resp_rows = api_resp_map.get(api_name, []) -%}
 {% set resp_parts = [] -%}
 {% for r in resp_rows -%}
-  {%- set rname = r["resp.uniquename"] -%}
-  {%- set rtype = r["resp.type"] | api_param_type -%}
-  {%- if rname -%}{%- set _ = resp_parts.append(rname ~ "(" ~ rtype ~ ")") -%}{%- endif -%}
+  {%- set rname = r.get("resp.uniquename") -%}
+  {%- if rname -%}
+    {%- set rtype = r["resp.type"] | api_param_type -%}
+    {%- set _ = resp_parts.append(rname ~ "(" ~ rtype ~ ")") -%}
+  {%- endif -%}
 {% endfor -%}
 | {{ api_name }} | {{ params | join(", ") if params else "—" }} | {{ resp_parts | join(", ") if resp_parts else "—" }} |
 {% endif -%}
