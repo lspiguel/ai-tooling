@@ -137,10 +137,13 @@ _No virtual table entities found._
 
 ### SDK Message Processing Steps
 
+{% set custom_plugin_typenames = pluginAssemblies | pluck("pt.typename") -%}
 | Step | Entity | Message | Stage | Mode |
 |---|---|---|---|---|
 {% for step in sdkSteps | sort(attribute="name") -%}
+{% if step["pt.typename"] in custom_plugin_typenames -%}
 | {{ step.name }} | {{ step["flt.primaryobjecttypecode"] | default("—") }} | {{ step["msg.name"] | default("—") }} | {{ step.stage | plugin_stage }} | {{ step.mode | plugin_mode }} |
+{% endif -%}
 {% endfor %}
 
 ---
