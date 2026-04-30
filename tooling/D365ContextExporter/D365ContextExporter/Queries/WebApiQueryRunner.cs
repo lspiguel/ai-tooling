@@ -55,7 +55,13 @@ namespace D365ContextExporter.Queries
                 request.Headers.TryAddWithoutValidation("OData-Version", "4.0");
 
                 var response = this.httpClient.SendAsync(request, cancellationToken).GetAwaiter().GetResult();
-                response.EnsureSuccessStatusCode();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    throw new HttpRequestException(
+                        $"Response status code does not indicate success: {(int)response.StatusCode} ({response.ReasonPhrase}). Response body: {body}");
+                }
 
                 var json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 var jobj = JObject.Parse(json);
