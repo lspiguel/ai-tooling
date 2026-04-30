@@ -5,7 +5,6 @@
     <attribute name="name" />
     <attribute name="description" />
     <attribute name="isfunction" />
-    <attribute name="isboundtoentity" />
     <attribute name="bindingtype" />
     <attribute name="boundentitylogicalname" />
     <link-entity name="customapirequestparameter" from="customapiid" to="customapiid" link-type="outer" alias="req">

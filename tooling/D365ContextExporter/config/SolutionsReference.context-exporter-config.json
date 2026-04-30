@@ -20,14 +20,14 @@
     {
       "id": "entities",
       "type": "webapi",
-      "path": "EntityDefinitions?$select=LogicalName,DisplayName,Description,IsCustomEntity,IsActivity,IsVirtual,PrimaryIdAttribute,PrimaryNameAttribute&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,RequiredLevel,IsCustomAttribute),SystemForms($select=Name,Type,IsDefault),SavedQueries($select=Name,QueryType,IsDefault)",
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName,Description,IsCustomEntity,IsActivity,PrimaryIdAttribute,PrimaryNameAttribute&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,RequiredLevel,IsCustomAttribute)",
       "resultKey": "entities",
       "maxRecords": 500
     },
     {
       "id": "global-optionsets",
       "type": "webapi",
-      "path": "GlobalOptionSetDefinitions?$select=Name,DisplayName,OptionSetType,Options",
+      "path": "GlobalOptionSetDefinitions",
       "resultKey": "globalOptionSets"
     },
     {

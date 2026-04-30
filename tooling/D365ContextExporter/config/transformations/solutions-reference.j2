@@ -27,7 +27,15 @@ Required: **R**=required, **r**=recommended, `-`=none
 
 ## Custom Entities
 
-{% set custom_ents = entities | selectattr("IsCustomEntity", "equalto", true) | rejectattr("IsVirtual", "equalto", true) | sort(attribute="LogicalName") | list -%}
+{%- set _ens = namespace(custom=[], std=[], virtual=[]) -%}
+{%- for e in entities -%}
+  {%- set _is_virtual = e.IsVirtual if e.IsVirtual is defined else false -%}
+  {%- if _is_virtual -%}{%- set _ens.virtual = _ens.virtual + [e] -%}
+  {%- elif e.IsCustomEntity -%}{%- set _ens.custom = _ens.custom + [e] -%}
+  {%- else -%}{%- set _ens.std = _ens.std + [e] -%}
+  {%- endif -%}
+{%- endfor -%}
+{% set custom_ents = _ens.custom | sort(attribute="LogicalName") -%}
 {% for entity in custom_ents -%}
 {% set dn = entity.DisplayName | display_label(entity.LogicalName) -%}
 {% set desc = entity.Description | display_label("") -%}
@@ -44,8 +52,8 @@ Required: **R**=required, **r**=recommended, `-`=none
 {% set req = (attr.RequiredLevel | default({})).Value | default("None") | req_indicator -%}
 - {{ attr.LogicalName }} | {{ adn }} | {{ attr.AttributeType | attr_type_abbrev }} | {{ req }}
 {% endfor %}
-**Forms:** {{ entity.SystemForms | format_forms }}
-**Views:** {{ entity.SavedQueries | format_views }}
+**Forms:** {{ entity.SystemForms | default(none) | format_forms }}
+**Views:** {{ entity.SavedQueries | default(none) | format_views }}
 {% endif -%}
 {% endfor %}
 
@@ -53,7 +61,7 @@ Required: **R**=required, **r**=recommended, `-`=none
 
 ## Standard Entity Extensions
 
-{% set std_ents = entities | rejectattr("IsCustomEntity", "equalto", true) | rejectattr("IsVirtual", "equalto", true) | sort(attribute="LogicalName") | list -%}
+{% set std_ents = _ens.std | sort(attribute="LogicalName") -%}
 {% for entity in std_ents -%}
 {% set custom_attrs = entity.Attributes | default([]) | selectattr("IsCustomAttribute", "equalto", true) | list -%}
 {% if custom_attrs -%}
@@ -67,8 +75,8 @@ Required: **R**=required, **r**=recommended, `-`=none
 {% set req = (attr.RequiredLevel | default({})).Value | default("None") | req_indicator -%}
 - {{ attr.LogicalName }} | {{ adn }} | {{ attr.AttributeType | attr_type_abbrev }} | {{ req }}
 {% endfor %}
-**Forms:** {{ entity.SystemForms | format_forms }}
-**Views:** {{ entity.SavedQueries | format_views }}
+**Forms:** {{ entity.SystemForms | default(none) | format_forms }}
+**Views:** {{ entity.SavedQueries | default(none) | format_views }}
 {% endif -%}
 {% endfor %}
 
@@ -76,7 +84,7 @@ Required: **R**=required, **r**=recommended, `-`=none
 
 ## Virtual Table Entities
 
-{% set virtual_ents = entities | selectattr("IsVirtual", "equalto", true) | sort(attribute="LogicalName") | list -%}
+{% set virtual_ents = _ens.virtual | sort(attribute="LogicalName") -%}
 {% if virtual_ents -%}
 {% for entity in virtual_ents -%}
 {% set dn = entity.DisplayName | display_label(entity.LogicalName) -%}
