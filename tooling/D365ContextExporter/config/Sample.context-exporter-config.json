@@ -1,6 +1,6 @@
 {
   "$schema": "../../schema/context-exporter.schema.json",
-  "project": "Sample",
+  "spec": "Sample",
   "version": "1.0.0",
   "frontMatter": {
     "generatedBy": "D365 CE Context Exporter",

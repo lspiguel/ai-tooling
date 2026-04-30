@@ -10,7 +10,7 @@ namespace D365ContextExporter.Helpers
     using System.IO;
     using System.Linq;
 
-    /// <summary>File-system helpers used to locate project config files and resolve paths.</summary>
+    /// <summary>File-system helpers used to locate spec config files and resolve paths.</summary>
     public static class PathResolver
     {
         /// <summary>Expands <c>%VAR%</c> tokens, then resolves <paramref name="path"/> relative to <paramref name="baseDir"/>.</summary>
@@ -26,9 +26,9 @@ namespace D365ContextExporter.Helpers
         }
 
         /// <summary>Returns all <c>*.context-exporter-config.json</c> files directly under <c>&lt;baseDir&gt;/config/</c>.</summary>
-        /// <param name="baseDir">The project root directory.</param>
+        /// <param name="baseDir">The base directory.</param>
         /// <returns>File paths, or an empty sequence when the <c>config/</c> subfolder does not exist.</returns>
-        public static IEnumerable<string> DiscoverProjectConfigs(string baseDir)
+        public static IEnumerable<string> DiscoverSpecConfigs(string baseDir)
         {
             var configDir = Path.Combine(baseDir, "config");
             if (!Directory.Exists(configDir))
@@ -39,10 +39,10 @@ namespace D365ContextExporter.Helpers
             return Directory.EnumerateFiles(configDir, "*.context-exporter-config.json", SearchOption.TopDirectoryOnly);
         }
 
-        /// <summary>Derives the project display name from a config file path by stripping the well-known suffix.</summary>
+        /// <summary>Derives the spec display name from a config file path by stripping the well-known suffix.</summary>
         /// <param name="configFilePath">Full path to a <c>*.context-exporter-config.json</c> file.</param>
-        /// <returns>The project name (e.g. <c>"Contoso"</c> for <c>"Contoso.context-exporter-config.json"</c>).</returns>
-        public static string ProjectNameFromPath(string configFilePath)
+        /// <returns>The spec name (e.g. <c>"Contoso"</c> for <c>"Contoso.context-exporter-config.json"</c>).</returns>
+        public static string SpecNameFromPath(string configFilePath)
         {
             var fileName = Path.GetFileNameWithoutExtension(configFilePath);
             const string suffix = ".context-exporter-config";

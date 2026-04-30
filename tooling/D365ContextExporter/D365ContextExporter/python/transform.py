@@ -3,7 +3,7 @@
 Reads intermediate.json, renders the specified Jinja2 template, and writes output.md.
 
 Usage:
-    python transform.py --input <path> --template <path> --out <dir> --project <name>
+    python transform.py --input <path> --template <path> --out <dir> --spec <name>
 """
 
 import argparse
@@ -28,14 +28,14 @@ def main() -> None:
     parser.add_argument("--input", required=True, help="Path to intermediate.json")
     parser.add_argument("--template", required=True, help="Path to the .j2 template file")
     parser.add_argument("--out", required=True, help="Output directory for output.md")
-    parser.add_argument("--project", required=True, help="Project name injected as _project")
+    parser.add_argument("--spec", required=True, help="Spec name injected as _spec")
     args = parser.parse_args()
 
     # Load intermediate JSON.
     with open(args.input, encoding="utf-8") as f:
         context = json.load(f)
 
-    context["_project"] = args.project
+    context["_spec"] = args.spec
 
     # Build Jinja2 environment.
     template_dir = os.path.dirname(os.path.abspath(args.template))

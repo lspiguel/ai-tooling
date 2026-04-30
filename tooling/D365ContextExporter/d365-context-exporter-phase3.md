@@ -1,4 +1,4 @@
-# D365 CE Context Exporter — Phase 3 Plan: Python Post-Processor and Output
+﻿# D365 CE Context Exporter — Phase 3 Plan: Python Post-Processor and Output
 
 ## What Phase 2 Left Behind
 
@@ -21,7 +21,7 @@ The Jinja2 template files (`.j2`) and FetchXML queries exist in `config/` and ar
 An end-to-end run against a real sandbox org must produce:
 1. `runs/<timestamp>/intermediate.json` (already working from Phase 2)
 2. `runs/<timestamp>/output.md` — rendered by `transform.py` from the intermediate JSON
-3. `output/<ProjectName>.context.md` — copied from `output.md` by the plugin after a successful run
+3. `output/<SpecName>.context.md` — copied from `output.md` by the plugin after a successful run
 
 The plugin UI must also show the generated files with actions to open them.
 
@@ -35,7 +35,7 @@ The plugin UI must also show the generated files with actions to open them.
 
 #### `Orchestration/PythonInvoker.cs`
 
-**Description.** Locates a Python interpreter and invokes `transform.py` as a child process, passing the paths to `intermediate.json`, the Jinja2 template, the output directory, and the project name. Streams stdout and stderr to the log delegate in real time. Enforces a configurable timeout and surfaces failures as typed exceptions.
+**Description.** Locates a Python interpreter and invokes `transform.py` as a child process, passing the paths to `intermediate.json`, the Jinja2 template, the output directory, and the spec name. Streams stdout and stderr to the log delegate in real time. Enforces a configurable timeout and surfaces failures as typed exceptions.
 
 **Responsibilities.**
 - Resolve the Python interpreter to use, following discovery order:
@@ -51,18 +51,18 @@ The plugin UI must also show the generated files with actions to open them.
       --input <runDir>\intermediate.json
       --template <baseDir>\config\transformations\<job.Transformation>
       --out <runDir>
-      --project <job.Project>
+      --spec <job.Spec>
   ```
 - Launch the process with `ProcessRunner`, redirecting stdout and stderr. Pipe each line to the `log` delegate so the user sees real-time progress.
 - Enforce a default 5-minute timeout (overridable from `PythonSettings.TimeoutSeconds` if added to the model in a future phase). Kill the process forcibly on timeout.
 - Throw `PythonInvocationException` (a typed exception carrying exit code, stdout snippet, and stderr snippet) when the process exits non-zero.
-- After a successful run, call `CopyOutputToProjectDir(runDir, baseDir, job.Project)` — copies `<runDir>\output.md` to `<baseDir>\output\<ProjectName>.context.md`, creating the `output\` directory if needed.
+- After a successful run, call `CopyOutputToSpecDir(runDir, baseDir, job.Spec)` — copies `<runDir>\output.md` to `<baseDir>\output\<SpecName>.context.md`, creating the `output\` directory if needed.
 
 **How it is used from configuration.**
 - `python.interpreter` — `"auto"` enables discovery; any other string is an absolute path.
 - `python.venv` — expands `%LOCALAPPDATA%` and other `%VAR%` tokens via `PathResolver.Resolve`; the plugin looks for `Scripts\python.exe` inside this directory.
 - `transformation` — the `.j2` filename passed as `--template`; resolved relative to `<baseDir>\config\transformations\`.
-- `project` — passed as `--project`; determines the final output filename.
+- `spec` — passed as `--spec`; determines the final output filename.
 
 **Called from.** `ExportJobRunner.Run()` after `IntermediateJsonBuilder.WriteIntermediate()` succeeds.
 
@@ -70,18 +70,18 @@ The plugin UI must also show the generated files with actions to open them.
 
 #### `UI/OutputPreviewControl.cs` (+ `.Designer.cs`)
 
-**Description.** A WinForms `UserControl` displayed after a successful export run. Shows the paths to the two output files (`output.md` in the run directory, and `output/<ProjectName>.context.md`) with actions to open them. Provides a prominent call-to-action directing the user to upload the grounding file to their AI assistant.
+**Description.** A WinForms `UserControl` displayed after a successful export run. Shows the paths to the two output files (`output.md` in the run directory, and `output/<SpecName>.context.md`) with actions to open them. Provides a prominent call-to-action directing the user to upload the grounding file to their AI assistant.
 
 **Responsibilities.**
-- Accept paths for the run-specific `output.md` and the project-level `<ProjectName>.context.md` via `ShowResult(string runOutputPath, string projectOutputPath)`.
+- Accept paths for the run-specific `output.md` and the spec-level `<SpecName>.context.md` via `ShowResult(string runOutputPath, string projectOutputPath)`.
 - Display both paths in read-only text boxes.
 - Provide three action buttons per file: **Open** (shell-launches the file with the default editor), **Reveal** (opens Explorer with the file selected), and **Copy Path** (copies the path to the clipboard).
 - Display a labelled `LinkLabel` or `RichTextBox` banner reading something like:
-  > Upload `<ProjectName>.context.md` to claude.ai, ChatGPT, or your AI assistant as a grounding file.
+  > Upload `<SpecName>.context.md` to claude.ai, ChatGPT, or your AI assistant as a grounding file.
 - Hide itself (or show a placeholder) when no run has completed yet.
 - Log nothing itself; all logging goes through `ExportProgressControl`.
 
-**How it is used from configuration.** The project name in `project` determines which file name is highlighted as the upload target. No other config keys affect this control directly.
+**How it is used from configuration.** The spec name in `spec` determines which file name is highlighted as the upload target. No other config keys affect this control directly.
 
 **Called from.** `ContextExporterPluginControl` after `ExportJobRunner.Run()` completes successfully.
 
@@ -128,7 +128,7 @@ The plugin UI must also show the generated files with actions to open them.
 **Required changes.**
 1. After `WriteIntermediate`, construct a `PythonInvoker` and call its `Invoke(job, baseDir, runDir, cancellationToken)` method.
 2. If `PythonInvoker.Invoke` throws, log the error and surface it to the caller — do not swallow it.
-3. After a successful invocation, log the path of the copied `output/<ProjectName>.context.md`.
+3. After a successful invocation, log the path of the copied `output/<SpecName>.context.md`.
 4. Pass the run directory back to the caller (or raise an event) so the UI can show `OutputPreviewControl`.
 
 No structural changes to query execution or intermediate JSON building.
@@ -149,7 +149,7 @@ No structural changes to query execution or intermediate JSON building.
 
 #### `ContextExporterPluginControl.cs`
 
-**Current state.** Wires up directory picker, project picker, run button, and log. Calls `ExportJobRunner.Run()` on a background `Task`.
+**Current state.** Wires up directory picker, spec picker, run button, and log. Calls `ExportJobRunner.Run()` on a background `Task`.
 
 **Required changes.**
 1. Add `OutputPreviewControl` to the form layout (hidden until a run completes).
@@ -197,7 +197,7 @@ No structural changes to query execution or intermediate JSON building.
   - `--input` — absolute path to `intermediate.json`
   - `--template` — absolute path to the `.j2` template file
   - `--out` — absolute path to the run directory where `output.md` will be written
-  - `--project` — project name (injected into the template context as `_project`)
+  - `--spec` — spec name (injected into the template context as `_spec`)
 - Load `intermediate.json` with `json.load()`.
 - Build a Jinja2 `Environment` with:
   - `loader = FileSystemLoader(os.path.dirname(template_path))` so templates can `{% include %}` siblings.
@@ -209,7 +209,7 @@ No structural changes to query execution or intermediate JSON building.
 - Exit with code 0 on success, 1 on any error (exceptions are caught at the top level, printed to stderr, and cause exit 1).
 
 **How it is used from configuration.**
-- The `transformation` key in the project config (`*.context-exporter-config.json`) names the `.j2` file that `PythonInvoker` passes as `--template`. `transform.py` itself is not referenced in config; it is always the entry point.
+- The `transformation` key in the spec config (`*.context-exporter-config.json`) names the `.j2` file that `PythonInvoker` passes as `--template`. `transform.py` itself is not referenced in config; it is always the entry point.
 - Template context variables match the `resultKey` values defined in the `queries` array plus `_meta` (always present).
 
 **Invoked by.** `PythonInvoker.cs` via `ProcessRunner.cs`.
@@ -277,7 +277,7 @@ The current `config/transformations/filters.py` is a stub in the wrong location.
 **Responsibilities.** Renders a per-entity Markdown section with display name, primary attribute names, ownership type, custom flag, and a pipe table of attributes sorted by `LogicalName`.
 
 **How it is used from configuration.**
-- Activated by setting `"transformation": "entity-dictionary.j2"` in the project config.
+- Activated by setting `"transformation": "entity-dictionary.j2"` in the spec config.
 - Requires `entityAttributes` in `resultKey` — supplied by a `webapi` query to `EntityDefinitions?$expand=Attributes(...)`.
 
 **Phase 3 action.** Test end-to-end against a sandbox. The `DisplayName.UserLocalizedLabel.Label` access path will fail if the Web API returns `DisplayName` as a flat string (as it does for some Metadata endpoints vs the schema-API response). May need conditional logic: `first.DisplayName.UserLocalizedLabel.Label | default(first.DisplayName) | default(entity_name)`.
@@ -364,7 +364,7 @@ The current `config/transformations/filters.py` is a stub in the wrong location.
 
 **Responsibilities.**
 Define types and constraints for all config keys:
-- `project` (string, required)
+- `spec` (string, required)
 - `version` (string, pattern `^\d+\.\d+\.\d+$`)
 - `transformation` (string, required — name of a `.j2` file)
 - `frontMatter` (object, additional string properties allowed)
@@ -404,7 +404,7 @@ btnRun_Click
                  └─ python transform.py           [new]
                       └─ filters.py              [completed]
                       └─ *.j2 template           [authored, tested]
-            └─ CopyOutputToProjectDir()           [new]
+            └─ CopyOutputToSpecDir()           [new]
   └─ OutputPreviewControl.ShowResult()            [new]
 ```
 

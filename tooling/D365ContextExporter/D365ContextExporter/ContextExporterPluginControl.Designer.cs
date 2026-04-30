@@ -18,7 +18,7 @@ namespace D365ContextExporter
         {
             this.mainLayout = new System.Windows.Forms.TableLayoutPanel();
             this.dirPicker = new D365ContextExporter.UI.BaseDirectoryPickerControl();
-            this.projectPicker = new D365ContextExporter.UI.ProjectPickerControl();
+            this.specPicker = new D365ContextExporter.UI.SpecPickerControl();
             this.toolbarPanel = new System.Windows.Forms.FlowLayoutPanel();
             this.btnRun = new System.Windows.Forms.Button();
             this.progressControl = new D365ContextExporter.UI.ExportProgressControl();
@@ -31,7 +31,7 @@ namespace D365ContextExporter
             this.mainLayout.ColumnCount = 1;
             this.mainLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.mainLayout.Controls.Add(this.dirPicker, 0, 0);
-            this.mainLayout.Controls.Add(this.projectPicker, 0, 1);
+            this.mainLayout.Controls.Add(this.specPicker, 0, 1);
             this.mainLayout.Controls.Add(this.toolbarPanel, 0, 2);
             this.mainLayout.Controls.Add(this.progressControl, 0, 3);
             this.mainLayout.Controls.Add(this.outputPreview, 0, 4);
@@ -55,13 +55,13 @@ namespace D365ContextExporter
             this.dirPicker.TabIndex = 0;
             this.dirPicker.DirectoryChanged += new System.EventHandler<string>(this.dirPicker_DirectoryChanged);
 
-            // projectPicker
-            this.projectPicker.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.projectPicker.Location = new System.Drawing.Point(3, 59);
-            this.projectPicker.Name = "projectPicker";
-            this.projectPicker.Size = new System.Drawing.Size(778, 50);
-            this.projectPicker.TabIndex = 1;
-            this.projectPicker.ProjectSelected += new System.EventHandler<D365ContextExporter.Models.ExportJob?>(this.projectPicker_ProjectSelected);
+            // specPicker
+            this.specPicker.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.specPicker.Location = new System.Drawing.Point(3, 59);
+            this.specPicker.Name = "specPicker";
+            this.specPicker.Size = new System.Drawing.Size(778, 50);
+            this.specPicker.TabIndex = 1;
+            this.specPicker.SpecSelected += new System.EventHandler<D365ContextExporter.Models.ExportJob?>(this.specPicker_SpecSelected);
 
             // toolbarPanel
             this.toolbarPanel.AutoSize = true;
@@ -115,7 +115,7 @@ namespace D365ContextExporter
 
         private System.Windows.Forms.TableLayoutPanel mainLayout;
         private D365ContextExporter.UI.BaseDirectoryPickerControl dirPicker;
-        private D365ContextExporter.UI.ProjectPickerControl projectPicker;
+        private D365ContextExporter.UI.SpecPickerControl specPicker;
         private System.Windows.Forms.FlowLayoutPanel toolbarPanel;
         private System.Windows.Forms.Button btnRun;
         private D365ContextExporter.UI.ExportProgressControl progressControl;

@@ -44,7 +44,7 @@ namespace D365ContextExporter
         {
             base.UpdateConnection(newService, detail, actionName, parameter);
             this.progressControl.AppendLog($"Connected: {detail.WebApplicationUrl}");
-            this.projectPicker.LoadProjects(this.dirPicker.SelectedDirectory);
+            this.specPicker.LoadSpecs(this.dirPicker.SelectedDirectory);
         }
 
         private void ContextExporterPluginControl_Load(object sender, EventArgs e)
@@ -53,7 +53,7 @@ namespace D365ContextExporter
             this.initialized = true;
             if (!string.IsNullOrEmpty(this.dirPicker.SelectedDirectory))
             {
-                this.projectPicker.LoadProjects(this.dirPicker.SelectedDirectory);
+                this.specPicker.LoadSpecs(this.dirPicker.SelectedDirectory);
             }
         }
 
@@ -67,16 +67,16 @@ namespace D365ContextExporter
 
         private void dirPicker_DirectoryChanged(object sender, string newDir)
         {
-            this.projectPicker.LoadProjects(newDir);
+            this.specPicker.LoadSpecs(newDir);
             this.progressControl.AppendLog($"Base directory set: {newDir}");
         }
 
-        private void projectPicker_ProjectSelected(object sender, ExportJob? job)
+        private void specPicker_SpecSelected(object sender, ExportJob? job)
         {
             this.btnRun.Enabled = job != null && this.Service != null;
             if (job != null)
             {
-                this.progressControl.AppendLog($"Project selected: {job}");
+                this.progressControl.AppendLog($"Spec selected: {job}");
             }
         }
 
@@ -87,12 +87,12 @@ namespace D365ContextExporter
 
         private void btnRun_Click(object sender, EventArgs e)
         {
-            if (this.Service == null || this.projectPicker.SelectedJob == null)
+            if (this.Service == null || this.specPicker.SelectedJob == null)
             {
                 return;
             }
 
-            var job = this.projectPicker.SelectedJob;
+            var job = this.specPicker.SelectedJob;
             var baseDir = this.dirPicker.SelectedDirectory;
 
             // Bootstrap check runs on UI thread so MessageBox is modal to the main window.
@@ -143,10 +143,10 @@ namespace D365ContextExporter
                         {
                             var runDir = t.Result;
                             var runOutputPath = Path.Combine(runDir, "output.md");
-                            var projectOutputPath = Path.Combine(
-                                baseDir, "output", $"{job.Project}.context.md");
+                            var specOutputPath = Path.Combine(
+                                baseDir, "output", $"{job.Spec}.context.md");
 
-                            this.outputPreview.ShowResult(runOutputPath, projectOutputPath);
+                            this.outputPreview.ShowResult(runOutputPath, specOutputPath);
                             this.outputPreview.Visible = true;
                         }
                     }));

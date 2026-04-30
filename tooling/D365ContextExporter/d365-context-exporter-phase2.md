@@ -1,4 +1,4 @@
-# Phase 2 — Query Execution: Detailed Implementation Plan
+﻿# Phase 2 — Query Execution: Detailed Implementation Plan
 
 ## What Phase 2 Delivers
 
@@ -117,7 +117,7 @@ The stub in `D365ContextExporter/Orchestration/ExportJobRunner.cs` will become r
      "_meta": {
        "exportedAtUtc": "<ISO-8601>",
        "environment": { "url": "...", "orgName": "..." },
-       "project": "<name>",
+       "spec": "<name>",
        "frontMatter": { ... }
      },
      "<resultKey1>": [...],
@@ -128,7 +128,7 @@ The stub in `D365ContextExporter/Orchestration/ExportJobRunner.cs` will become r
 5. Returns the full path to `intermediate.json`.
 
 **How configuration drives it:**
-- `job.Project` → placed in `_meta.project`.
+- `job.Spec` → placed in `_meta.project`.
 - `job.FrontMatter` → placed in `_meta.frontMatter`.
 - `query.ResultKey` per query → top-level key name in `intermediate.json`.
 - `query.Id` per query → used to name per-query files (`output.<id>.fetch.json`).
@@ -191,7 +191,7 @@ No other changes to models.
 |---|---|
 | `ContextExporterPluginControl.cs` | UI wiring complete; only `ExportJobRunner` output changes |
 | `UI/BaseDirectoryPickerControl.cs` | No change |
-| `UI/ProjectPickerControl.cs` | No change |
+| `UI/SpecPickerControl.cs` | No change |
 | `UI/ExportProgressControl.cs` | Log append already works; progress bars deferred to Phase 3 |
 | `Helpers/PathResolver.cs` | Complete and tested |
 | `Models/PythonSettings.cs` | Used only in Phase 3 |

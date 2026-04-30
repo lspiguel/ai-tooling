@@ -2,17 +2,17 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/lucisnospace/d365-context-exporter/schema/context-exporter.schema.json",
   "title": "D365 CE Context Exporter Config",
-  "description": "Configuration file for a D365 CE Context Exporter project.",
+  "description": "Configuration file for a D365 CE Context Exporter spec.",
   "type": "object",
-  "required": ["project", "transformation", "queries"],
+  "required": ["spec", "transformation", "queries"],
   "additionalProperties": false,
   "properties": {
     "$schema": {
       "type": "string"
     },
-    "project": {
+    "spec": {
       "type": "string",
-      "description": "The project name. Used as the stem of the output filename (e.g. 'Contoso' → 'Contoso.context.md')."
+      "description": "The spec name. Used as the stem of the output filename (e.g. 'Contoso' → 'Contoso.context.md')."
     },
     "version": {
       "type": "string",

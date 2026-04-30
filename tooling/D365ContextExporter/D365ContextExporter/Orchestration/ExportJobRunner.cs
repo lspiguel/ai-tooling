@@ -49,13 +49,13 @@ namespace D365ContextExporter.Orchestration
         }
 
         /// <summary>Executes all queries, writes intermediate JSON, and invokes Python to produce output.md.</summary>
-        /// <param name="job">The loaded project configuration.</param>
-        /// <param name="baseDir">The project base directory.</param>
+        /// <param name="job">The loaded spec configuration.</param>
+        /// <param name="baseDir">The base directory.</param>
         /// <param name="cancellationToken">Token used to observe cancellation requests.</param>
         /// <returns>The run directory path where output.md was written.</returns>
         public string Run(ExportJob job, string baseDir, CancellationToken cancellationToken)
         {
-            this.log($"[Export] Starting project '{job.Project}' ({job.Queries.Count} queries).");
+            this.log($"[Export] Starting spec '{job.Spec}' ({job.Queries.Count} queries).");
 
             var runDir = Path.Combine(baseDir, "runs", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss"));
             Directory.CreateDirectory(runDir);

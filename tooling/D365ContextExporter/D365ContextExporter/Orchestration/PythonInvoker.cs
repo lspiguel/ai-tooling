@@ -50,8 +50,8 @@ namespace D365ContextExporter.Orchestration
             this.log = log;
         }
 
-        /// <summary>Invokes transform.py and copies the output to the project directory.</summary>
-        /// <param name="job">The project configuration.</param>
+        /// <summary>Invokes transform.py and copies the output to the spec directory.</summary>
+        /// <param name="job">The spec configuration.</param>
         /// <param name="baseDir">The base directory containing the config/ and output/ subdirectories.</param>
         /// <param name="runDir">The run-specific directory containing intermediate.json.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
@@ -75,7 +75,7 @@ namespace D365ContextExporter.Orchestration
                 + $" --input \"{intermediatePath}\""
                 + $" --template \"{templatePath}\""
                 + $" --out \"{runDir}\""
-                + $" --project \"{job.Project}\"";
+                + $" --spec \"{job.Spec}\"";
 
             this.log($"[Python] Running transform.py ...");
 
@@ -104,7 +104,7 @@ namespace D365ContextExporter.Orchestration
                     snippet);
             }
 
-            this.CopyOutputToProjectDir(runDir, baseDir, job.Project);
+            this.CopyOutputToSpecDir(runDir, baseDir, job.Spec);
         }
 
         private static string EnsureScripts()
@@ -131,7 +131,7 @@ namespace D365ContextExporter.Orchestration
         private static string ResolveInterpreter(PythonSettings settings, string baseDir) =>
             PythonBootstrapHelper.ResolveExecutable(settings);
 
-        private void CopyOutputToProjectDir(string runDir, string baseDir, string projectName)
+        private void CopyOutputToSpecDir(string runDir, string baseDir, string specName)
         {
             var sourceFile = Path.Combine(runDir, "output.md");
             if (!File.Exists(sourceFile))
@@ -143,7 +143,7 @@ namespace D365ContextExporter.Orchestration
             var outputDir = Path.Combine(baseDir, "output");
             Directory.CreateDirectory(outputDir);
 
-            var destFile = Path.Combine(outputDir, $"{projectName}.context.md");
+            var destFile = Path.Combine(outputDir, $"{specName}.context.md");
             File.Copy(sourceFile, destFile, overwrite: true);
             this.log($"[Python] Output copied to: {destFile}");
         }

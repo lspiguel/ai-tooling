@@ -1,4 +1,4 @@
-# D365 CE Context Exporter — XrmToolBox Plugin with Python/Jinja2 Post-Processor
+﻿# D365 CE Context Exporter — XrmToolBox Plugin with Python/Jinja2 Post-Processor
 
 ## Executive Summary
 
@@ -34,7 +34,7 @@ All runtime artefacts live under a single **Context-Exporter** working directory
 ```
 Context-Exporter/
 ├── config/
-│   ├── <ProjectName>.context-exporter-config.json   ← one per project
+│   ├── <SpecName>.context-exporter-config.json   ← one per spec
 │   ├── queries/
 │   │   └── *.fetch.xml                              ← shared across projects
 │   └── transformations/
@@ -45,14 +45,14 @@ Context-Exporter/
 │       ├── intermediate.json                        ← all result sets combined
 │       └── output.md                                ← Markdown from transformation
 └── output/
-    └── <ProjectName>.context.md                      ← latest grounding file (overwritten each run)
+    └── <SpecName>.context.md                      ← latest grounding file (overwritten each run)
 ```
 
 Key principles:
-- **Config is per-project.** Each `<ProjectName>.context-exporter-config.json` selects which queries and transformation to run, plus project-specific metadata.
-- **Queries and transformations are shared.** FetchXML files and Jinja2 templates are authored once and referenced by any project config.
+- **Config is per-spec.** Each `<SpecName>.context-exporter-config.json` selects which queries and transformation to run, plus spec-specific metadata.
+- **Queries and transformations are shared.** FetchXML files and Jinja2 templates are authored once and referenced by any spec config.
 - **Each run is immutable.** A `runs/<timestamp>/` folder captures the full pipeline snapshot: per-query raw JSON, the combined intermediate, and the rendered Markdown. The plugin never deletes run folders.
-- **The `output/` folder is the grounding target.** After a successful run, `output.md` is copied to `output/<ProjectName>.context.md`, overwriting any previous file. This is the file users upload to AI assistants.
+- **The `output/` folder is the grounding target.** After a successful run, `output.md` is copied to `output/<SpecName>.context.md`, overwriting any previous file. This is the file users upload to AI assistants.
 
 ## Solution Architecture
 
@@ -65,7 +65,7 @@ Key principles:
 |  |  D365.ContextExporter   |  |   config/<Project>.context-exporter-config.json
 |  |       (plugin)          |<-+-- config/queries/*.fetch.xml
 |  |                         |  |   config/transformations/*.j2
-|  |  - Project picker       |  |
+|  |  - Spec picker       |  |
 |  |  - Query runner         |  |
 |  |  - JSON serializer      |  |
 |  |  - Python orchestrator  |  |
@@ -82,10 +82,10 @@ Key principles:
                     output.md                    (rendered)
                          |
                          v  copy
-               output/<ProjectName>.context.md
+               output/<SpecName>.context.md
 ```
 
-The plugin hosts a WinForms UI. The user selects a **Context-Exporter base directory**, then picks a **project** from the list of `*.context-exporter-config.json` files discovered under `config/`. The plugin reads the chosen config, runs each query writing a `output.<queryId>.fetch.json` per query, assembles `intermediate.json`, then shells out to the configured `*.transform.py` script. Python reads `intermediate.json`, renders the Markdown, and writes `output.md` into the same run folder. The plugin then copies `output.md` to `output/<ProjectName>.context.md`.
+The plugin hosts a WinForms UI. The user selects a **Context-Exporter base directory**, then picks a **project** from the list of `*.context-exporter-config.json` files discovered under `config/`. The plugin reads the chosen config, runs each query writing a `output.<queryId>.fetch.json` per query, assembles `intermediate.json`, then shells out to the configured `*.transform.py` script. Python reads `intermediate.json`, renders the Markdown, and writes `output.md` into the same run folder. The plugin then copies `output.md` to `output/<SpecName>.context.md`.
 
 ### Why shell out to Python instead of embedding it
 
@@ -112,14 +112,14 @@ Authenticated connection to Dataverse is inherited from XrmToolBox's Connection 
 
 ## Configuration Design
 
-Configuration is **per-project**: each project gets its own `<ProjectName>.context-exporter-config.json` under `config/`. The plugin builds the project list by scanning that directory and presenting the discovered project names in a dropdown.
+Configuration is **per-spec**: each project gets its own `<SpecName>.context-exporter-config.json` under `config/`. The plugin builds the spec list by scanning that directory and presenting the discovered spec names in a dropdown.
 
 Suggested top-level schema:
 
 ```json
 {
   "$schema": "../../schema/context-exporter.schema.json",
-  "project": "Contoso",
+  "spec": "Contoso",
   "version": "1.0.0",
   "frontMatter": {
     "generatedBy": "D365 CE Context Exporter"
@@ -155,10 +155,10 @@ Suggested top-level schema:
 ```
 
 Key principles:
-- `project` is the canonical project name used for the output filename (`output/<ProjectName>.context.md`).
+- `spec` is the canonical spec name used for the output filename (`output/<SpecName>.context.md`).
 - `transformation` names one Jinja2 template file from `config/transformations/`; query `source` values are resolved relative to `config/queries/`.
 - Every query has a `resultKey` naming its slot in the intermediate JSON. The transformation script can reference any key it needs.
-- There are no per-project template or query files — only the config differs between projects.
+- There are no per-spec template or query files — only the config differs between projects.
 
 ## Components and Modules
 
@@ -183,15 +183,15 @@ Following the standard folder/namespace pattern, with the plugin name `D365Conte
 - **`Utils/`** — copies of the shared utility files (`DataverseClientHelper.cs`, `EntityExtensionMethods.cs`, `EntityFactory.cs`, `JsonSerializerHelper.cs`).
 - **`UI/`** — WinForms user controls.
   - `BaseDirectoryPickerControl` — folder picker for the Context-Exporter base directory; persisted in user settings.
-  - `ProjectPickerControl` — dropdown/list built by scanning `config/*.context-exporter-config.json`; shows project names derived from file names.
+  - `SpecPickerControl` — dropdown/list built by scanning `config/*.context-exporter-config.json`; shows spec names derived from file names.
   - `ExportProgressControl` — per-query progress, log panel, cancel button.
-  - `OutputPreviewControl` — after a run, shows the generated `output.md` and the `output/<ProjectName>.context.md` copy with open/reveal actions.
+  - `OutputPreviewControl` — after a run, shows the generated `output.md` and the `output/<SpecName>.context.md` copy with open/reveal actions.
 
 ### Python side — post-processor
 
 Python is used as a **post-processor only**. A single universal `transform.py` orchestrator handles all templates.
 
-- **`transform.py`** — the single entry point. Receives CLI args: `--input intermediate.json --template <path.j2> --out <runDir> --project <projectName>`. Loads `intermediate.json`, renders the Jinja2 template against it (plus custom filters from `filters.py`), and writes `output.md`. ~100 lines.
+- **`transform.py`** — the single entry point. Receives CLI args: `--input intermediate.json --template <path.j2> --out <runDir> --spec <SpecName>`. Loads `intermediate.json`, renders the Jinja2 template against it (plus custom filters from `filters.py`), and writes `output.md`. ~100 lines.
 - **`filters.py`** — custom Jinja2 filters reusable across all templates (`schemaname_to_title`, `markdown_table`, `group_by`, `csv_list`, `optionset_values`, etc.).
 - **`requirements.txt`** — pinned dependencies (`Jinja2`, `PyYAML`, `python-dateutil`, `markupsafe`).
 
@@ -220,21 +220,21 @@ The following artifacts will be built. Each row maps to a concrete deliverable.
 | 13 | `ProcessRunner.cs` | C# class | `Helpers/` | `Process` wrapper |
 | 14 | Shared utility `*.cs` files | C# static classes | `Utils/` | Shared utility copies |
 | 15 | `BaseDirectoryPickerControl.cs` | C# UserControl | `UI/` | Base folder chooser, persisted |
-| 16 | `ProjectPickerControl.cs` | C# UserControl | `UI/` | Project list from config/*.json |
+| 16 | `SpecPickerControl.cs` | C# UserControl | `UI/` | Spec list from config/*.json |
 | 17 | `ExportProgressControl.cs` | C# UserControl | `UI/` | Progress + log |
 | 18 | `OutputPreviewControl.cs` | C# UserControl | `UI/` | Run output + grounding file link |
 | 19 | `stylecop.json` | Config | project root | StyleCop configuration |
 | 20 | `transform.py` | Python script | `/python/` | Universal Jinja2 orchestrator, ~100 LOC |
 | 21 | `filters.py` | Python module | `/python/` | Shared Jinja2 filters |
 | 22 | `requirements.txt` | Python deps | `/python/` | Pinned versions |
-| 23 | `context-exporter.schema.json` | JSON Schema | `/schema/` | IDE IntelliSense for project configs |
+| 23 | `context-exporter.schema.json` | JSON Schema | `/schema/` | IDE IntelliSense for spec configs |
 | 24 | `entity-dictionary.j2` | Jinja2 | `config/transformations/` (solution root) | See catalog below |
 | 25 | `security-model.j2` | Jinja2 | `config/transformations/` (solution root) | See catalog below |
 | 26 | `optionsets.j2` | Jinja2 | `config/transformations/` (solution root) | See catalog below |
 | 27 | `forms-and-views.j2` | Jinja2 | `config/transformations/` (solution root) | See catalog below |
 | 28 | `solution-inventory.j2` | Jinja2 | `config/transformations/` (solution root) | See catalog below |
 | 28 | `config/queries/*.fetch.xml` | FetchXML | `config/queries/` (solution root) | One per query, shared |
-| 29 | `Sample.context-exporter-config.json` | JSON | `config/` (solution root) | Sample project config |
+| 29 | `Sample.context-exporter-config.json` | JSON | `config/` (solution root) | Sample spec config |
 | 30 | `README.md` | Markdown | repo root | User + developer docs |
 | 31 | `D365ContextExporter.nuspec` | NuGet spec | project root | For XrmToolBox Tool Library listing |
 | 32 | Unit test project | C# project | `/Tests/D365ContextExporter.Tests/` | Moq-based |
@@ -269,9 +269,9 @@ No C extensions beyond what Jinja2 already uses, so `pip install` works out-of-t
 
 ### Inputs
 
-1. **Project config** (`config/<ProjectName>.context-exporter-config.json`) — one per project; selected from the project list in the plugin UI.
-2. **Query files** (`config/queries/*.fetch.xml`) — shared; referenced by name in the project config.
-3. **Jinja2 template** (`config/transformations/<name>.j2`) — shared; one referenced per project config.
+1. **Spec config** (`config/<SpecName>.context-exporter-config.json`) — one per spec; selected from the spec list in the plugin UI.
+2. **Query files** (`config/queries/*.fetch.xml`) — shared; referenced by name in the spec config.
+3. **Jinja2 template** (`config/transformations/<name>.j2`) — shared; one referenced per spec config.
 4. **Live Dataverse connection** — from XrmToolBox's Connection Manager.
 
 ### Intermediate representation
@@ -288,7 +288,7 @@ A single JSON document per export run, written to the working directory. Structu
       "orgName": "Example",
       "orgId": "..."
     },
-    "frontMatter": { "project": "<ProjectName>" }
+    "frontMatter": { "spec": "<SpecName>" }
   },
   "entityAttributes": [
     { "logicalname": "account", "name": "accountid", "displayname": "Account ID", ... },
@@ -303,21 +303,21 @@ This file is preserved after the run (in a `runs/<timestamp>/` folder), which me
 
 ### Outputs
 
-Each run produces exactly one `output.md` file (rendered by the transformation script) plus one raw `output.<queryId>.fetch.json` per query. After the run, the plugin copies `output.md` to `output/<ProjectName>.context.md` in the base directory, overwriting any previous version. This final file is what the user uploads to an AI assistant. Each file starts with an optional YAML front-matter block carrying the values from `frontMatter` in the project config, which most LLM-facing tools safely ignore but which helps humans.
+Each run produces exactly one `output.md` file (rendered by the transformation script) plus one raw `output.<queryId>.fetch.json` per query. After the run, the plugin copies `output.md` to `output/<SpecName>.context.md` in the base directory, overwriting any previous version. This final file is what the user uploads to an AI assistant. Each file starts with an optional YAML front-matter block carrying the values from `frontMatter` in the spec config, which most LLM-facing tools safely ignore but which helps humans.
 
 ### End-to-end flow
 
 1. User opens the plugin inside XrmToolBox, which supplies an authenticated `IOrganizationService` via `PluginControlBase.Service`.
 2. User selects the **Context-Exporter base directory** (persisted between sessions).
-3. The plugin scans `config/*.context-exporter-config.json` and populates the **project list**. User selects a project.
-4. User clicks **Run Export**. The plugin loads the project config, resolves all paths relative to the base directory, and validates against the JSON schema.
+3. The plugin scans `config/*.context-exporter-config.json` and populates the **spec list**. User selects a spec.
+4. User clicks **Run Export**. The plugin loads the spec config, resolves all paths relative to the base directory, and validates against the JSON schema.
 5. A timestamped run folder `runs/<timestamp>/` is created.
 6. For each `QueryDefinition`, the appropriate runner (`FetchXmlQueryRunner`, `WebApiQueryRunner`, `MetadataQueryRunner`) executes against Dataverse. Each result is written to `runs/<timestamp>/output.<queryId>.fetch.json`.
 7. `IntermediateJsonBuilder` merges all per-query results plus `_meta` into `runs/<timestamp>/intermediate.json`.
-8. `PythonInvoker` launches `python transform.py --input intermediate.json --template config/transformations/<name>.j2 --out runs/<timestamp>/ --project <ProjectName>`. Stdout streams into the plugin's log panel; a non-zero exit code is surfaced as an error.
+8. `PythonInvoker` launches `python transform.py --input intermediate.json --template config/transformations/<name>.j2 --out runs/<timestamp>/ --spec <SpecName>`. Stdout streams into the plugin's log panel; a non-zero exit code is surfaced as an error.
 9. `transform.py` renders the Jinja2 template against the intermediate JSON (with custom filters from `filters.py`) and writes `runs/<timestamp>/output.md`.
-10. The plugin copies `output.md` to `output/<ProjectName>.context.md`, overwriting any previous version.
-11. `OutputPreviewControl` shows the generated files and offers **Open folder** / **Open in VS Code** / **Copy path** actions. A prominent note indicates that `output/<ProjectName>.context.md` is the file to upload to the AI assistant.
+10. The plugin copies `output.md` to `output/<SpecName>.context.md`, overwriting any previous version.
+11. `OutputPreviewControl` shows the generated files and offers **Open folder** / **Open in VS Code** / **Copy path** actions. A prominent note indicates that `output/<SpecName>.context.md` is the file to upload to the AI assistant.
 
 ## Transformation Catalog (initial set)
 
@@ -329,7 +329,7 @@ Five Jinja2 templates ship with the plugin under `config/transformations/`. Each
 - **`forms-and-views.j2`** — for each entity, lists its forms (by type: main, quick create, card) and its system views, with column lists as comma-separated schema names.
 - **`solution-inventory.j2`** — lists all solutions in the environment with publisher, version, and a grouped summary of components (counted by type: entity, form, view, workflow, plugin assembly, etc.).
 
-Practitioners add new transformations by dropping a `.j2` file into `config/transformations/` and referencing it by name in the project config. No C# rebuild required.
+Practitioners add new transformations by dropping a `.j2` file into `config/transformations/` and referencing it by name in the spec config. No C# rebuild required.
 
 ## Project Structure and Code Organization
 
@@ -380,7 +380,7 @@ Placed into the repository following the standard layout:
       JsonSerializerHelper.cs
     UI/
       BaseDirectoryPickerControl.cs (+ .Designer.cs)
-      ProjectPickerControl.cs (+ .Designer.cs)
+      SpecPickerControl.cs (+ .Designer.cs)
       ExportProgressControl.cs (+ .Designer.cs)
       OutputPreviewControl.cs (+ .Designer.cs)
     python/
@@ -409,11 +409,11 @@ Work is broken into four phases, each independently deliverable.
 ### Phase 1 — Skeleton and wiring (sprint 1)
 
 - Create the solution, projects, StyleCop config.
-- Implement `ContextExporterPluginControl` with minimum UI: connect to org, base directory picker, project list, run button, log panel.
-- Implement `ProjectPickerControl` — scans `config/*.context-exporter-config.json` and populates the project dropdown.
-- Wire `PluginControlBase.Service` through to a stub `ExportJobRunner` that just prints the selected project config.
+- Implement `ContextExporterPluginControl` with minimum UI: connect to org, base directory picker, spec list, run button, log panel.
+- Implement `SpecPickerControl` — scans `config/*.context-exporter-config.json` and populates the spec dropdown.
+- Wire `PluginControlBase.Service` through to a stub `ExportJobRunner` that just prints the selected spec config.
 - Verify the `.nupkg` builds locally with `dotnet pack`.
-- **Exit criteria:** the plugin installs into XrmToolBox, loads, connects to a Dataverse org, shows the project list, and prints the loaded project config.
+- **Exit criteria:** the plugin installs into XrmToolBox, loads, connects to a Dataverse org, shows the spec list, and prints the loaded spec config.
 
 ### Phase 2 — Query execution (sprint 2)
 
@@ -422,21 +422,21 @@ Work is broken into four phases, each independently deliverable.
 - Implement `WebApiQueryRunner` with token reuse from `ServiceClient`.
 - Implement `EntityJsonSerializer` with unit tests covering `EntityReference`, `OptionSetValue`, `Money`, `AliasedValue`, `EntityCollection`, null handling.
 - Implement `IntermediateJsonBuilder`. Write `output.<queryId>.fetch.json` per query and `intermediate.json` to `runs/<timestamp>/`.
-- **Exit criteria:** given a project config with a couple of FetchXML + metadata queries, the plugin produces per-query raw files and a well-formed `intermediate.json` that can be opened and inspected.
+- **Exit criteria:** given a spec config with a couple of FetchXML + metadata queries, the plugin produces per-query raw files and a well-formed `intermediate.json` that can be opened and inspected.
 
 ### Phase 3 — Python post-processor and templates (sprint 3)
 
 - Author `transform.py` and `filters.py`. Keep `transform.py` under 150 lines.
 - Author the five initial Jinja2 templates listed in the Transformation Catalog.
-- Implement `PythonInvoker` with interpreter discovery (explicit path > config's venv > `py -3` > `python` on PATH), timeout, stderr capture, and the copy step that writes `output/<ProjectName>.context.md`.
-- Implement `OutputPreviewControl` with a prominent call-to-action pointing to the `output/<ProjectName>.context.md` grounding file.
+- Implement `PythonInvoker` with interpreter discovery (explicit path > config's venv > `py -3` > `python` on PATH), timeout, stderr capture, and the copy step that writes `output/<SpecName>.context.md`.
+- Implement `OutputPreviewControl` with a prominent call-to-action pointing to the `output/<SpecName>.context.md` grounding file.
 - Document the Python venv bootstrap in the plugin's **first-run experience** — if no venv is found, the plugin offers to create one and run `pip install -r requirements.txt` for the user.
-- **Exit criteria:** end-to-end run against a real sandbox org produces `output.md` in the run folder and copies it correctly to `output/<ProjectName>.context.md`.
+- **Exit criteria:** end-to-end run against a real sandbox org produces `output.md` in the run folder and copies it correctly to `output/<SpecName>.context.md`.
 
 ### Phase 4 — Polish, packaging, distribution (sprint 4)
 
 - JSON schema for configuration with `$schema` URL hint so VS Code gives IntelliSense.
-- Config validation with clear error messages (missing `resultKey`, unresolvable query or transformation path, missing `project` name).
+- Config validation with clear error messages (missing `resultKey`, unresolvable query or transformation path, missing `spec` name).
 - Recent configs MRU list.
 - Cancellation support (`CancellationToken` flowed through runners).
 - README with screenshots, quickstart, and sample configs.

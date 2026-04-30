@@ -39,7 +39,7 @@ namespace D365ContextExporter.Orchestration
         /// Assembles all query results into <c>intermediate.json</c> and writes it to the run directory.
         /// </summary>
         /// <param name="runDir">The timestamped run directory.</param>
-        /// <param name="job">The loaded export job (supplies project name and front-matter).</param>
+        /// <param name="job">The loaded export job (supplies spec name and front-matter).</param>
         /// <param name="environmentUrl">The Dataverse environment URL stored in <c>_meta</c>.</param>
         /// <param name="orgName">The organisation friendly name stored in <c>_meta</c>.</param>
         /// <param name="results">Map from each query's <c>resultKey</c> to its result object.</param>
@@ -71,8 +71,8 @@ namespace D365ContextExporter.Orchestration
             writer.WritePropertyName("orgName");
             writer.WriteValue(orgName);
             writer.WriteEndObject();
-            writer.WritePropertyName("project");
-            writer.WriteValue(job.Project);
+            writer.WritePropertyName("spec");
+            writer.WriteValue(job.Spec);
             writer.WritePropertyName("frontMatter");
             JToken.FromObject(job.FrontMatter).WriteTo(writer);
             writer.WriteEndObject();

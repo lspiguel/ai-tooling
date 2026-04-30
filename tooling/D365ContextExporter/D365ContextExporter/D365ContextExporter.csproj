@@ -39,8 +39,8 @@
     <Compile Update="UI\BaseDirectoryPickerControl.Designer.cs">
       <DependentUpon>BaseDirectoryPickerControl.cs</DependentUpon>
     </Compile>
-    <Compile Update="UI\ProjectPickerControl.Designer.cs">
-      <DependentUpon>ProjectPickerControl.cs</DependentUpon>
+    <Compile Update="UI\SpecPickerControl.Designer.cs">
+      <DependentUpon>SpecPickerControl.cs</DependentUpon>
     </Compile>
     <Compile Update="UI\ExportProgressControl.Designer.cs">
       <DependentUpon>ExportProgressControl.cs</DependentUpon>
@@ -75,8 +75,8 @@
     <EmbeddedResource Update="UI\BaseDirectoryPickerControl.resx">
       <DependentUpon>BaseDirectoryPickerControl.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Update="UI\ProjectPickerControl.resx">
-      <DependentUpon>ProjectPickerControl.cs</DependentUpon>
+    <EmbeddedResource Update="UI\SpecPickerControl.resx">
+      <DependentUpon>SpecPickerControl.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Update="UI\ExportProgressControl.resx">
       <DependentUpon>ExportProgressControl.cs</DependentUpon>

@@ -11,12 +11,12 @@ namespace D365ContextExporter.Models
 
     using Newtonsoft.Json;
 
-    /// <summary>Represents a loaded project configuration file.</summary>
+    /// <summary>Represents a loaded spec configuration file.</summary>
     public sealed class ExportJob
     {
-        /// <summary>Gets or sets the project name.</summary>
-        [JsonProperty("project")]
-        public string Project { get; set; } = string.Empty;
+        /// <summary>Gets or sets the spec name.</summary>
+        [JsonProperty("spec")]
+        public string Spec { get; set; } = string.Empty;
 
         /// <summary>Gets or sets the schema version of this config file.</summary>
         [JsonProperty("version")]
@@ -60,6 +60,6 @@ namespace D365ContextExporter.Models
         }
 
         /// <inheritdoc/>
-        public override string ToString() => $"{this.Project} v{this.Version} ({this.Queries.Count} queries)";
+        public override string ToString() => $"{this.Spec} v{this.Version} ({this.Queries.Count} queries)";
     }
 }
