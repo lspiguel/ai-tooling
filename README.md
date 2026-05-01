@@ -29,17 +29,7 @@ In the specific case of consulting, project and development work the **main issu
 
 This **context** is the grounding that an AI needs to provide answers and build artifacts that work. Tools are then classified by how they can operate in context, and the actions that they can carry out.
 
-### 1. Coding Assistants & Agentic Environments
-
-AI tools integrated into a developer's working environment — either embedded in an existing IDE/editor or operating as a dedicated AI-first IDE or CLI agent. Provide inline suggestion, chat, fully autonomous multi-file, multi-step task execution with build and test feedback loops.
-
-**Characteristics:** inline suggestions, chat within editor, code explanation, refactoring, test generation, terminal execution, repo-level reasoning, multi-file edits, test/build feedback loops  
-**Examples:** GitHub Copilot (VS Code)[^3], Cline, Continue, JetBrains AI Assistant, Claude Code (CLI)[^4], Cursor (dedicated IDE)[^5], Windsurf, Aider  
-**D365 relevance:** Plugin development, PCF controls, Azure Functions, JavaScript web resources, scaffolding plugin solutions, generating and running unit tests, refactoring assemblies, ADO pipeline authoring
-
----
-
-### 2. General-Purpose AI Assistants
+### 1. General-Purpose AI Assistants
 
 Web, desktop, or mobile chat interfaces offering broad reasoning, generation, and task support. Not specialized to a specific execution environment. Agentic capabilities (tool use, browsing, code execution) may be available depending on the platform.
 
@@ -49,13 +39,23 @@ Web, desktop, or mobile chat interfaces offering broad reasoning, generation, an
 
 ---
 
-### 3. Local / Desktop Automation Agents
+### 2. Local / Desktop Automation Agents
 
 AI with direct access to the local operating system, filesystem, browser, and installed applications. Executes tasks across the desktop environment with computer-use capabilities. Best suited for multi-application workflows that cannot be automated through APIs alone.
 
 **Characteristics:** browser control, file system access, UI interaction, cross-application automation  
 **Examples:** Claude Cowork, Anthropic Computer Use[^6], OpenAI Operator  
 **D365 relevance:** Automating repetitive configuration tasks in make.powerapps.com, navigating Power Platform Admin Center, extracting data from XrmToolbox outputs
+
+---
+
+### 3. Coding Assistants & Agentic Environments
+
+AI tools integrated into a developer's working environment — either embedded in an existing IDE/editor or operating as a dedicated AI-first IDE or CLI agent. Provide inline suggestion, chat, fully autonomous multi-file, multi-step task execution with build and test feedback loops.
+
+**Characteristics:** inline suggestions, chat within editor, code explanation, refactoring, test generation, terminal execution, repo-level reasoning, multi-file edits, test/build feedback loops  
+**Examples:** GitHub Copilot (VS Code)[^3], Cline, Continue, JetBrains AI Assistant, Claude Code (CLI)[^4], Cursor (dedicated IDE)[^5], Windsurf, Aider  
+**D365 relevance:** Plugin development, PCF controls, Azure Functions, JavaScript web resources, scaffolding plugin solutions, generating and running unit tests, refactoring assemblies, ADO pipeline authoring
 
 ---
 
@@ -95,9 +95,9 @@ Domain-specific tools that have embedded AI into their existing UX rather than b
 |------|-------------|
 | [Docs](docs/) | Reference documentation, architecture notes, and decision records |
 | [Scripts](scripts/) | Utility scripts supporting AI-assisted tasks and automation |
-| [1. Coding Assistants & Agentic Environments](workflows/1-coding-assistants/README.md) | Workflows using IDE-embedded and CLI/agentic coding AI (e.g., GitHub Copilot, Claude Code, Cursor) |
-| [2. General-Purpose AI Assistants](workflows/2-general-purpose-assistants/README.md) | Workflows using web/desktop chat AI (e.g., Claude.ai, ChatGPT) |
-| [Pending](workflows/3-desktop-automation-agents/) | Workflows using local OS/browser automation agents (e.g., Computer Use) |
+| [1. General-Purpose AI Assistants](workflows/1-general-purpose-assistants/README.md) | Workflows using web/desktop chat AI (e.g., Claude.ai, ChatGPT) |
+| [Pending](workflows/2-desktop-automation-agents/) | Workflows using local OS/browser automation agents (e.g., Computer Use) |
+| [3. Coding Assistants & Agentic Environments](workflows/3-coding-assistants/README.md) | Workflows using IDE-embedded and CLI/agentic coding AI (e.g., GitHub Copilot, Claude Code, Cursor) |
 | [Pending](workflows/4-platform-embedded-copilots/) | Workflows using platform-native copilots (e.g., M365 Copilot, D365 Copilot) |
 | [Pending](workflows/5-agent-builder-frameworks/) | Workflows using agent orchestration platforms (e.g., Copilot Studio, Foundry) |
 | [Pending](workflows/6-ai-augmented-specialty-tools/) | Workflows using AI-enhanced domain tools (e.g., XrmToolbox, GitHub PRs) |
@@ -106,11 +106,11 @@ Domain-specific tools that have embedded AI into their existing UX rather than b
 
 ## Notes on Taxonomy
 
-This classification is organized by *deployment context and execution model*, not purely by autonomy level. A single AI model (e.g., Claude or GPT-4o) may appear in multiple categories depending on the surface through which it is accessed — for example, Claude accessed via Claude.ai (Category 2), via Claude Code in a terminal (Category 1), or via a Copilot Studio integration (Category 5) represents three different tool categories despite sharing the same underlying model.
+This classification is organized by *deployment context and execution model*, not purely by autonomy level. A single AI model (e.g., Claude or GPT-4o) may appear in multiple categories depending on the surface through which it is accessed — for example, Claude accessed via Claude.ai (Category 1), via Claude Code in a terminal (Category 3), or via a Copilot Studio integration (Category 5) represents three different tool categories despite sharing the same underlying model.
 
 This distinction matters for governance, security review, and workflow design: the *execution environment* determines what the AI can act on, what data it can access, and what oversight is appropriate.
 
-Note that within Category 1, the spectrum runs from suggestion-driven assistance (IDE extensions like GitHub Copilot) to fully autonomous multi-step execution (CLI agents like Claude Code and dedicated AI-first IDEs like Cursor). Both share the characteristic of operating within a developer's working environment.
+Note that within Category 3, the spectrum runs from suggestion-driven assistance (IDE extensions like GitHub Copilot) to fully autonomous multi-step execution (CLI agents like Claude Code and dedicated AI-first IDEs like Cursor). Both share the characteristic of operating within a developer's working environment.
 
 ---
 
