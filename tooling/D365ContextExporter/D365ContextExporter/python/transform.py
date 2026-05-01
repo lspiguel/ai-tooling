@@ -23,6 +23,16 @@ except ImportError as e:
     sys.exit(1)
 
 
+def _count_tokens(text: str) -> int:
+    try:
+        import tiktoken
+        enc = tiktoken.get_encoding("o200k_base")
+        return len(enc.encode(text))
+    except Exception:
+        # Fallback: GPT-4o averages ~4 chars/token for English prose.
+        return max(1, len(text) // 4)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Render a Jinja2 template from intermediate.json.")
     parser.add_argument("--input", required=True, help="Path to intermediate.json")
@@ -58,6 +68,13 @@ def main() -> None:
         f.write(rendered)
 
     print(f"[transform] output.md written ({len(rendered.encode('utf-8'))} bytes)")
+
+    # Count tokens and write sidecar.
+    token_count = _count_tokens(rendered)
+    token_path = os.path.join(args.out, "token_count.txt")
+    with open(token_path, "w", encoding="utf-8") as f:
+        f.write(str(token_count))
+    print(f"[transform] token count (gpt-4o): {token_count:,}")
 
 
 if __name__ == "__main__":

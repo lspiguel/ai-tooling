@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MscrmTools.Xrm.Connection" Version="1.2025.9.64" />
+<PackageReference Include="MscrmTools.Xrm.Connection" Version="1.2025.9.64" />
     <PackageReference Include="XrmToolBoxPackage" Version="1.2025.10.74" />
     <!-- Microsoft.PowerPlatform.Dataverse.Client added in Phase 2 when query runners are implemented.
          XrmToolBoxPackage already provides IOrganizationService and McTools.Xrm.Connection. -->

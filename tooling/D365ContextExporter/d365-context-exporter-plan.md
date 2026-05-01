@@ -253,11 +253,12 @@ The following artifacts will be built. Each row maps to a concrete deliverable.
 ### Python — pip packages (pinned in `requirements.txt`)
 
 - `Jinja2` (latest 3.x).
+- `tiktoken` — OpenAI BPE tokenizer; used by `transform.py` to count tokens in `output.md` using the `o200k_base` (gpt-4o) encoding and write a `token_count.txt` sidecar. Falls back to a character-based estimate (`len // 4`) if not installed.
 - `PyYAML` — lets users optionally author configs or template fragments in YAML.
 - `python-dateutil` — forgiving date parsing inside templates.
 - `markupsafe` — pulled in transitively by Jinja2; listed for clarity.
 
-No C extensions beyond what Jinja2 already uses, so `pip install` works out-of-the-box on a clean Windows machine.
+`tiktoken` installs a C extension wheel; prebuilt wheels are available for all standard Windows/Python combinations so `pip install` still works out-of-the-box.
 
 ### External tools (not libraries, but required)
 
@@ -443,6 +444,7 @@ Work is broken into four phases, each independently deliverable.
 - `.nuspec` with proper tags (`XrmToolBox`, `Documentation`, `AI`, `Markdown`) for Tool Library listing.
 - Set up the GitHub Actions workflow to build and pack a `.nupkg`.
 - Submit to XrmToolBox Tool Library following Jonas Rapp's guidance on Nuget publishing.
+- Verify `tiktoken` is listed in `requirements.txt` and included in the first-run venv bootstrap — it is required alongside `Jinja2` for accurate token counting.
 - **Exit criteria:** plugin installable from XrmToolBox Tool Library by anyone with the required Python prerequisites.
 
 ## Testing Strategy
