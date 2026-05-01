@@ -1,63 +1,35 @@
-# AI Tooling for Dynamics 365 CE & Power Platform
+# AI Tooling
 
-A curated repository of AI workflows, prompts, configurations, and references organized around a practical taxonomy of AI tooling. The goal is to help development teams achieve greater productivity and higher quality during implementation and maintenance of Microsoft Dynamics 365 Customer Engagement and the broader Power Platform.
-
----
-
-## Principles
-
-- Implement solutions that work and are genuinely helpful to the end user
-- Deliver best-in-class quality and follow established conventions and best practices
-- Minimize rework and cost
-- Leverage AI as a productivity multiplier, not a replacement for judgment
-- Maintain Human-in-the-Loop (HITL) principles throughout
-- Integrate with the broader Development ecosystem: specially Microsoft tooling and SaaS - Azure, Visual Studio, VS Code, GitHub, ADO
+A curated repository of AI workflows, prompts, configurations, and references organized around a practical taxonomy of AI tooling. The goal is to help development teams achieve greater productivity and higher quality during implementation of software projects.
 
 ---
 
-## AI Tool Taxonomy
+## Read me first: AI Tool Taxonomy
 
 Tools are organized by their **deployment context and execution model** — that is, where the AI runs, how it integrates into a workflow, how it is context aware, and what kind of actions it can take. This is distinct from autonomy-level classifications (chatbot → copilot → agent → digital employee)[^1], which describe *how much* an AI can do, not *where or how* it operates. An example of this type of comparison for AI tools is maintained by Artificial Analysis[^2].
 
-In the specific case of consulting, project and development work the **main issue for AI tooling is how to provide context**. AI is not useful if it is not aware of things like:
-- Phase within a plan (are we planning and no work has been done yet? are we in maintenance mode and we have a multi-year user base? somewhere in the middle?)
-- What's already built (are there components already in place? what columns does this table have? artifacts already built)
-- Overall design (which can be at the Enterprise level, module level, and specific design patterns to be used)
-- Plans in place (epics, features, user stories, documentation that describes from a functional perspective what has been done, what's planned to be built and when)
-- Existing constraints (which tools can be used, security restrictions, licensing, budget, capacity;  is there a code freeze?)
-- Tools (including development, design, project management and other tools)
-
-This **context** is the grounding that an AI needs to provide answers and build artifacts that work. Tools are then classified by how they can operate in context, and the actions that they can carry out.
-
-### 1. Coding Assistants & Agentic Environments
-
-AI tools integrated into a developer's working environment — either embedded in an existing IDE/editor or operating as a dedicated AI-first IDE or CLI agent. Provide inline suggestion, chat, fully autonomous multi-file, multi-step task execution with build and test feedback loops.
-
-**Characteristics:** inline suggestions, chat within editor, code explanation, refactoring, test generation, terminal execution, repo-level reasoning, multi-file edits, test/build feedback loops  
-**Examples:** GitHub Copilot (VS Code)[^3], Cline, Continue, JetBrains AI Assistant, Claude Code (CLI)[^4], Cursor (dedicated IDE)[^5], Windsurf, Aider  
-**D365 relevance:** Plugin development, PCF controls, Azure Functions, JavaScript web resources, scaffolding plugin solutions, generating and running unit tests, refactoring assemblies, ADO pipeline authoring
-
 ---
 
-### 2. General-Purpose AI Assistants
+### 1. General-Purpose AI Assistants
 
 Web, desktop, or mobile chat interfaces offering broad reasoning, generation, and task support. Not specialized to a specific execution environment. Agentic capabilities (tool use, browsing, code execution) may be available depending on the platform.
 
 **Characteristics:** conversational, broad knowledge, document generation, research, planning  
 **Examples:** Claude.ai, ChatGPT, Gemini, Microsoft 365 Copilot (chat mode)  
-**D365 relevance:** Requirements analysis, writing user stories and acceptance criteria, architecture documentation, review of solution designs, drafting runbooks
 
----
-
-### 3. Local / Desktop Automation Agents
+### 2. Local / Desktop Automation Agents
 
 AI with direct access to the local operating system, filesystem, browser, and installed applications. Executes tasks across the desktop environment with computer-use capabilities. Best suited for multi-application workflows that cannot be automated through APIs alone.
 
 **Characteristics:** browser control, file system access, UI interaction, cross-application automation  
 **Examples:** Claude Cowork, Anthropic Computer Use[^6], OpenAI Operator  
-**D365 relevance:** Automating repetitive configuration tasks in make.powerapps.com, navigating Power Platform Admin Center, extracting data from XrmToolbox outputs
 
----
+### 3. Coding Assistants & Agentic Environments
+
+AI tools integrated into a developer's working environment — either embedded in an existing IDE/editor or operating as a dedicated AI-first IDE or CLI agent. Provide inline suggestion, chat, fully autonomous multi-file, multi-step task execution with build and test feedback loops.
+
+**Characteristics:** inline suggestions, chat within editor, code explanation, refactoring, test generation, terminal execution, repo-level reasoning, multi-file edits, test/build feedback loops  
+**Examples:** GitHub Copilot (VS Code)[^3], Cline, Continue, JetBrains AI Assistant, Claude Code (CLI)[^4], Cursor (dedicated IDE)[^5], Windsurf, Aider  
 
 ### 4. Platform-Embedded Copilots
 
@@ -65,9 +37,6 @@ AI tightly integrated into a specific SaaS or enterprise platform, surfaced with
 
 **Characteristics:** platform-native, context-aware of platform data, no external tool access  
 **Examples:** Microsoft 365 Copilot (Word/Excel/Teams), Copilot for Dynamics 365, Copilot in Power Apps (natural language table/form generation)  
-**D365 relevance:** Drafting solution documentation directly in SharePoint, summarizing CRM records, generating Power Fx expressions, AI Builder model integration
-
----
 
 ### 5. Agent Builder Frameworks / Orchestration Platforms
 
@@ -75,9 +44,6 @@ Low-code or pro-code platforms for composing, deploying, and governing AI agents
 
 **Characteristics:** topic/instruction authoring, connector integration, multi-agent orchestration, governance  
 **Examples:** Copilot Studio[^7], Azure AI Foundry[^8], Semantic Kernel[^9], AutoGen[^10], LangChain  
-**D365 relevance:** Building D365-connected virtual agents, orchestrating multi-step business processes, custom copilots for field service or sales, autonomous agents triggered by Dataverse events
-
----
 
 ### 6. AI-Augmented Specialty Tools
 
@@ -85,32 +51,37 @@ Domain-specific tools that have embedded AI into their existing UX rather than b
 
 **Characteristics:** AI features embedded in established tooling, domain-specific context  
 **Examples:** XrmToolbox plugins with AI capabilities, GitHub Copilot for Pull Requests, ADO Copilot features, Postman AI  
-**D365 relevance:** AI-assisted FetchXML authoring, automated PR descriptions for solution changes, test case generation in ADO
 
 ---
 
-## Repository Structure
+## Objectives
 
-| Path | Description |
-|------|-------------|
-| [Docs](docs/) | Reference documentation, architecture notes, and decision records |
-| [Scripts](scripts/) | Utility scripts supporting AI-assisted tasks and automation |
-| [1. Coding Assistants & Agentic Environments](workflows/1-coding-assistants/README.md) | Workflows using IDE-embedded and CLI/agentic coding AI (e.g., GitHub Copilot, Claude Code, Cursor) |
-| [2. General-Purpose AI Assistants](workflows/2-general-purpose-assistants/README.md) | Workflows using web/desktop chat AI (e.g., Claude.ai, ChatGPT) |
-| [Pending](workflows/3-desktop-automation-agents/) | Workflows using local OS/browser automation agents (e.g., Computer Use) |
-| [Pending](workflows/4-platform-embedded-copilots/) | Workflows using platform-native copilots (e.g., M365 Copilot, D365 Copilot) |
-| [Pending](workflows/5-agent-builder-frameworks/) | Workflows using agent orchestration platforms (e.g., Copilot Studio, Foundry) |
-| [Pending](workflows/6-ai-augmented-specialty-tools/) | Workflows using AI-enhanced domain tools (e.g., XrmToolbox, GitHub PRs) |
+In the specific case of consulting, project and development work the **main issue for AI tooling is how to provide it with context**. AI is not useful if it is not aware of things like:
+- Phase within a plan (are we planning and no work has been done yet? are we in maintenance mode and we have a multi-year user base? somewhere in the middle?)
+- What's already built (are there components already in place? what columns does this table have? artifacts already built)
+- Overall design (which can be at the Enterprise level, module level, and specific design patterns to be used)
+- Plans in place (epics, features, user stories, documentation that describes from a functional perspective what has been done, what's planned to be built and when)
+- Existing constraints (which tools can be used, security restrictions, licensing, budget, capacity;  is there a code freeze?)
+- Tools (including development, design, project management and other tools)
+
+This **context** is the grounding that an AI needs to provide answers and build artifacts that work.
+
+---
+
+## Sections
+
+- [Dynamics 365 Customer Engagement & Power Platform](/README-d365ce.md)
+- [Instructions for AI Tools](/INSTRUCTIONS.md)
 
 ---
 
 ## Notes on Taxonomy
 
-This classification is organized by *deployment context and execution model*, not purely by autonomy level. A single AI model (e.g., Claude or GPT-4o) may appear in multiple categories depending on the surface through which it is accessed — for example, Claude accessed via Claude.ai (Category 2), via Claude Code in a terminal (Category 1), or via a Copilot Studio integration (Category 5) represents three different tool categories despite sharing the same underlying model.
+This classification is organized by *deployment context and execution model*, not purely by autonomy level. A single AI model (e.g., Claude or GPT-4o) may appear in multiple categories depending on the surface through which it is accessed — for example, Claude accessed via Claude.ai (Category 1), via Claude Code in a terminal (Category 3), or via a Copilot Studio integration (Category 5) represents three different tool categories despite sharing the same underlying model.
 
 This distinction matters for governance, security review, and workflow design: the *execution environment* determines what the AI can act on, what data it can access, and what oversight is appropriate.
 
-Note that within Category 1, the spectrum runs from suggestion-driven assistance (IDE extensions like GitHub Copilot) to fully autonomous multi-step execution (CLI agents like Claude Code and dedicated AI-first IDEs like Cursor). Both share the characteristic of operating within a developer's working environment.
+Note that within Category 3, the spectrum runs from suggestion-driven assistance (IDE extensions like GitHub Copilot) to fully autonomous multi-step execution (CLI agents like Claude Code and dedicated AI-first IDEs like Cursor). Both share the characteristic of operating within a developer's working environment.
 
 ---
 
