@@ -35,32 +35,28 @@ The plugin UI must also show the generated files with actions to open them.
 
 #### `Orchestration/PythonInvoker.cs`
 
-**Description.** Locates a Python interpreter and invokes `transform.py` as a child process, passing the paths to `intermediate.json`, the Jinja2 template, the output directory, and the spec name. Streams stdout and stderr to the log delegate in real time. Enforces a configurable timeout and surfaces failures as typed exceptions.
+**Description.** Locates a Python interpreter, extracts embedded Python scripts to `LocalAppData`, and invokes `transform.py` as a child process, passing the paths to `intermediate.json`, the Jinja2 template, the output directory, and the spec name. Streams stdout and stderr to the log delegate in real time. Enforces a configurable timeout and surfaces failures as typed exceptions.
 
 **Responsibilities.**
-- Resolve the Python interpreter to use, following discovery order:
-  1. `PythonSettings.Interpreter` (when not `"auto"`) — treated as an absolute path to `python.exe`.
-  2. `Scripts\python.exe` inside the expanded `PythonSettings.Venv` path — the venv's own interpreter.
-  3. `py.exe -3` — the Windows Python launcher.
-  4. `python` on `PATH` — last resort.
-- Verify the resolved interpreter exists before launching; surface a clear error if none is found.
-- Locate `transform.py` relative to the plugin assembly directory (packed by MSBuild into `python\transform.py` alongside the `.dll`).
+- Resolve the Python interpreter via `PythonBootstrapHelper.ResolveExecutable(settings)`:
+  - `PythonSettings.Interpreter` (when not `"auto"`) — used as-is.
+  - `"python"` — when set to `"auto"` (relies on PATH).
+- Extract embedded Python scripts (`transform.py`, `filters.py`, `requirements.txt`) from the assembly manifest to `%LOCALAPPDATA%\D365ContextExporter\python\` via `EnsureScripts()`. This runs on every invocation and overwrites existing files, keeping them in sync with the assembly version.
 - Build the command-line call:
   ```
-  <python> python\transform.py
+  <python> "<LocalAppData>\D365ContextExporter\python\transform.py"
       --input <runDir>\intermediate.json
       --template <baseDir>\config\transformations\<job.Transformation>
       --out <runDir>
       --spec <job.Spec>
   ```
 - Launch the process with `ProcessRunner`, redirecting stdout and stderr. Pipe each line to the `log` delegate so the user sees real-time progress.
-- Enforce a default 5-minute timeout (overridable from `PythonSettings.TimeoutSeconds` if added to the model in a future phase). Kill the process forcibly on timeout.
-- Throw `PythonInvocationException` (a typed exception carrying exit code, stdout snippet, and stderr snippet) when the process exits non-zero.
+- Enforce a default 5-minute timeout. Kill the process forcibly on timeout.
+- Throw `PythonInvocationException` (a typed exception carrying exit code and last ~500 chars of stderr) when the process exits non-zero.
 - After a successful run, call `CopyOutputToSpecDir(runDir, baseDir, job.Spec)` — copies `<runDir>\output.md` to `<baseDir>\output\<SpecName>.context.md`, creating the `output\` directory if needed.
 
 **How it is used from configuration.**
-- `python.interpreter` — `"auto"` enables discovery; any other string is an absolute path.
-- `python.venv` — expands `%LOCALAPPDATA%` and other `%VAR%` tokens via `PathResolver.Resolve`; the plugin looks for `Scripts\python.exe` inside this directory.
+- `python.interpreter` — `"auto"` resolves to `"python"` on PATH; any other string is used verbatim.
 - `transformation` — the `.j2` filename passed as `--template`; resolved relative to `<baseDir>\config\transformations\`.
 - `spec` — passed as `--spec`; determines the final output filename.
 
@@ -110,14 +106,14 @@ The plugin UI must also show the generated files with actions to open them.
       CancellationToken cancellationToken)
   ```
 - Configure `ProcessStartInfo` with `RedirectStandardOutput = true`, `RedirectStandardError = true`, `UseShellExecute = false`, `CreateNoWindow = true`.
-- Begin async reads of stdout and stderr immediately after `Start()`, forwarding each line to the respective callback.
+- Begin async reads of stdout and stderr immediately after `Start()`, forwarding each line to the respective callback. The timeout is split: half is used for `WaitForExit`, half for draining stdout/stderr streams.
 - Block until the process exits or `timeoutMs` elapses. On timeout, call `Kill()` and throw `TimeoutException`.
 - Observe `cancellationToken`; on cancellation, call `Kill()` and throw `OperationCanceledException`.
 - Return the process `ExitCode`.
 
 **How it is used from configuration.** Not configured directly; all parameters come from `PythonInvoker`, which resolves config values before calling `ProcessRunner`.
 
-**Called from.** `PythonInvoker` exclusively.
+**Called from.** `PythonInvoker` and `PythonBootstrapHelper` exclusively.
 
 ---
 
@@ -125,11 +121,13 @@ The plugin UI must also show the generated files with actions to open them.
 
 **Current state.** Fully implemented but stops after `IntermediateJsonBuilder.WriteIntermediate()`. Never invokes Python or copies output.
 
-**Required changes.**
-1. After `WriteIntermediate`, construct a `PythonInvoker` and call its `Invoke(job, baseDir, runDir, cancellationToken)` method.
-2. If `PythonInvoker.Invoke` throws, log the error and surface it to the caller — do not swallow it.
-3. After a successful invocation, log the path of the copied `output/<SpecName>.context.md`.
-4. Pass the run directory back to the caller (or raise an event) so the UI can show `OutputPreviewControl`.
+**Implemented changes.**
+1. After `WriteIntermediate`, constructs a `PythonInvoker` and calls `Invoke(job, baseDir, runDir, cancellationToken)`.
+2. After `Invoke` succeeds, calls `AppendTokenCount(runDir)` — reads `token_count.txt` written by `transform.py` and prepends a `> Token count (gpt-4o): N` blockquote to `output.md`.
+3. Calls `CopyOutputToSpecDir(runDir, baseDir, job.Spec)` to write the final `output/<SpecName>.context.md`. (Note: `PythonInvoker` also has its own `CopyOutputToSpecDir` which runs first; `ExportJobRunner`'s copy runs after `AppendTokenCount` so the token-count header is included in the project output file.)
+4. Returns the run directory path to the caller so the UI can show `OutputPreviewControl`.
+5. Per-query failures are collected without short-circuiting; an `AggregateException` is thrown after the query loop if any failed.
+6. Progress callback (`onProgress`) is invoked after each query with `(i+1, total, queryId)`.
 
 No structural changes to query execution or intermediate JSON building.
 
@@ -140,10 +138,10 @@ No structural changes to query execution or intermediate JSON building.
 **Current state.** Log-only stub. The `ExportProgressControl` comment in the source reads "Phase 1 stub — progress bars and cancel button are deferred to Phase 3."
 
 **Required changes.**
-1. Add a **Cancel** button. When clicked, raise a `CancelRequested` event (the plugin control owns the `CancellationTokenSource` and calls `cts.Cancel()` in response).
-2. Add a `ProgressBar` or `Label` showing the current query index out of total (e.g., "Query 2 / 5").
-3. Expose `SetProgress(int current, int total, string queryId)` so `ExportJobRunner` can update progress via the `BeginInvoke`-safe log delegate pattern already in use.
-4. Expose `SetRunning(bool running)` to enable/disable the Cancel button and toggle a spinner or status label.
+1. **Cancel** button raises `CancelRequested` event. The plugin control owns the `CancellationTokenSource` and calls `cts.Cancel()` in response.
+2. `SetProgress(int current, int total, string queryId)` updates a progress label (e.g., "Query 2 / 5") with thread-safe marshalling via `BeginInvoke`.
+3. `SetRunning(bool running)` enables/disables the Cancel button.
+4. `AppendLog(string message)` and `ClearLog()` use the `InvokeRequired`/`BeginInvoke` pattern for thread safety. The RichTextBox auto-scrolls to the caret after each append.
 
 ---
 
@@ -152,11 +150,11 @@ No structural changes to query execution or intermediate JSON building.
 **Current state.** Wires up directory picker, spec picker, run button, and log. Calls `ExportJobRunner.Run()` on a background `Task`.
 
 **Required changes.**
-1. Add `OutputPreviewControl` to the form layout (hidden until a run completes).
-2. In the `Task.ContinueWith` callback, if the run succeeded, call `outputPreview.ShowResult(runOutputPath, projectOutputPath)` and make the control visible.
-3. Wire the `ExportProgressControl.CancelRequested` event to call `cts.Cancel()`.
-4. On run start, call `progressControl.SetRunning(true)`, `outputPreview.Hide()`. On completion (success or failure), call `progressControl.SetRunning(false)`.
-5. Add a first-run Python bootstrap check: before calling `ExportJobRunner.Run()`, call `PythonBootstrapHelper.EnsureVenvAsync(job.Python, log)` (see below).
+1. `OutputPreviewControl` is in the form layout (hidden until a run completes).
+2. In the `Task.ContinueWith` callback, if the run succeeded, constructs `runOutputPath` and `specOutputPath` and calls `outputPreview.ShowResult(runOutputPath, projectOutputPath)`.
+3. `ExportProgressControl.CancelRequested` is wired to call `cts.Cancel()`.
+4. On run start: `progressControl.SetRunning(true)`, `outputPreview.Hide()`. On completion (success or failure): `progressControl.SetRunning(false)`.
+5. Python pre-check: calls `PythonBootstrapHelper.Check(job.Python, log)` on the UI thread before launching the async run. If `Check` throws, the run is aborted and the error is displayed without starting a background task.
 
 ---
 
@@ -166,21 +164,21 @@ No structural changes to query execution or intermediate JSON building.
 
 #### `Helpers/PythonBootstrapHelper.cs`
 
-**Description.** Checks whether the configured virtual environment exists and offers to create it on first run.
+**Description.** Verifies that a usable Python interpreter with the required packages installed is available before any export run starts.
 
 **Responsibilities.**
-- `EnsureVenv(PythonSettings settings, string requirementsTxtPath, Action<string> log)` — static method.
-- Expand the venv path using `PathResolver.Resolve`.
-- If `Scripts\python.exe` exists inside the venv, return immediately (nothing to do).
-- If the venv does not exist, show a `MessageBox` dialog:
-  > "No Python virtual environment was found at `<venvPath>`. Would you like the plugin to create one and install the required packages? This requires Python 3.11+ on PATH."
-- On **Yes**: resolve the base Python interpreter (`py -3` or `python`); call `ProcessRunner.Run` twice — first `python -m venv <venvPath>` then `<venvPath>\Scripts\pip install -r <requirementsTxtPath>`. Stream output to the log.
-- On **No**: throw `InvalidOperationException` with a clear message pointing the user to the README.
-- Surface any `ProcessRunner` failure as a clear dialog and rethrow.
+- `Check(PythonSettings settings, Action<string> log)` — static method. Called on the UI thread before the async export run starts.
+  - Resolves the interpreter via `ResolveExecutable(settings)`.
+  - Reads package names from `%LOCALAPPDATA%\D365ContextExporter\python\requirements.txt` (extracted there by `PythonInvoker.EnsureScripts` on a prior run; absent on a true first run).
+  - Runs `python -m pip show <packages...>` with a 10-second timeout.
+  - If exit code is non-zero, throws `InvalidOperationException` with a message directing the user to install the requirements manually.
+  - Logs `[Python] OK (<interpreter>)` on success.
+- `ResolveExecutable(PythonSettings settings)` — `internal static` method used by both `PythonBootstrapHelper.Check` and `PythonInvoker`. Returns `settings.Interpreter` when not `"auto"`, otherwise returns `"python"`.
 
 **How it is used from configuration.**
-- `python.venv` — the target venv directory.
-- `python.interpreter` — used if not `"auto"` to pick the base interpreter for `venv` creation.
+- `python.interpreter` — `"auto"` resolves to `"python"` on PATH; any other string is used verbatim.
+
+**Note:** There is no venv creation logic in this helper. The plugin does not manage a virtual environment. Users are expected to have Python and the required packages installed in their active environment. The `requirements.txt` (extracted to LocalAppData) shows which packages are needed.
 
 ---
 
@@ -206,7 +204,10 @@ No structural changes to query execution or intermediate JSON building.
 - Render the template with the full intermediate JSON dict as the context (so `entityAttributes`, `securityRoles`, `_meta`, etc. are all top-level variables).
 - Write the rendered string to `<out>/output.md` in UTF-8.
 - Print a summary line to stdout on success: `[transform] output.md written ({len} bytes)`.
+- Count tokens using `tiktoken` (encoding `o200k_base`). If `tiktoken` is unavailable, fall back to `max(1, len(text) // 4)` (GPT-4o averages ~4 chars/token). Write the token count as a plain integer to `<out>/token_count.txt`. Print `[transform] token count (gpt-4o): {N}` to stdout.
 - Exit with code 0 on success, 1 on any error (exceptions are caught at the top level, printed to stderr, and cause exit 1).
+
+**Token count sidecar.** `ExportJobRunner` reads `token_count.txt` after a successful Python invocation and prepends `> Token count (gpt-4o): N` as a blockquote to `output.md` before copying it to the project output directory. This means the project-level `<SpecName>.context.md` includes the token count header; the raw `output.md` in the run directory does not (it is the unmodified Jinja2 output).
 
 **How it is used from configuration.**
 - The `transformation` key in the spec config (`*.context-exporter-config.json`) names the `.j2` file that `PythonInvoker` passes as `--template`. `transform.py` itself is not referenced in config; it is always the entry point.
@@ -218,21 +219,45 @@ No structural changes to query execution or intermediate JSON building.
 
 #### `python/filters.py`
 
-**Current state.** Bare Python module with a `COMPONENT_TYPES` dict and a single `component_type_name(n)` helper function. No Jinja2 filter registration.
+**Current state.** Fully implemented (19 filters registered).
 
 **Description.** Custom Jinja2 filters reusable across all templates. Exposes a single `get_filters()` function that returns a dict of `{filter_name: callable}` for `transform.py` to register.
 
-**Responsibilities.**
-Implement and register the following filters:
+**Mapping dictionaries** (module-level constants used by filters):
+
+| Constant | Key type | Purpose |
+|---|---|---|
+| `COMPONENT_TYPES` | `int` | Solution component type integer → readable label |
+| `ATTR_TYPE_ABBREV` | `str` | Dataverse `AttributeType` string → short abbreviation (e.g. `"Lookup"` → `"lkp"`) |
+| `FORM_TYPE_SHORT` | `int` | Form type integer → short label (e.g. `8` → `"main"`) |
+| `PLUGIN_STAGE` | `int` | Plugin step stage integer → label (e.g. `20` → `"Pre"`) |
+| `PLUGIN_MODE` | `int` | Plugin execution mode → `"Sync"` / `"Async"` |
+| `ENVVAR_TYPE` | `int` | Environment variable type integer → type name |
+| `API_PARAM_TYPE` | `int` | Custom API parameter type integer → short type abbreviation |
+
+**Registered filters:**
 
 | Filter name | Signature | Purpose |
 |---|---|---|
-| `component_type_name` | `(value: int) -> str` | Maps a Dataverse solution component type integer to a readable label (uses the existing `COMPONENT_TYPES` dict). |
-| `schemaname_to_title` | `(value: str) -> str` | Converts a camelCase or underscore-separated schema name to a Title Case display label (e.g. `account_name` → `Account Name`). |
-| `markdown_table` | `(rows: list[dict], columns: list[str]) -> str` | Renders a Markdown table from a list of dicts using the specified columns as headers and column order. |
-| `csv_list` | `(items: list, attr: str = None) -> str` | Joins a list (or list of dicts) into a comma-separated string; if `attr` is given, uses that dict key per item. |
-| `optionset_label` | `(options: list[dict], value: int) -> str` | Given an option set's `Options` list, returns the label for a given integer value (or the value itself as a fallback). |
-| `iso_date` | `(value: str) -> str` | Formats an ISO-8601 date string as `YYYY-MM-DD` (strips the time portion). |
+| `component_type_name` | `(value: int) -> str` | Maps a solution component type integer to a readable label. |
+| `schemaname_to_title` | `(value: str) -> str` | Converts camelCase or underscore schema name to Title Case. |
+| `markdown_table` | `(rows: list, columns: list[str]) -> str` | Renders a Markdown pipe table. Returns `_No data._` for empty input. |
+| `csv_list` | `(items: list, attr: str = None) -> str` | Joins a list into a comma-separated string; uses `attr` key for dicts. |
+| `optionset_label` | `(options: list[dict], value: int) -> str` | Returns the label for a given option value from an option set `Options` list. |
+| `iso_date` | `(value: str) -> str` | Formats an ISO-8601 string as `YYYY-MM-DD`. |
+| `attr_type_abbrev` | `(value) -> str` | Maps a Dataverse `AttributeType` string to a short abbreviation. |
+| `req_indicator` | `(value) -> str` | Maps `RequiredLevel.Value` to `**R**`, `r`, or `-`. |
+| `format_forms` | `(forms) -> str` | Groups forms by `Name`, appends abbreviated type list: `"Information(card,main)"`. |
+| `format_views` | `(views) -> str` | Returns comma-separated view names, skipping system/personal view types. |
+| `plugin_stage` | `(value) -> str` | Maps plugin step stage integer to label. |
+| `plugin_mode` | `(value) -> str` | Maps plugin execution mode integer to `"Sync"` / `"Async"`. |
+| `flow_trigger` | `(name: str) -> str` | Infers cloud flow trigger category (`HTTP`, `Sched`, `Child`, `Manual`, `Auto`) from the flow name. |
+| `classic_trigger` | `(wf) -> str` | Derives classic workflow trigger from boolean flags (`Create/Update/Delete/Manual`). |
+| `envvar_type` | `(value) -> str` | Maps environment variable type integer to type name. |
+| `api_param_type` | `(value) -> str` | Maps Custom API parameter type integer to short type abbreviation. |
+| `pluck` | `(items, key: str) -> list` | Extracts unique non-None values for a key from a list of dicts (supports literal-dot keys). |
+| `group_by_key` | `(items, key: str) -> list` | Groups a list of dicts by a key, returning `(value, [items])` tuples in insertion order. |
+| `display_label` | `(label_obj, fallback: str = "—") -> str` | Safely extracts `UserLocalizedLabel.Label` from a D365 Label object. |
 
 Expose `get_filters() -> dict` as the public API so `transform.py` calls `env.filters.update(get_filters())`.
 
@@ -247,12 +272,15 @@ Expose `get_filters() -> dict` as the public API so `transform.py` calls `env.fi
 **Contents.**
 ```
 Jinja2==3.1.4
+tiktoken==0.9.0
 MarkupSafe==2.1.5
 PyYAML==6.0.1
 python-dateutil==2.9.0.post0
 ```
 
-**How it is used from configuration.** `PythonBootstrapHelper` passes the path to this file when running `pip install -r requirements.txt`. The file is packed into the plugin output alongside `transform.py` and `filters.py` via MSBuild `CopyToOutputDirectory` items in the `.csproj`.
+`tiktoken` is used by `transform.py` for GPT-4o token counting (`o200k_base` encoding). It is an optional runtime dependency: if import fails, `transform.py` falls back to a character-count estimate and still exits successfully.
+
+**How it is used from configuration.** `PythonBootstrapHelper.Check` reads package names from this file (extracted to `%LOCALAPPDATA%\D365ContextExporter\python\`) to run `pip show` verification. The file is embedded in the assembly as an `EmbeddedResource` and extracted at runtime by `PythonInvoker.EnsureScripts()`.
 
 ---
 
@@ -391,63 +419,72 @@ After Phase 3, the complete pipeline from button click to grounding file is:
 
 ```
 btnRun_Click
-  └─ PythonBootstrapHelper.EnsureVenv()          [new — check/create venv]
-  └─ ExportJobRunner.Run()
+  └─ PythonBootstrapHelper.Check()               [pre-flight: pip show all packages]
+  └─ ExportJobRunner.Run()  [Task.Run]
        ├─ FetchXmlQueryRunner.Run()               [phase 2]
        ├─ WebApiQueryRunner.Run()                 [phase 2]
        ├─ MetadataQueryRunner.Run()               [phase 2]
        ├─ EntityJsonSerializer.SerializeEntities() [phase 2]
        ├─ IntermediateJsonBuilder.WriteQueryResult() ×N  [phase 2]
        ├─ IntermediateJsonBuilder.WriteIntermediate()    [phase 2]
-       └─ PythonInvoker.Invoke()                  [new — phase 3]
-            └─ ProcessRunner.Run()                [new — replaces stub]
-                 └─ python transform.py           [new]
-                      └─ filters.py              [completed]
-                      └─ *.j2 template           [authored, tested]
-            └─ CopyOutputToSpecDir()           [new]
-  └─ OutputPreviewControl.ShowResult()            [new]
+       ├─ PythonInvoker.Invoke()                  [phase 3]
+       │    ├─ EnsureScripts()                   [extract embedded py files to LocalAppData]
+       │    ├─ ProcessRunner.Run()                [phase 3]
+       │    │    └─ python transform.py
+       │    │         ├─ filters.py              [19 filters]
+       │    │         ├─ *.j2 template
+       │    │         ├─ writes output.md
+       │    │         └─ writes token_count.txt  [tiktoken / char-estimate fallback]
+       │    └─ CopyOutputToSpecDir()             [run output.md → output/<spec>.context.md]
+       ├─ AppendTokenCount()                      [prepends token count blockquote to output.md]
+       └─ CopyOutputToSpecDir()                   [run output.md → output/<spec>.context.md, now with header]
+  └─ OutputPreviewControl.ShowResult()            [phase 3]
 ```
 
 ---
 
 ## Artifacts Inventory
 
-| # | Artifact | Status | Action |
-|---|----------|--------|--------|
-| 1 | `Orchestration/PythonInvoker.cs` | Not created | **Create** |
-| 2 | `Helpers/ProcessRunner.cs` | Stub | **Implement** |
-| 3 | `Helpers/PythonBootstrapHelper.cs` | Not created | **Create** |
-| 4 | `Orchestration/ExportJobRunner.cs` | Implemented | **Extend** (add Python step) |
-| 5 | `UI/OutputPreviewControl.cs` | Not created | **Create** |
-| 6 | `UI/ExportProgressControl.cs` | Log-only stub | **Extend** (cancel button, progress) |
-| 7 | `ContextExporterPluginControl.cs` | Implemented | **Extend** (wire new controls) |
-| 8 | `python/transform.py` | Not created | **Create** |
-| 9 | `python/filters.py` | Stub (wrong location) | **Complete and move** |
-| 10 | `python/requirements.txt` | Not created | **Create** |
-| 11 | `schema/context-exporter.schema.json` | Not created | **Create** |
-| 12 | `config/transformations/entity-dictionary.j2` | Authored | **Test and fix** |
-| 13 | `config/transformations/security-model.j2` | Authored | **Test and fix** |
-| 14 | `config/transformations/optionsets.j2` | Authored | **Test and fix** |
-| 15 | `config/transformations/forms-and-views.j2` | Authored | **Test and fix** |
-| 16 | `config/transformations/solution-inventory.j2` | Authored | **Test and fix** |
-| 17 | `config/transformations/filters.py` | Stub (wrong location) | **Remove** (replaced by `python/filters.py`) |
-| 18 | `config/queries/security-roles.fetch.xml` | Exists | **Verify/update joins** |
-| 19 | `D365ContextExporter.csproj` | Exists | **Add MSBuild items for `python/` and `schema/`** |
+| # | Artifact | Status | Notes |
+|---|----------|--------|-------|
+| 1 | `Orchestration/PythonInvoker.cs` | **Done** | Includes `EnsureScripts()` embedded resource extraction |
+| 2 | `Helpers/ProcessRunner.cs` | **Done** | Timeout split between WaitForExit and stream drain |
+| 3 | `Helpers/PythonBootstrapHelper.cs` | **Done** | `Check()` + `ResolveExecutable()`; no venv creation |
+| 4 | `Orchestration/ExportJobRunner.cs` | **Done** | Adds Python step, `AppendTokenCount()`, and second copy |
+| 5 | `UI/OutputPreviewControl.cs` | **Done** | Open/Reveal/Copy for both output files |
+| 6 | `UI/ExportProgressControl.cs` | **Done** | Cancel button, progress label, thread-safe log |
+| 7 | `ContextExporterPluginControl.cs` | **Done** | Wired; calls `PythonBootstrapHelper.Check()` pre-run |
+| 8 | `python/transform.py` | **Done** | Jinja2 render + tiktoken counting + `token_count.txt` sidecar |
+| 9 | `python/filters.py` | **Done** | 19 filters registered; embedded resource |
+| 10 | `python/requirements.txt` | **Done** | Includes `tiktoken==0.9.0`; embedded resource |
+| 11 | `schema/context-exporter.schema.json` | **Done** | Full Draft-7 schema with conditional required fields |
+| 12 | `config/transformations/entity-dictionary.j2` | Authored | Pending end-to-end sandbox test |
+| 13 | `config/transformations/security-model.j2` | Authored | Pending end-to-end sandbox test |
+| 14 | `config/transformations/optionsets.j2` | Authored | Pending end-to-end sandbox test |
+| 15 | `config/transformations/forms-and-views.j2` | Authored | Pending end-to-end sandbox test |
+| 16 | `config/transformations/solution-inventory.j2` | Authored | Pending end-to-end sandbox test |
+| 17 | `config/transformations/filters.py` | **Removed** | Replaced by embedded `python/filters.py` |
+| 18 | `config/queries/security-roles.fetch.xml` | Exists | Joins still need sandbox verification |
+| 19 | `D365ContextExporter.csproj` | **Done** | Python files as `EmbeddedResource`; schema as `None` |
 
 ---
 
 ## MSBuild — Packing Python and Schema Alongside the Assembly
 
-The `.csproj` must include the following `None` items so that `python\` and `schema\` are copied to the output directory and packaged into the `.nupkg`:
+The `.csproj` uses **embedded resources** for the Python scripts and a `None` item for the schema:
 
 ```xml
 <ItemGroup>
-  <None Include="python\**\*" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="content\python\" />
-  <None Include="schema\**\*" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="content\schema\" />
+  <EmbeddedResource Include="python\transform.py" />
+  <EmbeddedResource Include="python\filters.py" />
+  <EmbeddedResource Include="python\requirements.txt" />
+  <None Include="..\schema\**\*" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="content\schema\" />
 </ItemGroup>
 ```
 
-`PythonInvoker` resolves `transform.py` relative to `Assembly.GetExecutingAssembly().Location`, which points to the plugin output directory where XrmToolBox copies everything. The `python\` subfolder will be present there after this MSBuild change.
+The Python files are embedded in the assembly manifest (resource names `D365ContextExporter.python.transform.py`, etc.). `PythonInvoker.EnsureScripts()` extracts them to `%LOCALAPPDATA%\D365ContextExporter\python\` on every invocation, overwriting stale files. This means the installed scripts are always in sync with the assembly without requiring a writable plugin output directory.
+
+The `schema\` directory is one level above the `.csproj` (at solution root), hence the `..\..\` relative path. Schema files are copied to the output directory and packaged as NuGet content at `content\schema\`.
 
 ---
 
