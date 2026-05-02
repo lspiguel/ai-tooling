@@ -1,0 +1,26 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="sdkmessageprocessingstep">
+    <attribute name="sdkmessageprocessingstepid" />
+    <attribute name="name" />
+    <attribute name="stage" />
+    <attribute name="mode" />
+    <attribute name="rank" />
+    <link-entity name="sdkmessage" from="sdkmessageid" to="sdkmessageid" link-type="inner" alias="msg">
+      <attribute name="name" />
+    </link-entity>
+    <link-entity name="sdkmessagefilter" from="sdkmessagefilterid" to="sdkmessagefilterid" link-type="outer" alias="flt">
+      <attribute name="primaryobjecttypecode" />
+    </link-entity>
+    <link-entity name="plugintype" from="plugintypeid" to="plugintypeid" link-type="inner" alias="pt">
+      <attribute name="name" />
+      <attribute name="typename" />
+      <link-entity name="pluginassembly" from="pluginassemblyid" to="pluginassemblyid" link-type="inner" alias="asm">
+        <attribute name="name" />
+      </link-entity>
+    </link-entity>
+    <filter type="and">
+      <condition attribute="ismanaged" operator="eq" value="0" />
+    </filter>
+    <order attribute="name" descending="false" />
+  </entity>
+</fetch>

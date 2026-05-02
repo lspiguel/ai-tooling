@@ -6,12 +6,18 @@
 namespace D365ContextExporter
 {
     using System;
+    using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
+
+    using D365ContextExporter.Helpers;
     using D365ContextExporter.Models;
     using D365ContextExporter.Orchestration;
+
     using McTools.Xrm.Connection;
+
     using Microsoft.Xrm.Sdk;
+
     using XrmToolBox.Extensibility;
 
     /// <summary>Root plugin control hosted by XrmToolBox.</summary>
@@ -21,7 +27,7 @@ namespace D365ContextExporter
         private bool initialized;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ContextExporterPluginControl"/> class.Initialises a new instance of <see cref="ContextExporterPluginControl"/>.
+        /// Initializes a new instance of the <see cref="ContextExporterPluginControl"/> class.
         /// </summary>
         public ContextExporterPluginControl()
         {
@@ -38,7 +44,7 @@ namespace D365ContextExporter
         {
             base.UpdateConnection(newService, detail, actionName, parameter);
             this.progressControl.AppendLog($"Connected: {detail.WebApplicationUrl}");
-            this.projectPicker.LoadProjects(this.dirPicker.SelectedDirectory);
+            this.specPicker.LoadSpecs(this.dirPicker.SelectedDirectory);
         }
 
         private void ContextExporterPluginControl_Load(object sender, EventArgs e)
@@ -47,7 +53,7 @@ namespace D365ContextExporter
             this.initialized = true;
             if (!string.IsNullOrEmpty(this.dirPicker.SelectedDirectory))
             {
-                this.projectPicker.LoadProjects(this.dirPicker.SelectedDirectory);
+                this.specPicker.LoadSpecs(this.dirPicker.SelectedDirectory);
             }
         }
 
@@ -61,49 +67,89 @@ namespace D365ContextExporter
 
         private void dirPicker_DirectoryChanged(object sender, string newDir)
         {
-            this.projectPicker.LoadProjects(newDir);
+            this.specPicker.LoadSpecs(newDir);
             this.progressControl.AppendLog($"Base directory set: {newDir}");
         }
 
-        private void projectPicker_ProjectSelected(object sender, ExportJob? job)
+        private void specPicker_SpecSelected(object sender, ExportJob? job)
         {
             this.btnRun.Enabled = job != null && this.Service != null;
             if (job != null)
             {
-                this.progressControl.AppendLog($"Project selected: {job}");
+                this.progressControl.AppendLog($"Spec selected: {job}");
             }
+        }
+
+        private void progressControl_CancelRequested(object sender, EventArgs e)
+        {
+            this.cts?.Cancel();
         }
 
         private void btnRun_Click(object sender, EventArgs e)
         {
-            if (this.Service == null || this.projectPicker.SelectedJob == null)
+            if (this.Service == null || this.specPicker.SelectedJob == null)
             {
                 return;
             }
 
-            this.btnRun.Enabled = false;
-            this.cts = new CancellationTokenSource();
-
-            var job = this.projectPicker.SelectedJob;
+            var job = this.specPicker.SelectedJob;
             var baseDir = this.dirPicker.SelectedDirectory;
 
-            Task.Run(
+            // Bootstrap check runs on UI thread so MessageBox is modal to the main window.
+            try
+            {
+                PythonBootstrapHelper.Check(
+                    job.Python,
+                    msg => this.progressControl.AppendLog(msg));
+            }
+            catch (Exception ex)
+            {
+                this.progressControl.AppendLog($"[Bootstrap] ERROR: {ex.Message}");
+                return;
+            }
+
+            this.btnRun.Enabled = false;
+            this.outputPreview.Visible = false;
+            this.cts = new CancellationTokenSource();
+
+            this.progressControl.ClearLog();
+            this.progressControl.SetRunning(true);
+
+            Task.Run<string?>(
                 () =>
                 {
                     var runner = new ExportJobRunner(
                         this.Service,
                         this.ConnectionDetail,
-                        msg => this.BeginInvoke((Action)(() => this.progressControl.AppendLog(msg))));
-                    runner.Run(job, baseDir, this.cts.Token);
+                        msg => this.BeginInvoke((Action)(() => this.progressControl.AppendLog(msg))),
+                        (current, total, queryId) =>
+                            this.BeginInvoke((Action)(() =>
+                                this.progressControl.SetProgress(current, total, queryId))));
+                    return runner.Run(job, baseDir, this.cts.Token);
                 },
                 this.cts.Token).ContinueWith(t =>
                 {
                     this.BeginInvoke((Action)(() =>
                     {
+                        this.progressControl.SetRunning(false);
                         this.btnRun.Enabled = true;
+
                         if (t.IsFaulted)
                         {
-                            this.progressControl.AppendLog($"ERROR: {t.Exception?.GetBaseException().Message}");
+                            var msg = t.Exception is AggregateException agg
+                                ? agg.Message
+                                : t.Exception?.GetBaseException().Message;
+                            this.progressControl.AppendLog($"ERROR: {msg}");
+                        }
+                        else if (!t.IsCanceled && t.Result != null)
+                        {
+                            var runDir = t.Result;
+                            var runOutputPath = Path.Combine(runDir, "output.md");
+                            var specOutputPath = Path.Combine(
+                                baseDir, "output", $"{job.Spec}.context.md");
+
+                            this.outputPreview.ShowResult(runOutputPath, specOutputPath);
+                            this.outputPreview.Visible = true;
                         }
                     }));
                 });

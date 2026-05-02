@@ -1,7 +1,7 @@
-# D365 CE Context Exporter — Phase 1 Detailed Plan
+﻿# D365 CE Context Exporter — Phase 1 Detailed Plan
 
 **Phase:** 1 of 4 — Skeleton and Wiring  
-**Sprint goal:** Plugin installs into XrmToolBox, loads, connects to a Dataverse org, shows the project list, and prints the loaded project config to the log panel.  
+**Sprint goal:** Plugin installs into XrmToolBox, loads, connects to a Dataverse org, shows the spec list, and prints the loaded spec config to the log panel.  
 **Artefacts from the master plan addressed in this phase:** #1, #2, #3, #10, #12, #15, #16, #19, #31 (partial), plus stub shells for #4 and #17.
 
 ---
@@ -57,9 +57,9 @@ Create the following directory tree. All paths are relative to the repo root.
       BaseDirectoryPickerControl.cs
       BaseDirectoryPickerControl.Designer.cs
       BaseDirectoryPickerControl.resx
-      ProjectPickerControl.cs
-      ProjectPickerControl.Designer.cs
-      ProjectPickerControl.resx
+      SpecPickerControl.cs
+      SpecPickerControl.Designer.cs
+      SpecPickerControl.resx
       ExportProgressControl.cs        ← stub shell only
       ExportProgressControl.Designer.cs
       ExportProgressControl.resx
@@ -126,11 +126,11 @@ Plain C# DTOs in `Models/`. No business logic. Deserialised from `*.context-expo
 
 ### 5.1 `Helpers/PathResolver.cs`
 
-Static helper used by `ProjectPickerControl` to locate `config/*.context-exporter-config.json` and by the runner to resolve query/template paths.
+Static helper used by `SpecPickerControl` to locate `config/*.context-exporter-config.json` and by the runner to resolve query/template paths.
 
 - `Resolve(path, baseDir)` — expands `%VAR%` tokens then resolves relative paths against `baseDir`; returns absolute paths unchanged.
-- `DiscoverProjectConfigs(baseDir)` — enumerates `*.context-exporter-config.json` under `<baseDir>/config/`; returns empty if the directory does not exist.
-- `ProjectNameFromPath(configFilePath)` — strips the `.context-exporter-config` suffix from the filename to yield the display name.
+- `DiscoverSpecConfigs(baseDir)` — enumerates `*.context-exporter-config.json` under `<baseDir>/config/`; returns empty if the directory does not exist.
+- `SpecNameFromPath(configFilePath)` — strips the `.context-exporter-config` suffix from the filename to yield the display name.
 
 Unit tests for this class are written in the test project (see §9).
 
@@ -140,7 +140,7 @@ Unit tests for this class are written in the test project (see §9).
 
 ### 6.1 `Orchestration/ExportJobRunner.cs`
 
-Stub in Phase 1 — logs the loaded config without executing any queries. Constructor takes `IOrganizationService` and an `Action<string>` log delegate. `Run(job, baseDir, cancellationToken)` logs the project name, config path, and each query definition, then writes a completion line. Full implementation deferred to Phase 2.
+Stub in Phase 1 — logs the loaded config without executing any queries. Constructor takes `IOrganizationService` and an `Action<string>` log delegate. `Run(job, baseDir, cancellationToken)` logs the spec name, config path, and each query definition, then writes a completion line. Full implementation deferred to Phase 2.
 
 ---
 
@@ -152,9 +152,9 @@ All controls are WinForms `UserControl` subclasses. Phase 1 layouts are function
 
 Read-only `TextBox` + "Browse…" `Button` in a `TableLayoutPanel`. Clicking Browse opens a `FolderBrowserDialog`; on confirmation it updates `SelectedDirectory`, persists to `Settings.Default.BaseDirectory`, and fires `DirectoryChanged`. `LoadSettings()` / `SaveSettings()` restore and persist the path between sessions.
 
-### 7.2 `UI/ProjectPickerControl`
+### 7.2 `UI/SpecPickerControl`
 
-`ComboBox` (`DropDownList`) + "↺" refresh `Button`. `LoadProjects(baseDir)` calls `PathResolver.DiscoverProjectConfigs`, populates the combo with display names (file path stored as `Tag`). On selection change, calls `ExportJob.Load(path)`, sets `SelectedJob`, and fires `ProjectSelected`. JSON errors clear the selection and show a `MessageBox`.
+`ComboBox` (`DropDownList`) + "↺" refresh `Button`. `LoadSpecs(baseDir)` calls `PathResolver.DiscoverSpecConfigs`, populates the combo with display names (file path stored as `Tag`). On selection change, calls `ExportJob.Load(path)`, sets `SelectedJob`, and fires `SpecSelected`. JSON errors clear the selection and show a `MessageBox`.
 
 ### 7.3 `UI/ExportProgressControl` (stub shell)
 
@@ -170,7 +170,7 @@ This is the root `UserControl` that XrmToolBox hosts. It must:
 
 - Inherit from `PluginControlBase` (from `XrmToolBoxPackage`).
 - Implement `IXrmToolBoxPluginControl` (satisfied by `PluginControlBase`).
-- Compose `BaseDirectoryPickerControl`, `ProjectPickerControl`, and `ExportProgressControl` as child controls.
+- Compose `BaseDirectoryPickerControl`, `SpecPickerControl`, and `ExportProgressControl` as child controls.
 
 **Key wiring:**
 
@@ -185,31 +185,31 @@ public partial class ContextExporterPluginControl : PluginControlBase
     {
         base.UpdateConnection(newService, detail, actionName, parameter);
         progressControl.AppendLog($"Connected: {detail.WebApplicationUrl}");
-        projectPicker.LoadProjects(dirPicker.SelectedDirectory); // refresh in case base dir was already set
+        specPicker.LoadSpecs(dirPicker.SelectedDirectory); // refresh in case base dir was already set
     }
 
     private void dirPicker_DirectoryChanged(object sender, string newDir)
     {
-        projectPicker.LoadProjects(newDir);
+        specPicker.LoadSpecs(newDir);
         progressControl.AppendLog($"Base directory set: {newDir}");
     }
 
-    private void projectPicker_ProjectSelected(object sender, ExportJob? job)
+    private void specPicker_SpecSelected(object sender, ExportJob? job)
     {
         btnRun.Enabled = job != null && Service != null;
         if (job != null)
         {
-            progressControl.AppendLog($"Project selected: {job}");
+            progressControl.AppendLog($"Spec selected: {job}");
         }
     }
 
     private void btnRun_Click(object sender, EventArgs e)
     {
-        if (Service == null || projectPicker.SelectedJob == null) return;
+        if (Service == null || specPicker.SelectedJob == null) return;
 
         btnRun.Enabled = false;
         _cts = new CancellationTokenSource();
-        var job = projectPicker.SelectedJob;
+        var job = specPicker.SelectedJob;
         var baseDir = dirPicker.SelectedDirectory;
 
         Task.Run(() =>
@@ -235,7 +235,7 @@ public partial class ContextExporterPluginControl : PluginControlBase
 
 Use a `TableLayoutPanel` as the root container:
 - Row 0 (auto height): `BaseDirectoryPickerControl dirPicker`
-- Row 1 (auto height): `ProjectPickerControl projectPicker`
+- Row 1 (auto height): `SpecPickerControl specPicker`
 - Row 2 (auto height): `FlowLayoutPanel` containing `Button btnRun` (text "Run Export", `Enabled = false`) and future controls.
 - Row 3 (star height): `ExportProgressControl progressControl`
 
@@ -249,7 +249,7 @@ private void ContextExporterPluginControl_Load(object sender, EventArgs e)
     dirPicker.LoadSettings();
     if (!string.IsNullOrEmpty(dirPicker.SelectedDirectory))
     {
-        projectPicker.LoadProjects(dirPicker.SelectedDirectory);
+        specPicker.LoadSpecs(dirPicker.SelectedDirectory);
     }
 }
 
@@ -286,10 +286,10 @@ Cover these cases in NUnit:
 | Resolve absolute path unchanged | `C:\abs\path`, any baseDir | `C:\abs\path` |
 | Resolve relative path joined to baseDir | `queries/foo.xml`, `C:\base` | `C:\base\queries\foo.xml` |
 | Expand `%TEMP%` env var | `%TEMP%\foo`, any baseDir | `<expanded temp>\foo` |
-| DiscoverProjectConfigs — no config dir | baseDir with no `config/` subfolder | returns empty |
-| DiscoverProjectConfigs — finds two configs | two `.context-exporter-config.json` files present | returns both paths |
-| ProjectNameFromPath — standard suffix | `Contoso.context-exporter-config.json` | `"Contoso"` |
-| ProjectNameFromPath — no suffix | `SomethingElse.json` | `"SomethingElse"` |
+| DiscoverSpecConfigs — no config dir | baseDir with no `config/` subfolder | returns empty |
+| DiscoverSpecConfigs — finds two configs | two `.context-exporter-config.json` files present | returns both paths |
+| SpecNameFromPath — standard suffix | `Contoso.context-exporter-config.json` | `"Contoso"` |
+| SpecNameFromPath — no suffix | `SomethingElse.json` | `"SomethingElse"` |
 
 Use `Path.GetTempPath()` + `Directory.CreateTempSubdirectory()` for file-system tests; clean up in `[TearDown]`.
 
@@ -359,15 +359,15 @@ Perform these steps manually before closing the Phase 1 PR:
    - The path appears in the text box.
    - On next restart of the plugin (close and reopen without restarting XrmToolBox) the path is restored from settings.
 
-6. **Project list populates:**
+6. **Spec list populates:**
    - Point the plugin at the solution root (`tooling/D365ContextExporter/`) as the base directory — the `config/` folder with `Sample.context-exporter-config.json` is already there.
-   - The project combo box shows "Sample".
+   - The spec combo box shows "Sample".
 
 7. **Connection and stub run:**
    - Connect to any Dataverse org in XrmToolBox.
    - Select the "PhaseOneTest" project.
    - Click "Run Export".
-   - The log panel shows the stub output lines (project name, query count, completion message) — no exception.
+   - The log panel shows the stub output lines (spec name, query count, completion message) — no exception.
 
 ---
 

@@ -6,6 +6,8 @@
 # Specific project folder that need to be ignored
 # (contain temp files)
 /tooling/D365ContextExporter/runs
+/scaffolding
+/tooling/D365ContextExporter/output
 
 # AI tooling configuration
 .claude/

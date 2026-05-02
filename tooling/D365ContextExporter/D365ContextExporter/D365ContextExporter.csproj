@@ -4,6 +4,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>D365ContextExporter</RootNamespace>
     <AssemblyName>D365ContextExporter</AssemblyName>
+    <Company>Luciano Spiguel</Company>
+    <Authors>Luciano Spiguel</Authors>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
     <Version>1.0.0</Version>
@@ -19,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MscrmTools.Xrm.Connection" Version="1.2025.9.64" />
+<PackageReference Include="MscrmTools.Xrm.Connection" Version="1.2025.9.64" />
     <PackageReference Include="XrmToolBoxPackage" Version="1.2025.10.74" />
     <!-- Microsoft.PowerPlatform.Dataverse.Client added in Phase 2 when query runners are implemented.
          XrmToolBoxPackage already provides IOrganizationService and McTools.Xrm.Connection. -->
@@ -39,8 +41,8 @@
     <Compile Update="UI\BaseDirectoryPickerControl.Designer.cs">
       <DependentUpon>BaseDirectoryPickerControl.cs</DependentUpon>
     </Compile>
-    <Compile Update="UI\ProjectPickerControl.Designer.cs">
-      <DependentUpon>ProjectPickerControl.cs</DependentUpon>
+    <Compile Update="UI\SpecPickerControl.Designer.cs">
+      <DependentUpon>SpecPickerControl.cs</DependentUpon>
     </Compile>
     <Compile Update="UI\ExportProgressControl.Designer.cs">
       <DependentUpon>ExportProgressControl.cs</DependentUpon>
@@ -58,11 +60,25 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="python\transform.py" />
+    <EmbeddedResource Include="python\filters.py" />
+    <EmbeddedResource Include="python\requirements.txt" />
+    <None Include="..\schema\**\*" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="content\schema\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="UI\OutputPreviewControl.Designer.cs">
+      <DependentUpon>OutputPreviewControl.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+
+  <ItemGroup>
     <EmbeddedResource Update="UI\BaseDirectoryPickerControl.resx">
       <DependentUpon>BaseDirectoryPickerControl.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Update="UI\ProjectPickerControl.resx">
-      <DependentUpon>ProjectPickerControl.cs</DependentUpon>
+    <EmbeddedResource Update="UI\SpecPickerControl.resx">
+      <DependentUpon>SpecPickerControl.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Update="UI\ExportProgressControl.resx">
       <DependentUpon>ExportProgressControl.cs</DependentUpon>

@@ -55,14 +55,14 @@ namespace D365ContextExporter.Tests.HelpersTests
         }
 
         [Test]
-        public void DiscoverProjectConfigs_NoConfigDir_ReturnsEmpty()
+        public void DiscoverSpecConfigs_NoConfigDir_ReturnsEmpty()
         {
-            var result = PathResolver.DiscoverProjectConfigs(_tempDir);
+            var result = PathResolver.DiscoverSpecConfigs(_tempDir);
             Assert.That(result, Is.Empty);
         }
 
         [Test]
-        public void DiscoverProjectConfigs_FindsTwoConfigs()
+        public void DiscoverSpecConfigs_FindsTwoConfigs()
         {
             var configDir = Path.Combine(_tempDir, "config");
             Directory.CreateDirectory(configDir);
@@ -70,7 +70,7 @@ namespace D365ContextExporter.Tests.HelpersTests
             File.WriteAllText(Path.Combine(configDir, "Beta.context-exporter-config.json"), "{}");
             File.WriteAllText(Path.Combine(configDir, "other.json"), "{}");
 
-            var result = PathResolver.DiscoverProjectConfigs(_tempDir).ToList();
+            var result = PathResolver.DiscoverSpecConfigs(_tempDir).ToList();
 
             Assert.That(result, Has.Count.EqualTo(2));
             Assert.That(result, Has.Some.EndsWith("Alpha.context-exporter-config.json"));
@@ -78,18 +78,18 @@ namespace D365ContextExporter.Tests.HelpersTests
         }
 
         [Test]
-        public void ProjectNameFromPath_StandardSuffix_ReturnsProjectName()
+        public void SpecNameFromPath_StandardSuffix_ReturnsSpecName()
         {
             var path = Path.Combine("config", "Contoso.context-exporter-config.json");
-            var result = PathResolver.ProjectNameFromPath(path);
+            var result = PathResolver.SpecNameFromPath(path);
             Assert.That(result, Is.EqualTo("Contoso"));
         }
 
         [Test]
-        public void ProjectNameFromPath_NoSuffix_ReturnsFileNameWithoutExtension()
+        public void SpecNameFromPath_NoSuffix_ReturnsFileNameWithoutExtension()
         {
             var path = Path.Combine("config", "SomethingElse.json");
-            var result = PathResolver.ProjectNameFromPath(path);
+            var result = PathResolver.SpecNameFromPath(path);
             Assert.That(result, Is.EqualTo("SomethingElse"));
         }
     }

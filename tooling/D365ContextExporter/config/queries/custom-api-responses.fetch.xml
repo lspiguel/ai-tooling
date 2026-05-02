@@ -1,0 +1,17 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="customapi">
+    <attribute name="customapiid" />
+    <attribute name="uniquename" />
+    <attribute name="name" />
+    <link-entity name="customapiresponseproperty" from="customapiid" to="customapiid" link-type="outer" alias="resp">
+      <attribute name="uniquename" />
+      <attribute name="name" />
+      <attribute name="type" />
+      <attribute name="description" />
+    </link-entity>
+    <filter type="and">
+      <condition attribute="ismanaged" operator="eq" value="0" />
+    </filter>
+    <order attribute="uniquename" descending="false" />
+  </entity>
+</fetch>

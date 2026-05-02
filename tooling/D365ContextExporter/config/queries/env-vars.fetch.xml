@@ -1,0 +1,14 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="environmentvariabledefinition">
+    <attribute name="environmentvariabledefinitionid" />
+    <attribute name="schemaname" />
+    <attribute name="displayname" />
+    <attribute name="type" />
+    <attribute name="description" />
+    <attribute name="ismanaged" />
+    <filter type="and">
+      <condition attribute="ismanaged" operator="eq" value="0" />
+    </filter>
+    <order attribute="schemaname" descending="false" />
+  </entity>
+</fetch>

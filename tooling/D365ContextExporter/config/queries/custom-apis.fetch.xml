@@ -1,0 +1,22 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="customapi">
+    <attribute name="customapiid" />
+    <attribute name="uniquename" />
+    <attribute name="name" />
+    <attribute name="description" />
+    <attribute name="isfunction" />
+    <attribute name="bindingtype" />
+    <attribute name="boundentitylogicalname" />
+    <link-entity name="customapirequestparameter" from="customapiid" to="customapiid" link-type="outer" alias="req">
+      <attribute name="uniquename" />
+      <attribute name="name" />
+      <attribute name="type" />
+      <attribute name="isoptional" />
+      <attribute name="description" />
+    </link-entity>
+    <filter type="and">
+      <condition attribute="ismanaged" operator="eq" value="0" />
+    </filter>
+    <order attribute="uniquename" descending="false" />
+  </entity>
+</fetch>

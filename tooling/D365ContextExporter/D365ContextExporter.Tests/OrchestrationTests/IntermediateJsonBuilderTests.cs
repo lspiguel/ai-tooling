@@ -32,7 +32,7 @@ namespace D365ContextExporter.Tests.OrchestrationTests
 
         private static ExportJob MakeJob() => new ExportJob
         {
-            Project = "TestProject",
+            Spec = "TestProject",
             FrontMatter = new Dictionary<string, string> { ["purpose"] = "testing" },
         };
 
@@ -81,7 +81,7 @@ namespace D365ContextExporter.Tests.OrchestrationTests
 
             var jobj = JObject.Parse(File.ReadAllText(path));
             var meta = jobj["_meta"]!;
-            Assert.That(meta["project"]!.Value<string>(), Is.EqualTo("TestProject"));
+            Assert.That(meta["spec"]!.Value<string>(), Is.EqualTo("TestProject"));
             Assert.That(meta["environment"]!["url"]!.Value<string>(), Is.EqualTo("https://test.crm.dynamics.com"));
             Assert.That(meta["environment"]!["orgName"]!.Value<string>(), Is.EqualTo("TestOrg"));
             Assert.That(meta["frontMatter"]!["purpose"]!.Value<string>(), Is.EqualTo("testing"));
