@@ -116,6 +116,7 @@ namespace D365ContextExporter.Orchestration
             Directory.CreateDirectory(pythonDir);
             ExtractResource("D365ContextExporter.python.transform.py", Path.Combine(pythonDir, "transform.py"));
             ExtractResource("D365ContextExporter.python.filters.py", Path.Combine(pythonDir, "filters.py"));
+            ExtractResource("D365ContextExporter.python.requirements.txt", Path.Combine(pythonDir, "requirements.txt"));
             return pythonDir;
         }
 

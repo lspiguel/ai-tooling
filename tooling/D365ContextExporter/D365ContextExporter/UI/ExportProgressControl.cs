@@ -26,6 +26,12 @@ namespace D365ContextExporter.UI
         /// <param name="message">The text to append.</param>
         public void AppendLog(string message)
         {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action<string>(this.AppendLog), message);
+                return;
+            }
+
             this.rtbLog.AppendText(message + "\n");
             this.rtbLog.ScrollToCaret();
         }
@@ -33,6 +39,12 @@ namespace D365ContextExporter.UI
         /// <summary>Clears all log content.</summary>
         public void ClearLog()
         {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(this.ClearLog));
+                return;
+            }
+
             this.rtbLog.Clear();
         }
 
@@ -42,6 +54,12 @@ namespace D365ContextExporter.UI
         /// <param name="queryId">Identifier of the query just completed.</param>
         public void SetProgress(int current, int total, string queryId)
         {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action<int, int, string>(this.SetProgress), current, total, queryId);
+                return;
+            }
+
             this.lblProgress.Text = $"Query {current} / {total}";
         }
 
@@ -49,6 +67,12 @@ namespace D365ContextExporter.UI
         /// <param name="running"><c>true</c> while an export is in progress; <c>false</c> when idle.</param>
         public void SetRunning(bool running)
         {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action<bool>(this.SetRunning), running);
+                return;
+            }
+
             this.btnCancel.Enabled = running;
             this.lblProgress.Text = running ? "Running…" : string.Empty;
         }

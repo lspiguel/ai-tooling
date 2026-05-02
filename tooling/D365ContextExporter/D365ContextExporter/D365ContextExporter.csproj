@@ -62,7 +62,7 @@
   <ItemGroup>
     <EmbeddedResource Include="python\transform.py" />
     <EmbeddedResource Include="python\filters.py" />
-    <None Include="python\requirements.txt" />
+    <EmbeddedResource Include="python\requirements.txt" />
     <None Include="..\schema\**\*" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="content\schema\" />
   </ItemGroup>
 
