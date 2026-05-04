@@ -436,15 +436,14 @@ Work is broken into four phases, each independently deliverable.
 
 ### Phase 4 — Polish, packaging, distribution (sprint 4)
 
-- JSON schema for configuration with `$schema` URL hint so VS Code gives IntelliSense.
 - Config validation with clear error messages (missing `resultKey`, unresolvable query or transformation path, missing `spec` name).
-- Recent configs MRU list.
 - Cancellation support (`CancellationToken` flowed through runners).
 - README with screenshots, quickstart, and sample configs.
 - `.nuspec` with proper tags (`XrmToolBox`, `Documentation`, `AI`, `Markdown`) for Tool Library listing.
 - Set up the GitHub Actions workflow to build and pack a `.nupkg`.
 - Submit to XrmToolBox Tool Library following Jonas Rapp's guidance on Nuget publishing.
-- Verify `tiktoken` is listed in `requirements.txt` and included in the first-run venv bootstrap — it is required alongside `Jinja2` for accurate token counting.
+- Verify `jinja2` and `tiktoken` are listed in `requirements.txt` and included in the first-run bootstrap.
+- JSON schema for configuration with `$schema` URL hint so VS Code gives IntelliSense.
 - **Exit criteria:** plugin installable from XrmToolBox Tool Library by anyone with the required Python prerequisites.
 
 ## Testing Strategy
