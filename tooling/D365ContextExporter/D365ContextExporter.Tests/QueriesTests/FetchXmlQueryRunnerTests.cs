@@ -133,5 +133,49 @@ namespace D365ContextExporter.Tests.QueriesTests
             Assert.Throws<FileNotFoundException>(() =>
                 runner.Run(MakeQuery("nonexistent.fetch.xml"), _tempDir, CancellationToken.None));
         }
+
+        [Test]
+        public void Run_CancellationRequested_ThrowsOperationCanceledException()
+        {
+            WriteFetchXml(_queriesDir, "test.fetch.xml");
+            var mock = new Mock<IOrganizationService>();
+            mock.Setup(s => s.RetrieveMultiple(It.IsAny<QueryBase>()))
+                .Returns(MakePage(5, moreRecords: true, cookie: "cookie"));
+
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            var runner = new FetchXmlQueryRunner(mock.Object, _ => { });
+            Assert.Throws<OperationCanceledException>(() =>
+                runner.Run(MakeQuery("test.fetch.xml"), _tempDir, cts.Token));
+        }
+
+        [Test]
+        public void Run_ServiceThrowsException_PropagatesException()
+        {
+            WriteFetchXml(_queriesDir, "test.fetch.xml");
+            var mock = new Mock<IOrganizationService>();
+            mock.Setup(s => s.RetrieveMultiple(It.IsAny<QueryBase>()))
+                .Throws(new InvalidOperationException("Dataverse error"));
+
+            var runner = new FetchXmlQueryRunner(mock.Object, _ => { });
+            Assert.Throws<InvalidOperationException>(() =>
+                runner.Run(MakeQuery("test.fetch.xml"), _tempDir, CancellationToken.None));
+        }
+
+        [Test]
+        public void Run_LogCallbackInvoked()
+        {
+            WriteFetchXml(_queriesDir, "test.fetch.xml");
+            var mock = new Mock<IOrganizationService>();
+            mock.Setup(s => s.RetrieveMultiple(It.IsAny<QueryBase>()))
+                .Returns(MakePage(2, moreRecords: false));
+
+            var logMessages = new List<string>();
+            var runner = new FetchXmlQueryRunner(mock.Object, msg => logMessages.Add(msg));
+            runner.Run(MakeQuery("test.fetch.xml"), _tempDir, CancellationToken.None);
+
+            Assert.That(logMessages, Has.Some.Contains("test-query"));
+        }
     }
 }

@@ -96,6 +96,80 @@ namespace D365ContextExporter.Tests.QueriesTests
                 runner.Run(MakeQuery("accounts"), CancellationToken.None));
         }
 
+        [Test]
+        public void Run_SelectClause_AppendsSelectToUrl()
+        {
+            var capturer = new CapturingHandler(MakePage(1));
+            var client = new HttpClient(capturer);
+            var query = new QueryDefinition
+            {
+                Id = "q",
+                Type = "webapi",
+                Path = "accounts",
+                ResultKey = "r",
+                Select = new System.Collections.Generic.List<string> { "name", "accountid" },
+            };
+            var runner = new WebApiQueryRunner(EnvUrl, () => FakeToken, client, _ => { });
+            runner.Run(query, CancellationToken.None);
+
+            Assert.That(capturer.LastRequestUri?.ToString(), Does.Contain("$select=name,accountid"));
+        }
+
+        [Test]
+        public void Run_PathAlreadyHasQueryString_UsesAmpersandSeparatorForSelect()
+        {
+            var capturer = new CapturingHandler(MakePage(1));
+            var client = new HttpClient(capturer);
+            var query = new QueryDefinition
+            {
+                Id = "q",
+                Type = "webapi",
+                Path = "accounts?$filter=name eq 'test'",
+                ResultKey = "r",
+                Select = new System.Collections.Generic.List<string> { "name" },
+            };
+            var runner = new WebApiQueryRunner(EnvUrl, () => FakeToken, client, _ => { });
+            runner.Run(query, CancellationToken.None);
+
+            Assert.That(capturer.LastRequestUri?.ToString(), Does.Contain("&$select=name"));
+            Assert.That(capturer.LastRequestUri?.ToString(), Does.Not.Contain("?$select"));
+        }
+
+        [Test]
+        public void Run_EmptyValueArray_ReturnsEmptyJArray()
+        {
+            var body = new Newtonsoft.Json.Linq.JObject { ["value"] = new JArray() }.ToString();
+            var client = BuildClient(body);
+            var runner = new WebApiQueryRunner(EnvUrl, () => FakeToken, client, _ => { });
+
+            var result = runner.Run(MakeQuery("accounts"), CancellationToken.None);
+
+            Assert.That(result, Is.Empty);
+        }
+
+        [Test]
+        public void Run_CancellationRequested_ThrowsOperationCanceledException()
+        {
+            var client = BuildClient(MakePage(5));
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            var runner = new WebApiQueryRunner(EnvUrl, () => FakeToken, client, _ => { });
+            Assert.Throws<OperationCanceledException>(() =>
+                runner.Run(MakeQuery("accounts"), cts.Token));
+        }
+
+        [Test]
+        public void Run_NoSelectClause_DoesNotAppendSelectParam()
+        {
+            var capturer = new CapturingHandler(MakePage(1));
+            var client = new HttpClient(capturer);
+            var runner = new WebApiQueryRunner(EnvUrl, () => FakeToken, client, _ => { });
+            runner.Run(MakeQuery("accounts"), CancellationToken.None);
+
+            Assert.That(capturer.LastRequestUri?.ToString(), Does.Not.Contain("$select"));
+        }
+
         // --- helpers ---
 
         private sealed class SequencedHandler : HttpMessageHandler
@@ -125,7 +199,32 @@ namespace D365ContextExporter.Tests.QueriesTests
 
             protected override Task<HttpResponseMessage> SendAsync(
                 HttpRequestMessage request, CancellationToken cancellationToken)
-                => Task.FromResult(new HttpResponseMessage(_code));
+            {
+                var response = new HttpResponseMessage(_code)
+                {
+                    Content = new StringContent("{\"error\":\"test error\"}", System.Text.Encoding.UTF8, "application/json"),
+                };
+                return Task.FromResult(response);
+            }
+        }
+
+        private sealed class CapturingHandler : HttpMessageHandler
+        {
+            private readonly string _responseBody;
+            public Uri? LastRequestUri { get; private set; }
+
+            public CapturingHandler(string responseBody) => _responseBody = responseBody;
+
+            protected override Task<HttpResponseMessage> SendAsync(
+                HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                LastRequestUri = request.RequestUri;
+                var msg = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(_responseBody, System.Text.Encoding.UTF8, "application/json"),
+                };
+                return Task.FromResult(msg);
+            }
         }
     }
 }
