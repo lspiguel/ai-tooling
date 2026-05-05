@@ -45,21 +45,32 @@ Specifically, at the end of Phase 3:
 
 #### `Helpers/FirstRunHelper.cs`
 
-**Description.** Detects whether a given base directory contains a recognisable Context-Exporter configuration. If not, offers the user a one-time setup via `MessageBox`. On acceptance, extracts the bundled reference configuration from embedded resources and writes it to the expected folder structure under the chosen base directory.
+**Description.** Manages the lifecycle of the reference configuration in a base directory: initial deployment on first use, and upgrade deployment when the plugin version advances. All embedded-resource files are written to the expected folder structure; user-created files are never touched.
 
 **Responsibilities.**
+
 - `IsConfigured(string baseDir) → bool` — returns `true` if `<baseDir>\config\` exists and contains at least one `*.context-exporter-config.json` file.
 - `OfferSetup(string baseDir, IWin32Window owner) → bool` — shows a `MessageBox.Show(...)` with `MessageBoxButtons.YesNo` offering to create the reference configuration. Returns `true` if the user selected Yes.
-- `DeployReferenceConfig(string baseDir, Action<string> log)` — extracts all embedded sample files to their correct locations:
+- `DeployReferenceConfig(string baseDir, IWin32Window owner, Action<string> log, bool overwrite = false)` — extracts all embedded sample files to their correct locations:
   - `<baseDir>\config\queries\*.fetch.xml` — FetchXML query files from `D365ContextExporter.SampleConfig.queries.*`.
   - `<baseDir>\config\transformations\*.j2` — Jinja2 templates from `D365ContextExporter.SampleConfig.transformations.*`.
-  - `<baseDir>\config\transformations\transform.py` — Python orchestrator from `D365ContextExporter.SampleConfig.transformations.transform.py`. Skip (do not overwrite) if the file already exists.
-  - `<baseDir>\config\transformations\filters.py` — Python filters from `D365ContextExporter.SampleConfig.transformations.filters.py`. Skip if already exists.
-  - `<baseDir>\config\transformations\requirements.txt` — pip requirements from `D365ContextExporter.SampleConfig.transformations.requirements.txt`. Skip if already exists.
-  - `<baseDir>\config\*.context-exporter-config.json` — sample spec configs from `D365ContextExporter.SampleConfig.*`. Skip if already exists.
-  - `<baseDir>\LEGAL.md` — the default legal notice template from `D365ContextExporter.SampleConfig.LEGAL.md`, with `[ORGANISATION NAME]` replaced by the value returned from `PromptOrgName(owner)`. Skip if already exists.
-  - Logs each extracted file and each skip.
-- Does **not** create `runs\` or `output\` — those are created at run time by `ExportJobRunner`.
+  - `<baseDir>\config\transformations\transform.py` — Python orchestrator from `D365ContextExporter.SampleConfig.transformations.transform.py`.
+  - `<baseDir>\config\transformations\filters.py` — Python filters.
+  - `<baseDir>\config\transformations\requirements.txt` — pip requirements.
+  - `<baseDir>\config\*.context-exporter-config.json` — sample spec configs.
+  - `<baseDir>\LEGAL.md` — legal notice template, with `[ORGANISATION NAME]` substituted via `PromptOrgName(owner)` (see below).
+  - When `overwrite` is `false` (first-run path): every file is guarded by `File.Exists`; existing files are skipped and logged as `[Setup] Skipped (exists): <path>`.
+  - When `overwrite` is `true` (upgrade path): all files are overwritten **except `LEGAL.md`**, which is always skipped to protect user customisations. Logs each overwritten file as `[Setup] Updated: <path>`.
+  - After all files are written, writes `<baseDir>\version.txt` containing the current assembly version string (e.g. `1.0.0.0`).
+  - Does **not** create `runs\` or `output\` — those are created at run time by `ExportJobRunner`.
+
+- `CheckVersion(string baseDir, IWin32Window owner, Action<string> log)` — called every time a base directory is loaded (startup or directory change). Reads `<baseDir>\version.txt` and compares its contents to the current assembly version via `Assembly.GetExecutingAssembly().GetName().Version.ToString()`.
+  - If `version.txt` does not exist, the directory is either new (handled by `OfferSetup`) or was set up before this feature was added. Write `version.txt` with the current version and return without prompting.
+  - If the version matches, return without action.
+  - If the version differs, show a `MessageBox` informing the user (e.g. _"The plugin has been updated from 1.0.x.x to 1.0.y.y. Would you like to update the reference configuration files (queries, templates, Python scripts, and sample specs)? Your LEGAL.md and any custom files will not be modified."_) with `MessageBoxButtons.YesNo`.
+    - If Yes: call `DeployReferenceConfig(baseDir, owner, log, overwrite: true)` — this writes `version.txt` at the end.
+    - If No: write `version.txt` with the current version so the prompt is not shown again for this version, then log `[Setup] Upgrade skipped by user.`.
+
 - `PromptOrgName(IWin32Window owner) → string` — private static method. Calls `Microsoft.VisualBasic.Interaction.InputBox` to ask the user for their organisation name before writing `LEGAL.md`:
   ```csharp
   using Microsoft.VisualBasic;
@@ -72,14 +83,17 @@ Specifically, at the end of Phase 3:
           "My Organisation");
   }
   ```
-  If the user cancels (returns empty string), `LEGAL.md` is deployed with the `[ORGANISATION NAME]` placeholder intact. The validator warning already covers that case. The `Microsoft.VisualBasic` assembly is available in every .NET Framework 4.8 project without an additional NuGet reference.
+  If the user cancels (returns empty string), `LEGAL.md` is deployed with the `[ORGANISATION NAME]` placeholder intact. The validator warning covers that case. Called only when `LEGAL.md` does not already exist.
 
-**How it is used.** Called from `ContextExporterPluginControl.dirPicker_DirectoryChanged()` (and on startup when the saved directory is loaded) whenever the base directory changes: if `!IsConfigured(newDir)`, call `OfferSetup(newDir, this)`, and on `true`, call `DeployReferenceConfig(newDir, this, log)` then refresh the spec list. The `IWin32Window owner` parameter is the plugin control itself, passed through so `InputBox` is modal to the main window.
+- `ApplyOrgName(string template, string orgName) → string` — internal static method (unit-testable). Returns `template` with every occurrence of `[ORGANISATION NAME]` replaced by `orgName`. If `orgName` is null or whitespace, returns `template` unchanged.
+
+**How it is used.** `ContextExporterPluginControl.CheckAndOfferFirstRun(string dir)` calls `IsConfigured`, then `OfferSetup` + `DeployReferenceConfig` for new directories, then `CheckVersion` for all directories (new and existing). See the modified control section for the full call sequence.
 
 **Key design constraints.**
-- Never overwrites user files. Every extracted file is guarded by a `File.Exists` check; if the file exists it is skipped and a `[Setup] Skipped (exists): <path>` line is logged.
-- `PromptOrgName` is called only when `LEGAL.md` does not already exist — not on every deployment.
-- Does not require a Dataverse connection. Can run before the user connects.
+- `LEGAL.md` is never overwritten on upgrade — it is user-owned once deployed.
+- `version.txt` is always written/updated at the end of any deployment (first-run or upgrade) so the comparison is stable on the next load.
+- `PromptOrgName` is called only when `LEGAL.md` does not already exist.
+- Does not require a Dataverse connection.
 - All paths are resolved through `PathResolver.Resolve(baseDir, ...)` for consistency.
 
 ---
@@ -182,17 +196,22 @@ No other changes to `ExportJob.cs`.
 
 1. In `dirPicker_DirectoryChanged()`: after `LoadSpecs(newDir)`, call `CheckAndOfferFirstRun(newDir)`.
 2. In `ContextExporterPluginControl_Load()`: after `LoadSettings()`, if `SelectedDirectory` is non-empty, call `CheckAndOfferFirstRun(SelectedDirectory)`.
-3. Add `CheckAndOfferFirstRun(string dir)` private method:
+3. Add `CheckAndOfferFirstRun(string dir)` private method. The sequence is: check for a new/empty directory first, then check for a version change. `CheckVersion` runs for all directories — including ones just freshly set up — so that `version.txt` is always written on the first deployment:
    ```csharp
    private void CheckAndOfferFirstRun(string dir)
    {
+       var log = (Action<string>)(msg => this.progressControl.AppendLog(msg));
+
        if (!FirstRunHelper.IsConfigured(dir) && FirstRunHelper.OfferSetup(dir, this))
        {
-           FirstRunHelper.DeployReferenceConfig(dir, msg => this.progressControl.AppendLog(msg));
+           FirstRunHelper.DeployReferenceConfig(dir, this, log, overwrite: false);
            this.specPicker.LoadSpecs(dir);
        }
+
+       FirstRunHelper.CheckVersion(dir, this, log);
    }
    ```
+   `CheckVersion` is always called because a freshly deployed directory also needs `version.txt` written, and on subsequent loads it provides the upgrade check.
 4. In `btnRun_Click()`: add a call to `ConfigValidator.Validate(job, baseDir)` wrapped in a try/catch for `ConfigValidationException`. On failure, log each violation and return without starting the task. This sits after `PythonBootstrapHelper.Check()`.
 
 ---
@@ -434,7 +453,7 @@ The following items require action by a human developer and cannot be automated 
 | 5 | `Orchestration/PythonInvoker.cs` | **Modify** | Remove `EnsureScripts()`; resolve `transform.py` from `<baseDir>\config\transformations\`; update `workingDirectory` |
 | 6 | `ContextExporterPluginControl.cs` | **Modify** | Wire `CheckAndOfferFirstRun()`; wire `ConfigValidator` error display |
 | 7 | `python/` folder | **Delete** | `transform.py`, `filters.py`, `requirements.txt` move to `SampleConfig/transformations/` |
-| 8 | `SampleConfig/` folder | **New** | All sample specs, queries, templates, Python scripts, LEGAL.md as `EmbeddedResource` |
+| 8 | `SampleConfig/` folder | **New** | All sample specs, queries, templates, Python scripts, LEGAL.md as `EmbeddedResource`; `version.txt` written to base dir at runtime (not embedded) |
 | 9 | `SampleConfig/transformations/transform.py` | **New (moved)** | Moved from `python/transform.py`; content unchanged |
 | 10 | `SampleConfig/transformations/filters.py` | **New (moved)** | Moved from `python/filters.py`; content unchanged |
 | 11 | `SampleConfig/transformations/requirements.txt` | **New (moved)** | Moved from `python/requirements.txt`; content unchanged |
@@ -479,12 +498,20 @@ The run-directory `output.md` contains only items 3–5 (token count + rendered 
 
 **Unit tests — `FirstRunHelper`.**
 - `IsConfigured` returns `false` for an empty temp directory and `true` after `DeployReferenceConfig` runs against it.
-- `DeployReferenceConfig` does not overwrite an existing file (write a sentinel file, call deploy, read back — content must be unchanged).
+- `DeployReferenceConfig` with `overwrite: false` does not overwrite an existing file (write a sentinel file, call deploy, read back — content must be unchanged).
+- `DeployReferenceConfig` with `overwrite: true` overwrites embedded-source files but never touches `LEGAL.md`.
 - All expected files are present after a clean deploy.
+- `version.txt` is written with the current assembly version after `DeployReferenceConfig` completes.
+- `CheckVersion`: when `version.txt` is absent, the file is created and no prompt is shown.
+- `CheckVersion`: when version matches, no prompt is shown.
+- `CheckVersion`: when version differs and user accepts, `DeployReferenceConfig(overwrite: true)` is called and `version.txt` is updated.
+- `CheckVersion`: when version differs and user declines, `DeployReferenceConfig` is not called but `version.txt` is still updated to the current version.
+- `ApplyOrgName`: replaces all occurrences of `[ORGANISATION NAME]` when a non-empty name is given.
+- `ApplyOrgName`: returns the template unchanged when `orgName` is null or whitespace.
 - When `orgName` is non-empty, `LEGAL.md` on disk does not contain `[ORGANISATION NAME]`.
 - When `orgName` is empty (user cancelled), `LEGAL.md` on disk still contains `[ORGANISATION NAME]` (placeholder preserved).
 
-Note: `PromptOrgName` itself (the `InputBox` call) is not unit-tested — it is a thin UI call. Extract the replacement logic into a separate internal method `ApplyOrgName(string template, string orgName) → string` that is covered by unit tests independently.
+Note: `PromptOrgName` (the `InputBox` call) is not unit-tested — it is a thin UI call. The replacement logic is covered via `ApplyOrgName` independently.
 
 **Unit tests — `ConfigValidator`.**
 - Happy path: a fully valid job passes without exception.
@@ -514,6 +541,7 @@ Test manually on a clean temp directory: point the plugin at it, accept the setu
 | User edits `transform.py` in the base dir; a future plugin update ships a new version of the script. | `FirstRunHelper.DeployReferenceConfig` never overwrites an existing file. Users who want the updated script must manually delete (or rename) their copy. Document this in the README upgrade notes. |
 | `EmbeddedResource` logical name pattern with `%(RecursiveDir)` replaces backslashes with dots on Windows. | Normalise the resource name in `FirstRunHelper` by replacing `\` with `.` when computing the manifest resource stream name. Cover this in unit tests by extracting a known resource by its computed name. |
 | User cancels the `InputBox` prompt; `LEGAL.md` is deployed with `[ORGANISATION NAME]` still in place. | `ConfigValidator` checks: if the resolved `LEGAL.md` file contains the literal string `[ORGANISATION NAME]`, log a warning (not an error) so the user is reminded to edit it before the output file is used. |
+| `version.txt` is absent in a base directory configured before Phase 4 shipped. | `CheckVersion` treats a missing `version.txt` as a silent first write — it writes the current version and returns without prompting. The user is not offered an upgrade for that first load; they will be prompted normally if they later install a newer version of the plugin. |
 | `Microsoft.VisualBasic` not referenced at build time. | `Microsoft.VisualBasic.dll` is a framework assembly bundled with every .NET Framework 4.8 installation — it cannot be absent on any machine that can run XrmToolBox. The only action required is a build-time `<Reference Include="Microsoft.VisualBasic" />` in the `.csproj` so the compiler can resolve `Interaction.InputBox`. No NuGet package or runtime deployment step is needed. |
 | GitHub Actions NuGet publish step fails if `NUGET_API_KEY` secret is absent. | Make the `publish` job conditional on `vars.NUGET_API_KEY != ''` so the pipeline still produces a build artifact without failing when the secret is not yet configured. |
 | `PostBuild` xcopy removal breaks local developer workflow. | Provide `Directory.Build.targets.example`; document in README. Developers who relied on the xcopy must opt in explicitly by creating their own override. |
