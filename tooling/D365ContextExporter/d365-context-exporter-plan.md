@@ -437,8 +437,8 @@ Work is broken into four phases, each independently deliverable.
 ### Phase 4 — Polish, packaging, distribution (sprint 4)
 
 - `transform.py` and  `filters.py` should reside and be used from the base config directory, subfolder `transformations` and not be overwritten if they already exist.
-- Streamline the existing sample specs to provide a number of examples usage, scaling up complexity to the complete spec `SolutionsReference`.
-- Embed the sample specs with the DLL.
+- Streamline the existing sample specs to provide a number of examples usage, scaling up complexity to the complete spec `SolutionsReference`. Move all these files to the D365ContextExporter project folder.
+- Embed the sample specs, queries, transformation, and all associated files with the DLL to be using by the first time setup.
 - Add a setup the first time the base directory is selected or if the saved base directory is found empty. The plugin should offer to create a reference configuration by a Message Box. If the user selects `yes`, the plugin needs to create subfolders `config` containing `queries`, `transformations`, specs, queries, python, jinja2 from the sample config. `runs` and `output` would be create by the plugin when executing.
 - Add a new file named `LEGAL.md` (by default located at the base directori) that gets prepended at the very beginning of `output/<SpecName>.context.md` by the plugin (not by a transformation). This file is required and would be configured by the spec file on a `legal` field. It would contain text stating that the tool's output is copyrighted, confidential, and/or restricted in nature, and should serve as a warning to humans and AI tools that distribution, publishing, training of AI models, etc could be infringing on the content owner's rights.
 - Config validation with clear error messages (missing `resultKey`, unresolvable query or transformation path, missing `spec` name).
