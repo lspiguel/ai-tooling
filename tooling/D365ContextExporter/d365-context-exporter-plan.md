@@ -436,12 +436,24 @@ Work is broken into four phases, each independently deliverable.
 
 ### Phase 4 — Polish, packaging, distribution (sprint 4)
 
+- `transform.py` and  `filters.py` should reside and be used from the base config directory, subfolder `transformations` and not be overwritten if they already exist.
+- Streamline the existing sample specs to provide a number of examples usage, scaling up complexity to the complete spec `SolutionsReference`.
+- Embed the sample specs with the DLL.
+- Add a setup the first time the base directory is selected or if the saved base directory is found empty. The plugin should offer to create a reference configuration by a Message Box. If the user selects `yes`, the plugin needs to create subfolders `config` containing `queries`, `transformations`, specs, queries, python, jinja2 from the sample config. `runs` and `output` would be create by the plugin when executing.
+- Add a new file named `LEGAL.md` (by default located at the base directori) that gets prepended at the very beginning of `output/<SpecName>.context.md` by the plugin (not by a transformation). This file is required and would be configured by the spec file on a `legal` field. It would contain text stating that the tool's output is copyrighted, confidential, and/or restricted in nature, and should serve as a warning to humans and AI tools that distribution, publishing, training of AI models, etc could be infringing on the content owner's rights.
 - Config validation with clear error messages (missing `resultKey`, unresolvable query or transformation path, missing `spec` name).
 - Cancellation support (`CancellationToken` flowed through runners).
 - README with screenshots, quickstart, and sample configs.
 - `.nuspec` with proper tags (`XrmToolBox`, `Documentation`, `AI`, `Markdown`) for Tool Library listing.
 - Set up the GitHub Actions workflow to build and pack a `.nupkg`.
-- Submit to XrmToolBox Tool Library following Jonas Rapp's guidance on Nuget publishing.
+- Submit to XrmToolBox Tool Library following Jonas Rapp's guidance on NuGet publishing:
+  - Create a NuGet account at [nuget.org](https://nuget.org) and generate an API key under your profile.
+  - Ensure the `.nuspec` fills `Title`, `Version`, `Authors`, `Description`, and a `Tags` value that starts with `XrmToolBox` but is not exactly `XrmToolBox` (e.g. `XrmToolBox Documentation AI Markdown`).
+  - All plugin files must be placed under a `Plugins/` folder in the package; declare a dependency on the `XrmToolBox` NuGet package at the minimum version the plugin was developed against.
+  - Add a NuGet Pack task to the GitHub Actions workflow (or Azure DevOps pipeline) after build and tests pass, pointing at the `.nuspec` and stamping the version from the build number.
+  - Push the resulting `.nupkg` to nuget.org using the stored API key.
+  - Once published, the Tool Library will pick it up automatically — verify the listing appears in XrmToolBox under the expected tags.
+  - **References:** [Jonas Rapp — Use Azure DevOps to publish XrmToolBox tools](https://jonasr.app/xtbvsts/) · [XrmToolBox — Deploy your tool in Tool Library](https://www.xrmtoolbox.com/documentation/for-developers/deploy-your-plugin-in-plugins-store/) · [XrmToolBox Wiki — Distribute plugins through NuGet](https://github.com/MscrmTools/XrmToolBox/wiki/Distribute-your-plugins-through-XrmToolBox-and-Nuget)
 - Verify `jinja2` and `tiktoken` are listed in `requirements.txt` and included in the first-run bootstrap.
 - JSON schema for configuration with `$schema` URL hint so VS Code gives IntelliSense.
 - **Exit criteria:** plugin installable from XrmToolBox Tool Library by anyone with the required Python prerequisites.
