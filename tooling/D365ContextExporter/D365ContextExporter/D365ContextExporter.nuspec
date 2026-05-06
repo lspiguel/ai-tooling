@@ -14,6 +14,9 @@
     <tags>XrmToolBox Documentation AI Markdown D365 Dataverse Grounding</tags>
     <license type="file">LICENSE</license>
     <readme>README.md</readme>
+    <dependencies>
+      <dependency id="XrmToolBox" version="[1.2025.10.74,)" />
+    </dependencies>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <projectUrl>https://github.com/lspiguel/ai-tooling</projectUrl>
   </metadata>
