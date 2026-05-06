@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>D365ContextExporter</id>
+    <version>$version$</version>
+    <title>D365 CE Context Exporter</title>
+    <authors>Luciano Spiguel</authors>
+    <owners>Luciano Spiguel</owners>
+    <description>
+      XrmToolBox plugin that executes FetchXML and Web API queries against a Dataverse environment,
+      serialises results to an intermediate JSON file, and invokes a Python/Jinja2 post-processor
+      to produce Markdown grounding files for non-agentic AI assistants.
+    </description>
+    <tags>XrmToolBox Documentation AI Markdown D365 Dataverse Grounding</tags>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectUrl>https://github.com/lspiguel/ai-tooling</projectUrl>
+  </metadata>
+  <files>
+    <!-- Plugin DLL and debug symbols -->
+    <file src="bin\Release\net48\D365ContextExporter.dll" target="Plugins" />
+    <file src="bin\Release\net48\D365ContextExporter.pdb" target="Plugins" />
+
+    <!-- Schema for IDE IntelliSense (installed alongside plugin) -->
+    <file src="..\schema\context-exporter.schema.json" target="Plugins\schema" />
+  </files>
+</package>

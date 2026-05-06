@@ -1,0 +1,83 @@
+{
+  "$schema": "../schema/context-exporter.schema.json",
+  "spec": "SolutionsReference",
+  "version": "1.0.0",
+  "legal": "LEGAL.md",
+  "frontMatter": {
+    "generatedBy": "D365 CE Context Exporter",
+    "purpose": "AI assistant grounding context — full customization reference"
+  },
+  "python": {
+    "interpreter": "auto"
+  },
+  "transformation": "solutions-reference.j2",
+  "queries": [
+    {
+      "id": "solutions",
+      "type": "fetchxml",
+      "source": "solutions-detail.fetch.xml",
+      "resultKey": "solutions"
+    },
+    {
+      "id": "entities",
+      "type": "webapi",
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName,Description,IsCustomEntity,IsActivity,PrimaryIdAttribute,PrimaryNameAttribute&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,RequiredLevel,IsCustomAttribute)",
+      "resultKey": "entities",
+      "maxRecords": 500
+    },
+    {
+      "id": "global-optionsets",
+      "type": "webapi",
+      "path": "GlobalOptionSetDefinitions",
+      "resultKey": "globalOptionSets"
+    },
+    {
+      "id": "plugin-assemblies",
+      "type": "fetchxml",
+      "source": "plugin-assemblies.fetch.xml",
+      "resultKey": "pluginAssemblies"
+    },
+    {
+      "id": "sdk-steps",
+      "type": "fetchxml",
+      "source": "sdk-steps.fetch.xml",
+      "resultKey": "sdkSteps"
+    },
+    {
+      "id": "custom-apis",
+      "type": "fetchxml",
+      "source": "custom-apis.fetch.xml",
+      "resultKey": "customApiRequests"
+    },
+    {
+      "id": "custom-api-responses",
+      "type": "fetchxml",
+      "source": "custom-api-responses.fetch.xml",
+      "resultKey": "customApiResponses"
+    },
+    {
+      "id": "workflows",
+      "type": "fetchxml",
+      "source": "workflows.fetch.xml",
+      "resultKey": "workflows"
+    },
+    {
+      "id": "app-modules",
+      "type": "fetchxml",
+      "source": "app-modules.fetch.xml",
+      "resultKey": "appModules"
+    },
+    {
+      "id": "env-vars",
+      "type": "fetchxml",
+      "source": "env-vars.fetch.xml",
+      "resultKey": "envVars"
+    },
+    {
+      "id": "security-roles",
+      "type": "fetchxml",
+      "source": "security-roles.fetch.xml",
+      "resultKey": "securityRoles"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="pluginassembly">
+    <attribute name="pluginassemblyid" />
+    <attribute name="name" />
+    <attribute name="version" />
+    <link-entity name="plugintype" from="pluginassemblyid" to="pluginassemblyid" link-type="outer" alias="pt">
+      <attribute name="plugintypeid" />
+      <attribute name="name" />
+      <attribute name="typename" />
+      <attribute name="friendlyname" />
+    </link-entity>
+    <filter type="and">
+      <condition attribute="ismanaged" operator="eq" value="0" />
+    </filter>
+    <order attribute="name" descending="false" />
+  </entity>
+</fetch>

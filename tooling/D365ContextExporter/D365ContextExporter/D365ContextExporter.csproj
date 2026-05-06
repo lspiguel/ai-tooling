@@ -1,0 +1,91 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>D365ContextExporter</RootNamespace>
+    <AssemblyName>D365ContextExporter</AssemblyName>
+    <Company>Luciano Spiguel</Company>
+    <Authors>Luciano Spiguel</Authors>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Version>1.0.0</Version>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <Platforms>AnyCPU</Platforms>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="stylecop.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+<PackageReference Include="MscrmTools.Xrm.Connection" Version="1.2025.9.64" />
+    <PackageReference Include="XrmToolBoxPackage" Version="1.2025.10.74" />
+    <!-- Microsoft.PowerPlatform.Dataverse.Client added in Phase 2 when query runners are implemented.
+         XrmToolBoxPackage already provides IOrganizationService and McTools.Xrm.Connection. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <Compile Update="UI\BaseDirectoryPickerControl.Designer.cs">
+      <DependentUpon>BaseDirectoryPickerControl.cs</DependentUpon>
+    </Compile>
+    <Compile Update="UI\SpecPickerControl.Designer.cs">
+      <DependentUpon>SpecPickerControl.cs</DependentUpon>
+    </Compile>
+    <Compile Update="UI\ExportProgressControl.Designer.cs">
+      <DependentUpon>ExportProgressControl.cs</DependentUpon>
+    </Compile>
+    <Compile Update="ContextExporterPluginControl.Designer.cs">
+      <DependentUpon>ContextExporterPluginControl.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="SampleConfig\**\*.*" />
+    <Reference Include="Microsoft.VisualBasic" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="UI\OutputPreviewControl.Designer.cs">
+      <DependentUpon>OutputPreviewControl.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <EmbeddedResource Update="UI\BaseDirectoryPickerControl.resx">
+      <DependentUpon>BaseDirectoryPickerControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Update="UI\SpecPickerControl.resx">
+      <DependentUpon>SpecPickerControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Update="UI\ExportProgressControl.resx">
+      <DependentUpon>ExportProgressControl.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Update="ContextExporterPluginControl.resx">
+      <DependentUpon>ContextExporterPluginControl.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- Post-build DLL copy: use a local Directory.Build.targets override per developer.
+       See Directory.Build.targets.example at the D365ContextExporter.csproj level for the template. -->
+</Project>

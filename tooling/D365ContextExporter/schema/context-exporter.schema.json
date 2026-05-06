@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/lucisnospace/d365-context-exporter/schema/context-exporter.schema.json",
+  "title": "D365 CE Context Exporter Config",
+  "description": "Configuration file for a D365 CE Context Exporter spec.",
+  "type": "object",
+  "required": ["spec", "transformation", "queries"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "spec": {
+      "type": "string",
+      "description": "The spec name. Used as the stem of the output filename (e.g. 'Contoso' → 'Contoso.context.md')."
+    },
+    "version": {
+      "type": "string",
+      "description": "Schema version of this config file.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "default": "1.0.0"
+    },
+    "transformation": {
+      "type": "string",
+      "description": "Filename of the Jinja2 template in config/transformations/ used to render the output Markdown.",
+      "examples": [
+        "entity-dictionary.j2",
+        "security-model.j2",
+        "optionsets.j2",
+        "forms-and-views.j2",
+        "solution-inventory.j2"
+      ]
+    },
+    "frontMatter": {
+      "type": "object",
+      "description": "Key/value pairs injected as YAML front-matter into the output document.",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "examples": [
+        { "generatedBy": "D365 CE Context Exporter" }
+      ]
+    },
+    "python": {
+      "type": "object",
+      "description": "Python runtime settings.",
+      "additionalProperties": false,
+      "properties": {
+        "interpreter": {
+          "type": "string",
+          "description": "'auto' uses interpreter discovery (venv → py launcher → PATH). Any other value is an absolute path to python.exe.",
+          "default": "auto"
+        },
+        "venv": {
+          "type": "string",
+          "description": "Path to the virtual environment directory. Supports %LOCALAPPDATA% and other %VAR% tokens.",
+          "default": "%LOCALAPPDATA%\\D365ContextExporter\\venv"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "description": "Output serialisation settings.",
+      "additionalProperties": false,
+      "properties": {
+        "attributeDenyList": {
+          "type": "array",
+          "description": "Attribute names (or substrings) to exclude from the serialised output.",
+          "items": {
+            "type": "string"
+          },
+          "default": ["password", "secret", "token", "key"]
+        }
+      }
+    },
+    "legal": {
+      "type": "string",
+      "description": "Path to a LEGAL.md file (relative to the base directory) whose content is prepended to the output context file before delivery. Omit or leave empty to skip the legal notice step."
+    },
+    "queries": {
+      "type": "array",
+      "description": "Ordered list of queries to execute. Results are merged into intermediate.json.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/QueryDefinition"
+      }
+    }
+  },
+  "definitions": {
+    "QueryDefinition": {
+      "type": "object",
+      "required": ["id", "type", "resultKey"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for this query. Used as the per-query raw output filename."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["fetchxml", "webapi", "metadata"],
+          "description": "Query engine to use."
+        },
+        "source": {
+          "type": "string",
+          "description": "Filename of the FetchXML file in config/queries/. Required when type is 'fetchxml'."
+        },
+        "path": {
+          "type": "string",
+          "description": "OData relative path appended to the environment URL. Required when type is 'webapi'.",
+          "examples": [
+            "EntityDefinitions?$expand=Attributes($select=LogicalName,DisplayName,AttributeType,RequiredLevel,IsCustomAttribute)",
+            "GlobalOptionSetDefinitions"
+          ]
+        },
+        "metadataTarget": {
+          "type": "string",
+          "enum": ["entities", "attributes", "optionsets", "relationships"],
+          "description": "Metadata category to retrieve. Required when type is 'metadata'."
+        },
+        "resultKey": {
+          "type": "string",
+          "description": "Top-level key under which this query's result is stored in intermediate.json. Referenced as a variable in templates."
+        },
+        "maxRecords": {
+          "type": "integer",
+          "description": "Maximum number of records to retrieve. Applies to fetchxml and webapi queries.",
+          "minimum": 1
+        },
+        "select": {
+          "type": "array",
+          "description": "OData $select fields. Only applicable to webapi queries.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "if": { "properties": { "type": { "const": "fetchxml" } } },
+      "then": { "required": ["source"] },
+      "else": {
+        "if": { "properties": { "type": { "const": "webapi" } } },
+        "then": { "required": ["path"] },
+        "else": {
+          "if": { "properties": { "type": { "const": "metadata" } } },
+          "then": { "required": ["metadataTarget"] }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="solution">
+    <attribute name="solutionid" />
+    <attribute name="uniquename" />
+    <attribute name="friendlyname" />
+    <attribute name="version" />
+    <attribute name="ismanaged" />
+    <attribute name="publisherid" />
+    <attribute name="installedon" />
+    <attribute name="modifiedon" />
+    <link-entity name="publisher" from="publisherid" to="publisherid" link-type="inner" alias="pub">
+      <attribute name="friendlyname" alias="publisherfriendlyname" />
+      <attribute name="uniquename" alias="publisheruniquename" />
+      <filter type="and">
+        <condition attribute="friendlyname" operator="not-begin-with" value="Microsoft" />
+        <condition attribute="friendlyname" operator="not-begin-with" value="Default Publisher" />
+        <condition attribute="friendlyname" operator="not-begin-with" value="CDS Default Publisher" />
+      </filter>
+    </link-entity>
+    <filter type="and">
+      <condition attribute="uniquename" operator="not-like" value="Active%" />
+      <condition attribute="uniquename" operator="not-like" value="Default%" />
+    </filter>
+    <order attribute="friendlyname" descending="false" />
+  </entity>
+</fetch>
