@@ -182,5 +182,59 @@ namespace D365ContextExporter.Tests.HelpersTests
             Assert.That(children.Count, Is.EqualTo(1));
             Assert.That(children[0]["subject"], Is.EqualTo("Call back"));
         }
+
+        [Test]
+        public void SerializeEntity_LongPassthrough()
+        {
+            var entity = MakeEntity("account", Guid.NewGuid(), ("bigcount", (object?)(long)9_000_000_000L));
+            var dict = EntityJsonSerializer.SerializeEntity(entity, Array.Empty<string>());
+            Assert.That(dict["bigcount"], Is.EqualTo(9_000_000_000L));
+        }
+
+        [Test]
+        public void SerializeEntity_DoublePassthrough()
+        {
+            var entity = MakeEntity("account", Guid.NewGuid(), ("ratio", (object?)3.14));
+            var dict = EntityJsonSerializer.SerializeEntity(entity, Array.Empty<string>());
+            Assert.That(dict["ratio"], Is.EqualTo(3.14));
+        }
+
+        [Test]
+        public void SerializeEntity_DecimalPassthrough()
+        {
+            var entity = MakeEntity("account", Guid.NewGuid(), ("amount", (object?)99.99m));
+            var dict = EntityJsonSerializer.SerializeEntity(entity, Array.Empty<string>());
+            Assert.That(dict["amount"], Is.EqualTo(99.99m));
+        }
+
+        [Test]
+        public void SerializeEntity_UnknownType_FallsBackToToString()
+        {
+            var entity = MakeEntity("account", Guid.NewGuid(), ("custom", (object?)new Uri("https://example.com")));
+            var dict = EntityJsonSerializer.SerializeEntity(entity, Array.Empty<string>());
+            Assert.That(dict["custom"], Is.EqualTo("https://example.com/"));
+        }
+
+        [Test]
+        public void SerializeEntities_MultipleEntities_ReturnsCorrectCount()
+        {
+            var entities = new[]
+            {
+                MakeEntity("account", Guid.NewGuid(), ("name", (object?)"A")),
+                MakeEntity("account", Guid.NewGuid(), ("name", (object?)"B")),
+                MakeEntity("account", Guid.NewGuid(), ("name", (object?)"C")),
+            };
+            var results = EntityJsonSerializer.SerializeEntities(entities, NoFilter());
+            Assert.That(results, Has.Count.EqualTo(3));
+            Assert.That(results[0]["name"], Is.EqualTo("A"));
+            Assert.That(results[2]["name"], Is.EqualTo("C"));
+        }
+
+        [Test]
+        public void SerializeEntities_EmptyList_ReturnsEmptyList()
+        {
+            var results = EntityJsonSerializer.SerializeEntities(Array.Empty<Entity>(), NoFilter());
+            Assert.That(results, Is.Empty);
+        }
     }
 }

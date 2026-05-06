@@ -7,7 +7,6 @@ namespace D365ContextExporter.Orchestration
 {
     using System;
     using System.IO;
-    using System.Reflection;
     using System.Text;
     using System.Threading;
 
@@ -34,7 +33,7 @@ namespace D365ContextExporter.Orchestration
         public string StderrSnippet { get; }
     }
 
-    /// <summary>Resolves a Python interpreter and invokes transform.py as a child process.</summary>
+    /// <summary>Resolves a Python interpreter and invokes transform.py from the base directory's config\transformations\ folder.</summary>
     internal sealed class PythonInvoker
     {
         private const int DefaultTimeoutMs = 5 * 60 * 1000;
@@ -50,20 +49,26 @@ namespace D365ContextExporter.Orchestration
             this.log = log;
         }
 
-        /// <summary>Invokes transform.py and copies the output to the spec directory.</summary>
+        /// <summary>Invokes transform.py from the base directory's config\transformations\ folder.</summary>
         /// <param name="job">The spec configuration.</param>
-        /// <param name="baseDir">The base directory containing the config/ and output/ subdirectories.</param>
+        /// <param name="baseDir">The base directory containing the config/ subdirectory.</param>
         /// <param name="runDir">The run-specific directory containing intermediate.json.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         public void Invoke(ExportJob job, string baseDir, string runDir, CancellationToken cancellationToken)
         {
-            var interpreter = ResolveInterpreter(job.Python, baseDir);
+            var interpreter = PythonBootstrapHelper.ResolveExecutable(job.Python);
             this.log($"[Python] Using interpreter: {interpreter}");
 
-            var pythonDir = EnsureScripts();
-            var transformScript = Path.Combine(pythonDir, "transform.py");
+            var transformationsDir = Path.Combine(baseDir, "config", "transformations");
+            var transformScript = Path.Combine(transformationsDir, "transform.py");
 
-            var templatePath = Path.Combine(baseDir, "config", "transformations", job.Transformation);
+            if (!File.Exists(transformScript))
+            {
+                throw new FileNotFoundException(
+                    $"transform.py not found at: {transformScript}. Run first-time setup to deploy it.");
+            }
+
+            var templatePath = Path.Combine(transformationsDir, job.Transformation);
             if (!File.Exists(templatePath))
             {
                 throw new FileNotFoundException(
@@ -83,7 +88,7 @@ namespace D365ContextExporter.Orchestration
             var exitCode = ProcessRunner.Run(
                 executable: interpreter,
                 arguments: arguments,
-                workingDirectory: runDir,
+                workingDirectory: transformationsDir,
                 onStdout: line => this.log($"[Python] {line}"),
                 onStderr: line =>
                 {
@@ -103,50 +108,6 @@ namespace D365ContextExporter.Orchestration
                     $"transform.py exited with code {exitCode}. Check the log for details.",
                     snippet);
             }
-
-            this.CopyOutputToSpecDir(runDir, baseDir, job.Spec);
-        }
-
-        private static string EnsureScripts()
-        {
-            var pythonDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "D365ContextExporter",
-                "python");
-            Directory.CreateDirectory(pythonDir);
-            ExtractResource("D365ContextExporter.python.transform.py", Path.Combine(pythonDir, "transform.py"));
-            ExtractResource("D365ContextExporter.python.filters.py", Path.Combine(pythonDir, "filters.py"));
-            ExtractResource("D365ContextExporter.python.requirements.txt", Path.Combine(pythonDir, "requirements.txt"));
-            return pythonDir;
-        }
-
-        private static void ExtractResource(string resourceName, string destPath)
-        {
-            var assembly = Assembly.GetExecutingAssembly();
-            using var stream = assembly.GetManifestResourceStream(resourceName)
-                ?? throw new InvalidOperationException($"Embedded resource not found: {resourceName}");
-            using var reader = new StreamReader(stream, Encoding.UTF8);
-            File.WriteAllText(destPath, reader.ReadToEnd(), Encoding.UTF8);
-        }
-
-        private static string ResolveInterpreter(PythonSettings settings, string baseDir) =>
-            PythonBootstrapHelper.ResolveExecutable(settings);
-
-        private void CopyOutputToSpecDir(string runDir, string baseDir, string specName)
-        {
-            var sourceFile = Path.Combine(runDir, "output.md");
-            if (!File.Exists(sourceFile))
-            {
-                this.log("[Python] Warning: output.md not found in run directory after transform.");
-                return;
-            }
-
-            var outputDir = Path.Combine(baseDir, "output");
-            Directory.CreateDirectory(outputDir);
-
-            var destFile = Path.Combine(outputDir, $"{specName}.context.md");
-            File.Copy(sourceFile, destFile, overwrite: true);
-            this.log($"[Python] Output copied to: {destFile}");
         }
     }
 }

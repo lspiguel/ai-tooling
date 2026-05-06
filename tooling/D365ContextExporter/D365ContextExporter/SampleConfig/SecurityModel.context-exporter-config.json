@@ -1,33 +1,29 @@
 {
-  "$schema": "../../schema/context-exporter.schema.json",
-  "spec": "Sample",
+  "$schema": "../schema/context-exporter.schema.json",
+  "spec": "SecurityModel",
   "version": "1.0.0",
+  "legal": "LEGAL.md",
   "frontMatter": {
     "generatedBy": "D365 CE Context Exporter",
-    "purpose": "AI assistant grounding context"
+    "purpose": "AI assistant grounding context — security roles and entity list"
   },
   "python": {
     "interpreter": "auto"
   },
-  "transformation": "entity-dictionary.j2",
+  "transformation": "security-model.j2",
   "queries": [
     {
       "id": "entity-attributes",
       "type": "webapi",
       "path": "EntityDefinitions?$select=LogicalName,DisplayName,PrimaryIdAttribute,PrimaryNameAttribute,OwnershipType,IsCustomEntity&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,IsCustomAttribute,RequiredLevel)",
-      "resultKey": "entityAttributes"
+      "resultKey": "entityAttributes",
+      "maxRecords": 500
     },
     {
       "id": "security-roles",
       "type": "fetchxml",
       "source": "security-roles.fetch.xml",
       "resultKey": "securityRoles"
-    },
-    {
-      "id": "solutions",
-      "type": "fetchxml",
-      "source": "solutions.fetch.xml",
-      "resultKey": "solutions"
     }
   ]
 }

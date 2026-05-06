@@ -55,6 +55,8 @@ namespace D365ContextExporter.Orchestration
         /// <returns>The run directory path where output.md was written.</returns>
         public string Run(ExportJob job, string baseDir, CancellationToken cancellationToken)
         {
+            ConfigValidator.Validate(job, baseDir);
+
             this.log($"[Export] Starting spec '{job.Spec}' ({job.Queries.Count} queries).");
 
             var runDir = Path.Combine(baseDir, "runs", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss"));
@@ -127,6 +129,7 @@ namespace D365ContextExporter.Orchestration
                 invoker.Invoke(job, baseDir, runDir, cancellationToken);
                 this.AppendTokenCount(runDir);
                 this.CopyOutputToSpecDir(runDir, baseDir, job.Spec);
+                this.PrependLegalNotice(job, baseDir);
             }
 
             this.log($"[Export] Run complete. Outputs in: {runDir}");
@@ -169,6 +172,32 @@ namespace D365ContextExporter.Orchestration
             var destFile = Path.Combine(outputDir, $"{specName}.context.md");
             File.Copy(sourceFile, destFile, overwrite: true);
             this.log($"[Python] Output copied to: {destFile}");
+        }
+
+        private void PrependLegalNotice(ExportJob job, string baseDir)
+        {
+            if (string.IsNullOrEmpty(job.Legal))
+            {
+                return;
+            }
+
+            var legalPath = PathResolver.Resolve(job.Legal, baseDir);
+            if (!File.Exists(legalPath))
+            {
+                this.log($"[Legal] Warning: LEGAL.md not found at '{legalPath}' — skipping legal notice prepend.");
+                return;
+            }
+
+            var destFile = Path.Combine(baseDir, "output", $"{job.Spec}.context.md");
+            if (!File.Exists(destFile))
+            {
+                return;
+            }
+
+            var legalContent = File.ReadAllText(legalPath);
+            var existingContent = File.ReadAllText(destFile);
+            File.WriteAllText(destFile, legalContent + "\n\n" + existingContent);
+            this.log($"[Legal] Legal notice prepended to: {destFile}");
         }
 
         private string GetToken()

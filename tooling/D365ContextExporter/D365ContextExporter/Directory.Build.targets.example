@@ -1,0 +1,24 @@
+<!--
+  Copy this file to Directory.Build.targets (in the same folder as D365ContextExporter.csproj)
+  and update the XrmToolBoxPluginsDir path to match your local XrmToolBox installation.
+  This file is NOT committed to source control — add it to .gitignore.
+
+  This replaces the machine-specific xcopy PostBuild that was removed from D365ContextExporter.csproj.
+-->
+<Project>
+  <PropertyGroup>
+    <!-- Edit this to point to your local XrmToolBox Plugins folder. -->
+    <XrmToolBoxPluginsDir>C:\Users\YourName\AppData\Roaming\MscrmTools\XrmToolBox\Plugins</XrmToolBoxPluginsDir>
+  </PropertyGroup>
+
+  <Target Name="CopyToXrmToolBox" AfterTargets="Build"
+          Condition="'$(Configuration)' == 'Debug' AND Exists('$(XrmToolBoxPluginsDir)')">
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFolder="$(XrmToolBoxPluginsDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb"
+          DestinationFolder="$(XrmToolBoxPluginsDir)"
+          SkipUnchangedFiles="true" />
+    <Message Text="[PostBuild] Copied $(TargetFileName) to $(XrmToolBoxPluginsDir)" Importance="High" />
+  </Target>
+</Project>

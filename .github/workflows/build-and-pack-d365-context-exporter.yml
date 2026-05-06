@@ -1,0 +1,75 @@
+name: Build and Pack D365ContextExporter
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    outputs:
+      nupkg-name: ${{ steps.pack.outputs.nupkg-name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+
+      - name: Restore
+        run: dotnet restore tooling/D365ContextExporter/D365ContextExporter.sln
+
+      - name: Build
+        run: >
+          dotnet build tooling/D365ContextExporter/D365ContextExporter.sln
+          --configuration Release --no-restore
+
+      - name: Test
+        run: >
+          dotnet test tooling/D365ContextExporter/D365ContextExporter.Tests/D365ContextExporter.Tests.csproj
+          --configuration Release --no-build --verbosity normal
+
+      - name: Pack
+        id: pack
+        shell: pwsh
+        run: |
+          $version = "1.0.${{ github.run_number }}"
+          nuget pack tooling/D365ContextExporter/D365ContextExporter/D365ContextExporter.nuspec `
+            -Version $version `
+            -BasePath tooling/D365ContextExporter/D365ContextExporter `
+            -OutputDirectory nupkg
+          $name = (Get-ChildItem nupkg/*.nupkg | Select-Object -First 1).Name
+          echo "nupkg-name=$name" >> $env:GITHUB_OUTPUT
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: D365ContextExporter-nupkg
+          path: nupkg/*.nupkg
+
+  publish:
+    needs: build
+    runs-on: windows-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.NUGET_API_KEY != ''
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: D365ContextExporter-nupkg
+          path: nupkg
+
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+
+      - name: Push to NuGet
+        shell: pwsh
+        run: |
+          nuget push nupkg/*.nupkg `
+            -ApiKey ${{ secrets.NUGET_API_KEY }} `
+            -Source https://api.nuget.org/v3/index.json `
+            -NonInteractive

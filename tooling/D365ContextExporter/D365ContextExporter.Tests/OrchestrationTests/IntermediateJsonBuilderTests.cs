@@ -123,5 +123,52 @@ namespace D365ContextExporter.Tests.OrchestrationTests
             Assert.That(arr.Count, Is.EqualTo(1));
             Assert.That(arr[0]["name"]!.Value<string>(), Is.EqualTo("account"));
         }
+
+        [Test]
+        public void WriteIntermediate_EmptyResults_OnlyContainsMetaKey()
+        {
+            var results = new Dictionary<string, object>();
+            var path = IntermediateJsonBuilder.WriteIntermediate(
+                _runDir, MakeJob(), "https://x.crm.dynamics.com", "X", results);
+
+            var jobj = JObject.Parse(File.ReadAllText(path));
+            Assert.That(jobj.ContainsKey("_meta"), Is.True);
+            Assert.That(jobj.Properties(), Has.Exactly(1).Items);
+        }
+
+        [Test]
+        public void WriteQueryResult_WithDictionaryList_WritesValidJsonArray()
+        {
+            var data = new List<Dictionary<string, object?>>
+            {
+                new Dictionary<string, object?> { ["key"] = "value1" },
+                new Dictionary<string, object?> { ["key"] = "value2" },
+            };
+            IntermediateJsonBuilder.WriteQueryResult(_runDir, "dict-query", data);
+
+            var json = File.ReadAllText(Path.Combine(_runDir, "output.dict-query.fetch.json"));
+            var arr = JArray.Parse(json);
+            Assert.That(arr.Count, Is.EqualTo(2));
+            Assert.That(arr[0]["key"]!.Value<string>(), Is.EqualTo("value1"));
+        }
+
+        [Test]
+        public void WriteIntermediate_MultipleResultKeys_AllPresentInOutput()
+        {
+            var results = new Dictionary<string, object>
+            {
+                ["alpha"] = new JArray { new JObject { ["x"] = 1 } },
+                ["beta"] = new JArray(),
+                ["gamma"] = new JArray { new JObject { ["y"] = 2 }, new JObject { ["y"] = 3 } },
+            };
+            var path = IntermediateJsonBuilder.WriteIntermediate(
+                _runDir, MakeJob(), "https://x.crm.dynamics.com", "X", results);
+
+            var jobj = JObject.Parse(File.ReadAllText(path));
+            Assert.That(jobj.ContainsKey("alpha"), Is.True);
+            Assert.That(jobj.ContainsKey("beta"), Is.True);
+            Assert.That(jobj.ContainsKey("gamma"), Is.True);
+            Assert.That(((JArray)jobj["gamma"]!).Count, Is.EqualTo(2));
+        }
     }
 }
