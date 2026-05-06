@@ -82,7 +82,8 @@ jobs:
       - name: Push to NuGet
         shell: pwsh
         run: |
-          nuget push nupkg/*.nupkg `
+          $pkg = (Get-ChildItem nupkg/*.nupkg | Select-Object -First 1).FullName
+          nuget push $pkg `
             -ApiKey ${{ steps.oidc.outputs.api-key }} `
             -Source https://api.nuget.org/v3/index.json `
             -NonInteractive
