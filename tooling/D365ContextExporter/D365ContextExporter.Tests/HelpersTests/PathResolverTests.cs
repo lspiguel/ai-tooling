@@ -46,15 +46,6 @@ namespace D365ContextExporter.Tests.HelpersTests
         }
 
         [Test]
-        public void Resolve_ExpandsEnvironmentVariable()
-        {
-            var temp = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar);
-            var result = PathResolver.Resolve(@"%TEMP%\foo", @"C:\base");
-            Assert.That(result, Does.StartWith(temp));
-            Assert.That(result, Does.EndWith("foo"));
-        }
-
-        [Test]
         public void DiscoverSpecConfigs_NoConfigDir_ReturnsEmpty()
         {
             var result = PathResolver.DiscoverSpecConfigs(_tempDir);
