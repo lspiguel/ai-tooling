@@ -12,10 +12,16 @@
       to produce Markdown grounding files for non-agentic AI assistants.
     </description>
     <tags>XrmToolBox Documentation AI Markdown D365 Dataverse Grounding</tags>
+    <license type="file">LICENSE</license>
+    <readme>README.md</readme>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <projectUrl>https://github.com/lspiguel/ai-tooling</projectUrl>
   </metadata>
   <files>
+    <!-- License and readme must be at package root -->
+    <file src="..\..\..\LICENSE" target="LICENSE" />
+    <file src="..\README.md" target="README.md" />
+
     <!-- Plugin DLL and debug symbols -->
     <file src="bin\Release\net48\D365ContextExporter.dll" target="Plugins" />
     <file src="bin\Release\net48\D365ContextExporter.pdb" target="Plugins" />
