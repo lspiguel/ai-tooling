@@ -1,4 +1,4 @@
-namespace D365ContextExporter
+﻿namespace Lspiguel.Xrm.D365ContextExporter
 {
     partial class ContextExporterPluginControl
     {
@@ -17,12 +17,12 @@ namespace D365ContextExporter
         private void InitializeComponent()
         {
             this.mainLayout = new System.Windows.Forms.TableLayoutPanel();
-            this.dirPicker = new D365ContextExporter.UI.BaseDirectoryPickerControl();
-            this.specPicker = new D365ContextExporter.UI.SpecPickerControl();
+            this.dirPicker = new Lspiguel.Xrm.D365ContextExporter.UI.BaseDirectoryPickerControl();
+            this.specPicker = new Lspiguel.Xrm.D365ContextExporter.UI.SpecPickerControl();
             this.toolbarPanel = new System.Windows.Forms.FlowLayoutPanel();
             this.btnRun = new System.Windows.Forms.Button();
-            this.progressControl = new D365ContextExporter.UI.ExportProgressControl();
-            this.outputPreview = new D365ContextExporter.UI.OutputPreviewControl();
+            this.progressControl = new Lspiguel.Xrm.D365ContextExporter.UI.ExportProgressControl();
+            this.outputPreview = new Lspiguel.Xrm.D365ContextExporter.UI.OutputPreviewControl();
             this.mainLayout.SuspendLayout();
             this.toolbarPanel.SuspendLayout();
             this.SuspendLayout();
@@ -61,7 +61,7 @@ namespace D365ContextExporter
             this.specPicker.Name = "specPicker";
             this.specPicker.Size = new System.Drawing.Size(778, 50);
             this.specPicker.TabIndex = 1;
-            this.specPicker.SpecSelected += new System.EventHandler<D365ContextExporter.Models.ExportJob?>(this.specPicker_SpecSelected);
+            this.specPicker.SpecSelected += new System.EventHandler<Lspiguel.Xrm.D365ContextExporter.Models.ExportJob?>(this.specPicker_SpecSelected);
 
             // toolbarPanel
             this.toolbarPanel.AutoSize = true;
@@ -114,11 +114,11 @@ namespace D365ContextExporter
         }
 
         private System.Windows.Forms.TableLayoutPanel mainLayout;
-        private D365ContextExporter.UI.BaseDirectoryPickerControl dirPicker;
-        private D365ContextExporter.UI.SpecPickerControl specPicker;
+        private Lspiguel.Xrm.D365ContextExporter.UI.BaseDirectoryPickerControl dirPicker;
+        private Lspiguel.Xrm.D365ContextExporter.UI.SpecPickerControl specPicker;
         private System.Windows.Forms.FlowLayoutPanel toolbarPanel;
         private System.Windows.Forms.Button btnRun;
-        private D365ContextExporter.UI.ExportProgressControl progressControl;
-        private D365ContextExporter.UI.OutputPreviewControl outputPreview;
+        private Lspiguel.Xrm.D365ContextExporter.UI.ExportProgressControl progressControl;
+        private Lspiguel.Xrm.D365ContextExporter.UI.OutputPreviewControl outputPreview;
     }
 }

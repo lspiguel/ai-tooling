@@ -3,7 +3,7 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter.Helpers
+namespace Lspiguel.Xrm.D365ContextExporter.Helpers
 {
     using System;
     using System.IO;
@@ -108,7 +108,7 @@ namespace D365ContextExporter.Helpers
                     continue;
                 }
 
-                var resourceName = "D365ContextExporter." + resourceSuffix;
+                var resourceName = "Lspiguel.Xrm.D365ContextExporter." + resourceSuffix;
                 WriteResource(resourceName, destPath, log, overwrite ? "[Setup] Updated" : "[Setup] Deployed");
             }
 
@@ -117,7 +117,7 @@ namespace D365ContextExporter.Helpers
             if (!File.Exists(legalDest))
             {
                 var orgName = PromptOrgName(owner);
-                var legalResource = "D365ContextExporter." + LegalResourceSuffix;
+                var legalResource = "Lspiguel.Xrm.D365ContextExporter." + LegalResourceSuffix;
                 var template = ReadResource(legalResource);
                 var content = ApplyOrgName(template, orgName);
                 Directory.CreateDirectory(Path.GetDirectoryName(legalDest)!);

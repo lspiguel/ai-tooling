@@ -3,7 +3,7 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter.Orchestration
+namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
 {
     using System;
     using System.Collections.Generic;
@@ -12,9 +12,9 @@ namespace D365ContextExporter.Orchestration
     using System.Net.Http;
     using System.Threading;
 
-    using D365ContextExporter.Helpers;
-    using D365ContextExporter.Models;
-    using D365ContextExporter.Queries;
+    using Lspiguel.Xrm.D365ContextExporter.Helpers;
+    using Lspiguel.Xrm.D365ContextExporter.Models;
+    using Lspiguel.Xrm.D365ContextExporter.Queries;
 
     using McTools.Xrm.Connection;
 

@@ -1,17 +1,17 @@
-using System;
+﻿using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-using D365ContextExporter.Models;
-using D365ContextExporter.Queries;
+using Lspiguel.Xrm.D365ContextExporter.Models;
+using Lspiguel.Xrm.D365ContextExporter.Queries;
 
 using Newtonsoft.Json.Linq;
 
 using NUnit.Framework;
 
-namespace D365ContextExporter.Tests.QueriesTests
+namespace Lspiguel.Xrm.D365ContextExporter.Tests.QueriesTests
 {
     [TestFixture]
     public class WebApiQueryRunnerTests

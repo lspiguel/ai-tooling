@@ -3,14 +3,14 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter.Helpers
+namespace Lspiguel.Xrm.D365ContextExporter.Helpers
 {
     using System;
     using System.IO;
     using System.Linq;
     using System.Threading;
 
-    using D365ContextExporter.Models;
+    using Lspiguel.Xrm.D365ContextExporter.Models;
 
     /// <summary>Verifies that a usable Python interpreter with Jinja2 installed is available.</summary>
     internal static class PythonBootstrapHelper

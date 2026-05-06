@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <RootNamespace>D365ContextExporter</RootNamespace>
+    <RootNamespace>Lspiguel.Xrm.D365ContextExporter</RootNamespace>
     <AssemblyName>D365ContextExporter</AssemblyName>
     <Company>Luciano Spiguel</Company>
     <Authors>Luciano Spiguel</Authors>

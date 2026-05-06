@@ -3,15 +3,15 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter.Orchestration
+namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
 {
     using System;
     using System.IO;
     using System.Text;
     using System.Threading;
 
-    using D365ContextExporter.Helpers;
-    using D365ContextExporter.Models;
+    using Lspiguel.Xrm.D365ContextExporter.Helpers;
+    using Lspiguel.Xrm.D365ContextExporter.Models;
 
     /// <summary>Thrown when transform.py exits with a non-zero code.</summary>
     internal sealed class PythonInvocationException : Exception

@@ -1,4 +1,4 @@
-namespace D365ContextExporter.UI
+﻿namespace Lspiguel.Xrm.D365ContextExporter.UI
 {
     partial class SpecPickerControl
     {

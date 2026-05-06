@@ -1,4 +1,4 @@
-namespace D365ContextExporter.UI
+﻿namespace Lspiguel.Xrm.D365ContextExporter.UI
 {
     partial class BaseDirectoryPickerControl
     {
@@ -57,7 +57,7 @@ namespace D365ContextExporter.UI
             this.btnBrowse.Name = "btnBrowse";
             this.btnBrowse.Size = new System.Drawing.Size(74, 24);
             this.btnBrowse.TabIndex = 1;
-            this.btnBrowse.Text = "Browse…";
+            this.btnBrowse.Text = "Browseâ€¦";
             this.btnBrowse.UseVisualStyleBackColor = true;
             this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
 

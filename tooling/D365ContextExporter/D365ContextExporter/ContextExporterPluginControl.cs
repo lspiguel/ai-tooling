@@ -3,16 +3,16 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter
+namespace Lspiguel.Xrm.D365ContextExporter
 {
     using System;
     using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
 
-    using D365ContextExporter.Helpers;
-    using D365ContextExporter.Models;
-    using D365ContextExporter.Orchestration;
+    using Lspiguel.Xrm.D365ContextExporter.Helpers;
+    using Lspiguel.Xrm.D365ContextExporter.Models;
+    using Lspiguel.Xrm.D365ContextExporter.Orchestration;
 
     using McTools.Xrm.Connection;
 

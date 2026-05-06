@@ -1,12 +1,12 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 
-using D365ContextExporter.Helpers;
-using D365ContextExporter.Models;
+using Lspiguel.Xrm.D365ContextExporter.Helpers;
+using Lspiguel.Xrm.D365ContextExporter.Models;
 
 using NUnit.Framework;
 
-namespace D365ContextExporter.Tests.HelpersTests
+namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
 {
     [TestFixture]
     public class ConfigValidatorTests

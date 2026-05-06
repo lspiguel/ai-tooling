@@ -1,15 +1,15 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 
-using D365ContextExporter.Models;
-using D365ContextExporter.Orchestration;
+using Lspiguel.Xrm.D365ContextExporter.Models;
+using Lspiguel.Xrm.D365ContextExporter.Orchestration;
 
 using Newtonsoft.Json.Linq;
 
 using NUnit.Framework;
 
-namespace D365ContextExporter.Tests.OrchestrationTests
+namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
 {
     [TestFixture]
     public class IntermediateJsonBuilderTests
