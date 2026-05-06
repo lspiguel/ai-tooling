@@ -21,27 +21,16 @@ namespace D365ContextExporter.UI
             this.InitializeComponent();
         }
 
-        /// <summary>Populates the control with the paths to the two output files.</summary>
-        /// <param name="runOutputPath">Path to output.md in the run directory.</param>
+        /// <summary>Populates the control with the path to the output context file.</summary>
         /// <param name="projectOutputPath">Path to the project-level *.context.md file.</param>
-        public void ShowResult(string runOutputPath, string projectOutputPath)
+        public void ShowResult(string projectOutputPath)
         {
-            this.txtRunOutput.Text = runOutputPath;
             this.txtProjectOutput.Text = projectOutputPath;
 
             var fileName = Path.GetFileName(projectOutputPath);
             this.lblBanner.Text =
                 $"Upload {fileName} to claude.ai, ChatGPT, or your AI assistant as a grounding file.";
         }
-
-        private void btnOpenRun_Click(object sender, EventArgs e) =>
-            ShellOpen(this.txtRunOutput.Text);
-
-        private void btnRevealRun_Click(object sender, EventArgs e) =>
-            RevealInExplorer(this.txtRunOutput.Text);
-
-        private void btnCopyRun_Click(object sender, EventArgs e) =>
-            CopyToClipboard(this.txtRunOutput.Text);
 
         private void btnOpenProject_Click(object sender, EventArgs e) =>
             ShellOpen(this.txtProjectOutput.Text);

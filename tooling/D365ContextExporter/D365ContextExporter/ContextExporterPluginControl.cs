@@ -160,12 +160,10 @@ namespace D365ContextExporter
                         }
                         else if (!t.IsCanceled && t.Result != null)
                         {
-                            var runDir = t.Result;
-                            var runOutputPath = Path.Combine(runDir, "output.md");
                             var specOutputPath = Path.Combine(
                                 baseDir, "output", $"{job.Spec}.context.md");
 
-                            this.outputPreview.ShowResult(runOutputPath, specOutputPath);
+                            this.outputPreview.ShowResult(specOutputPath);
                             this.outputPreview.Visible = true;
                         }
                     }));
