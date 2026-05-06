@@ -16,7 +16,11 @@
     <projectUrl>https://github.com/lspiguel/ai-tooling</projectUrl>
   </metadata>
   <files>
-    <file src="bin\Release\net48\D365ContextExporter.dll" target="lib\net48" />
-    <!-- python/, Context-Exporter/, schema/ added in Phase 3 -->
+    <!-- Plugin DLL and debug symbols -->
+    <file src="bin\Release\net48\D365ContextExporter.dll" target="Plugins" />
+    <file src="bin\Release\net48\D365ContextExporter.pdb" target="Plugins" />
+
+    <!-- Schema for IDE IntelliSense (installed alongside plugin) -->
+    <file src="..\schema\context-exporter.schema.json" target="Plugins\schema" />
   </files>
 </package>

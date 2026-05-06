@@ -73,6 +73,10 @@
         }
       }
     },
+    "legal": {
+      "type": "string",
+      "description": "Path to a LEGAL.md file (relative to the base directory) whose content is prepended to the output context file before delivery. Omit or leave empty to skip the legal notice step."
+    },
     "queries": {
       "type": "array",
       "description": "Ordered list of queries to execute. Results are merged into intermediate.json.",

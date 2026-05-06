@@ -42,6 +42,10 @@ namespace D365ContextExporter.Models
         [JsonProperty("output")]
         public OutputSettings Output { get; set; } = new OutputSettings();
 
+        /// <summary>Gets or sets the path to a LEGAL.md file (relative to the base directory) prepended to the output context file.</summary>
+        [JsonProperty("legal")]
+        public string Legal { get; set; } = string.Empty;
+
         /// <summary>Gets or sets the full path to the config file from which this job was loaded.</summary>
         [JsonIgnore]
         public string ConfigFilePath { get; set; } = string.Empty;

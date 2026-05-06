@@ -54,6 +54,7 @@ namespace D365ContextExporter
             if (!string.IsNullOrEmpty(this.dirPicker.SelectedDirectory))
             {
                 this.specPicker.LoadSpecs(this.dirPicker.SelectedDirectory);
+                this.CheckAndOfferFirstRun(this.dirPicker.SelectedDirectory);
             }
         }
 
@@ -69,6 +70,7 @@ namespace D365ContextExporter
         {
             this.specPicker.LoadSpecs(newDir);
             this.progressControl.AppendLog($"Base directory set: {newDir}");
+            this.CheckAndOfferFirstRun(newDir);
         }
 
         private void specPicker_SpecSelected(object sender, ExportJob? job)
@@ -105,6 +107,21 @@ namespace D365ContextExporter
             catch (Exception ex)
             {
                 this.progressControl.AppendLog($"[Bootstrap] ERROR: {ex.Message}");
+                return;
+            }
+
+            // Validate config before starting the background task.
+            try
+            {
+                ConfigValidator.Validate(job, baseDir);
+            }
+            catch (ConfigValidationException ex)
+            {
+                foreach (var violation in ex.Violations)
+                {
+                    this.progressControl.AppendLog($"[Validation] {violation}");
+                }
+
                 return;
             }
 
@@ -153,6 +170,19 @@ namespace D365ContextExporter
                         }
                     }));
                 });
+        }
+
+        private void CheckAndOfferFirstRun(string dir)
+        {
+            var log = (Action<string>)(msg => this.progressControl.AppendLog(msg));
+
+            if (!FirstRunHelper.IsConfigured(dir) && FirstRunHelper.OfferSetup(dir, this))
+            {
+                FirstRunHelper.DeployReferenceConfig(dir, this, log, overwrite: false);
+                this.specPicker.LoadSpecs(dir);
+            }
+
+            FirstRunHelper.CheckVersion(dir, this, log);
         }
     }
 }

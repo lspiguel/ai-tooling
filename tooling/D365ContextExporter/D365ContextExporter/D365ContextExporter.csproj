@@ -60,10 +60,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="python\transform.py" />
-    <EmbeddedResource Include="python\filters.py" />
-    <EmbeddedResource Include="python\requirements.txt" />
-    <None Include="..\schema\**\*" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="content\schema\" />
+    <EmbeddedResource Include="SampleConfig\**\*.*" />
+    <Reference Include="Microsoft.VisualBasic" />
   </ItemGroup>
 
   <ItemGroup>
@@ -88,7 +86,6 @@
     </EmbeddedResource>
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy /y &quot;$(TargetDir)$(TargetFileName)&quot; &quot;$(SolutionDir)..\..\..\..\Git\XrmToolBox\XrmToolBox\bin\$(Configuration)\Plugins\&quot;&#xD;&#xA;xcopy /y &quot;$(TargetDir)$(TargetName).pdb&quot; &quot;$(SolutionDir)..\..\..\..\Git\XrmToolBox\XrmToolBox\bin\$(Configuration)\Plugins\&quot;&#xD;&#xA;" />
-  </Target>
+  <!-- Post-build DLL copy: use a local Directory.Build.targets override per developer.
+       See Directory.Build.targets.example at the D365ContextExporter.csproj level for the template. -->
 </Project>

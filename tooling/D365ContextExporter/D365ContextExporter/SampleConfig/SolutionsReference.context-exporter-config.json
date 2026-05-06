@@ -1,7 +1,8 @@
 {
-  "$schema": "../../schema/context-exporter.schema.json",
+  "$schema": "../schema/context-exporter.schema.json",
   "spec": "SolutionsReference",
   "version": "1.0.0",
+  "legal": "LEGAL.md",
   "frontMatter": {
     "generatedBy": "D365 CE Context Exporter",
     "purpose": "AI assistant grounding context — full customization reference"
