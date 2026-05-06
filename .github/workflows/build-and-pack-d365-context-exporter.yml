@@ -56,7 +56,9 @@ jobs:
   publish:
     needs: build
     runs-on: windows-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.NUGET_API_KEY != ''
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -66,10 +68,21 @@ jobs:
       - name: Setup NuGet
         uses: nuget/setup-nuget@v2
 
+      - name: Get NuGet API key via OIDC
+        id: oidc
+        shell: pwsh
+        run: |
+          $token = Invoke-RestMethod `
+            -Uri "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=nuget.org" `
+            -Headers @{ Authorization = "bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN" } |
+            Select-Object -ExpandProperty value
+          echo "::add-mask::$token"
+          echo "api-key=$token" >> $env:GITHUB_OUTPUT
+
       - name: Push to NuGet
         shell: pwsh
         run: |
           nuget push nupkg/*.nupkg `
-            -ApiKey ${{ secrets.NUGET_API_KEY }} `
+            -ApiKey ${{ steps.oidc.outputs.api-key }} `
             -Source https://api.nuget.org/v3/index.json `
             -NonInteractive
