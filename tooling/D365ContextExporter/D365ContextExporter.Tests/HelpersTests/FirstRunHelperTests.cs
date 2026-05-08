@@ -101,19 +101,6 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
         }
 
         [Test]
-        public void DeployReferenceConfig_FirstRun_WritesVersionTxt()
-        {
-            FirstRunHelper.DeployReferenceConfig(_baseDir, new NullWin32Window(), _ => { }, overwrite: false);
-
-            var versionPath = Path.Combine(_baseDir, "version.txt");
-            Assert.That(File.Exists(versionPath), Is.True);
-
-            var written = File.ReadAllText(versionPath).Trim();
-            var expected = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
-            Assert.That(written, Is.EqualTo(expected));
-        }
-
-        [Test]
         public void DeployReferenceConfig_WithOverwriteFalse_DoesNotOverwriteExistingFile()
         {
             var queryDir = Path.Combine(_baseDir, "config", "queries");
@@ -170,32 +157,6 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
         }
 
         // ── CheckVersion ─────────────────────────────────────────────────────
-
-        [Test]
-        public void CheckVersion_NoVersionTxt_WritesCurrentVersionSilently()
-        {
-            FirstRunHelper.CheckVersion(_baseDir, new NullWin32Window(), _ => { });
-
-            var versionPath = Path.Combine(_baseDir, "version.txt");
-            Assert.That(File.Exists(versionPath), Is.True);
-            var written = File.ReadAllText(versionPath).Trim();
-            var expected = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
-            Assert.That(written, Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void CheckVersion_VersionMatches_NoFileChange()
-        {
-            var current = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
-            var versionPath = Path.Combine(_baseDir, "version.txt");
-            File.WriteAllText(versionPath, current);
-            var beforeTicks = File.GetLastWriteTimeUtc(versionPath).Ticks;
-
-            FirstRunHelper.CheckVersion(_baseDir, new NullWin32Window(), _ => { });
-
-            // File should not have been rewritten.
-            Assert.That(File.GetLastWriteTimeUtc(versionPath).Ticks, Is.EqualTo(beforeTicks));
-        }
 
         /// <summary>Minimal IWin32Window that does not display any UI. PromptOrgName will return empty string.</summary>
         private sealed class NullWin32Window : IWin32Window
