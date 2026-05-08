@@ -10,23 +10,23 @@ dotnet nuget pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExp
     <title>D365 CE Context Exporter for XrmToolBox</title>
     <authors>Luciano Spiguel</authors>
     <owners>Luciano Spiguel</owners>
+    <projectUrl>https://github.com/lspiguel/ai-tooling</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/lspiguel/ai-tooling/refs/heads/main/tooling/D365ContextExporter/D365ContextExporter/d365-context-exporter-icon-c-128px-transparent.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>XrmToolBox plugin to produce grounding files for AI assistants</summary>
     <description>
       XrmToolBox plugin that executes FetchXML and Web API queries against a Dataverse environment,
       serialises results to an intermediate JSON file, and invokes a Python/Jinja2 post-processor
       to produce Markdown grounding files for non-agentic AI assistants.
     </description>
-    <summary>XrmToolBox plugin to produce grounding files for AI assistants</summary>
-    <tags>XrmToolBox Documentation AI Markdown D365 Dataverse Grounding</tags>
-    <license type="file">LICENSE</license>
     <releaseNotes>Alpha version for testing distribution.</releaseNotes>
-    <readme>README.md</readme>
+    <copyright>Copyright 2026- Luciano Spiguel</copyright>
+    <tags>XrmToolBox Documentation AI Markdown D365 Dataverse Grounding</tags>
     <dependencies>
       <dependency id="XrmToolBox" version="1.2025.10.74" />
     </dependencies>
-    <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <projectUrl>https://github.com/lspiguel/ai-tooling</projectUrl>
-    <iconUrl>https://raw.githubusercontent.com/lspiguel/ai-tooling/refs/heads/main/tooling/D365ContextExporter/D365ContextExporter/d365-context-exporter-icon-c-128px-transparent.png</iconUrl>
-    <copyright>Copyright 2026- Luciano Spiguel</copyright>
+    <license type="file">LICENSE</license>
+    <readme>README.md</readme>
   </metadata>
   <files>
     <!-- License and readme must be at package root -->
@@ -34,11 +34,11 @@ dotnet nuget pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExp
     <file src="..\README.md" target="README.md" />
 
     <!-- Plugin DLL and debug symbols -->
-    <file src="bin\Release\net48\D365ContextExporter.dll" target="Plugins" />
+    <file src="bin\Release\net48\D365ContextExporter.dll" target="lib\net472\Plugins" />
     <!-- Disconnect this line if symbols are not needed -->
-    <file src="bin\Release\net48\D365ContextExporter.pdb" target="Plugins" />
+    <file src="bin\Release\net48\D365ContextExporter.pdb" target="lib\net472\Plugins" />
 
     <!-- Schema for IDE IntelliSense (installed alongside plugin) -->
-    <file src="..\schema\context-exporter.schema.json" target="Plugins\schema" />
+    <file src="..\schema\context-exporter.schema.json" target="lib\net472\Plugins\schema" />
   </files>
 </package>
