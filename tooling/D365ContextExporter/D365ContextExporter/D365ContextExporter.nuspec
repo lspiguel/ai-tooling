@@ -1,4 +1,8 @@
 <?xml version="1.0"?>
+<!--
+To generate a nuget (run from the ai-tooling repo folder):
+dotnet nuget pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExporter.nuspec -Version 1.0.0-alpha2 -BasePath tooling\D365ContextExporter\D365ContextExporter -OutputDirectory nupkg
+-->
 <package>
   <metadata>
     <id>Lspiguel.Xrm.D365ContextExporter</id>
@@ -31,6 +35,7 @@
 
     <!-- Plugin DLL and debug symbols -->
     <file src="bin\Release\net48\D365ContextExporter.dll" target="Plugins" />
+    <!-- Disconnect this line if symbols are not needed -->
     <file src="bin\Release\net48\D365ContextExporter.pdb" target="Plugins" />
 
     <!-- Schema for IDE IntelliSense (installed alongside plugin) -->
