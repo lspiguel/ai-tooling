@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
 <!--
 To generate a nuget (run from the ai-tooling repo folder):
-dotnet nuget pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExporter.nuspec -Version 1.0.0-alpha2 -BasePath tooling\D365ContextExporter\D365ContextExporter -OutputDirectory nupkg
+dotnet nuget pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExporter.nuspec -BasePath tooling\D365ContextExporter\D365ContextExporter -OutputDirectory nupkg
 -->
 <package>
   <metadata>
     <id>Lspiguel.Xrm.D365ContextExporter</id>
-    <version>$version$</version>
+    <version>0.2026.0.5</version>
     <title>D365 CE Context Exporter for XrmToolBox</title>
     <authors>Luciano Spiguel</authors>
     <owners>Luciano Spiguel</owners>
