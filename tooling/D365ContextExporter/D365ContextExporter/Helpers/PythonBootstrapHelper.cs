@@ -18,20 +18,17 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
         private static readonly char[] PackageNameSeparators = ['=', '>', '<', '~', '!', '[', ';', ' '];
 
         /// <summary>
-        /// Runs <c>python -c "import jinja2"</c> to confirm Python and Jinja2 are available.
+        /// Runs <c>pip show</c> to confirm Python and all required packages are available.
         /// Throws <see cref="InvalidOperationException"/> with a human-readable message if the check fails.
         /// </summary>
         /// <param name="settings">The Python settings from the project config.</param>
+        /// <param name="baseDir">The user-selected base directory containing <c>config\transformations\requirements.txt</c>.</param>
         /// <param name="log">Log delegate for status messages.</param>
-        public static void Check(PythonSettings settings, Action<string> log)
+        public static void Check(PythonSettings settings, string baseDir, Action<string> log)
         {
             var interpreter = ResolveExecutable(settings);
 
-            var requirementsPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "D365ContextExporter",
-                "python",
-                "requirements.txt");
+            var requirementsPath = Path.Combine(baseDir, "config", "transformations", "requirements.txt");
 
             var packages = ReadPackageNames(requirementsPath);
             var exitCode = ProcessRunner.Run(

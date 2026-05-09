@@ -102,6 +102,7 @@ namespace Lspiguel.Xrm.D365ContextExporter
             {
                 PythonBootstrapHelper.Check(
                     job.Python,
+                    baseDir,
                     msg => this.progressControl.AppendLog(msg));
             }
             catch (Exception ex)
