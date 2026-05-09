@@ -19,11 +19,11 @@ environment: {{ _meta.environment.url }}
 
 {% set privileges = roles | selectattr("name", "equalto", role.name) | list %}
 {% set has_privs = namespace(value=false) %}
-{% for p in privileges %}{% if p["priv.name"] %}{% set has_privs.value = true %}{% endif %}{% endfor %}
+{% for p in privileges %}{% if p.get("priv.name") %}{% set has_privs.value = true %}{% endif %}{% endfor %}
 {% if has_privs.value %}
 | Privilege | Depth |
 |-----------|-------|
-{% for p in privileges %}{% if p["priv.name"] %}| {{ p["priv.name"] }} | {{ p["rp.privilegedepthmask"] | default("—") }} |
+{% for p in privileges %}{% if p.get("priv.name") %}| {{ p.get("priv.name") }} | {{ p.get("rp.privilegedepthmask") | default("—") }} |
 {% endif %}{% endfor %}
 {% else %}
 _No privileges captured._
