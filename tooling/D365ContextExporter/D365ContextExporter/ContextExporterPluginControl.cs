@@ -75,7 +75,7 @@ namespace Lspiguel.Xrm.D365ContextExporter
 
         private void specPicker_SpecSelected(object sender, ExportJob? job)
         {
-            this.btnRun.Enabled = job != null && this.Service != null;
+            this.btnRun.Enabled = job != null;
             if (job != null)
             {
                 this.progressControl.AppendLog($"Spec selected: {job}");
@@ -88,6 +88,22 @@ namespace Lspiguel.Xrm.D365ContextExporter
         }
 
         private void btnRun_Click(object sender, EventArgs e)
+        {
+            if (this.specPicker.SelectedJob == null)
+            {
+                return;
+            }
+
+            if (this.Service == null)
+            {
+                this.ExecuteMethod(this.StartExport);
+                return;
+            }
+
+            this.StartExport();
+        }
+
+        private void StartExport()
         {
             if (this.Service == null || this.specPicker.SelectedJob == null)
             {
