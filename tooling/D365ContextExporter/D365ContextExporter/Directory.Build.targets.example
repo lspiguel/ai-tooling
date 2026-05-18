@@ -13,12 +13,35 @@
 
   <Target Name="CopyToXrmToolBox" AfterTargets="Build"
           Condition="'$(Configuration)' == 'Debug' AND Exists('$(XrmToolBoxPluginsDir)')">
+
+    <!-- Plugin DLL and symbols -->
     <Copy SourceFiles="$(TargetPath)"
           DestinationFolder="$(XrmToolBoxPluginsDir)"
           SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(TargetDir)$(TargetName).pdb"
           DestinationFolder="$(XrmToolBoxPluginsDir)"
           SkipUnchangedFiles="true" />
-    <Message Text="[PostBuild] Copied $(TargetFileName) to $(XrmToolBoxPluginsDir)" Importance="High" />
+
+    <!-- IronPython runtime DLLs -->
+    <ItemGroup>
+      <_IronPythonDlls Include="$(TargetDir)IronPython.dll;
+                                $(TargetDir)IronPython.Modules.dll;
+                                $(TargetDir)Microsoft.Dynamic.dll;
+                                $(TargetDir)Microsoft.Scripting.dll;
+                                $(TargetDir)Microsoft.Scripting.Metadata.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_IronPythonDlls)"
+          DestinationFolder="$(XrmToolBoxPluginsDir)"
+          SkipUnchangedFiles="true" />
+
+    <!-- IronPython standard library (Lib folder) -->
+    <ItemGroup>
+      <_IronPythonLib Include="$(TargetDir)Lib\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_IronPythonLib)"
+          DestinationFiles="@(_IronPythonLib->'$(XrmToolBoxPluginsDir)\Lib\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+
+    <Message Text="[PostBuild] Copied $(TargetFileName) + IronPython runtime to $(XrmToolBoxPluginsDir)" Importance="High" />
   </Target>
 </Project>

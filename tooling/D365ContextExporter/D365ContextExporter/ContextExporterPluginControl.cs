@@ -113,20 +113,6 @@ namespace Lspiguel.Xrm.D365ContextExporter
             var job = this.specPicker.SelectedJob;
             var baseDir = this.dirPicker.SelectedDirectory;
 
-            // Bootstrap check runs on UI thread so MessageBox is modal to the main window.
-            try
-            {
-                PythonBootstrapHelper.Check(
-                    job.Python,
-                    baseDir,
-                    msg => this.progressControl.AppendLog(msg));
-            }
-            catch (Exception ex)
-            {
-                this.progressControl.AppendLog($"[Bootstrap] ERROR: {ex.Message}");
-                return;
-            }
-
             // Validate config before starting the background task.
             try
             {

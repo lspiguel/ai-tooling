@@ -30,7 +30,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Models
         [JsonProperty("queries")]
         public List<QueryDefinition> Queries { get; set; } = new List<QueryDefinition>();
 
-        /// <summary>Gets or sets the Python runtime settings.</summary>
+        /// <summary>Gets or sets the Python runtime settings. Ignored in Phase 5 and later; IronPython is the built-in runtime.</summary>
         [JsonProperty("python")]
         public PythonSettings Python { get; set; } = new PythonSettings();
 

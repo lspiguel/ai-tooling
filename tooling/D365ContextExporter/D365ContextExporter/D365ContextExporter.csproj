@@ -31,6 +31,8 @@ to produce Markdown grounding files for non-agentic AI assistants.</Description>
     <PackageReference Include="XrmToolBoxPackage" Version="1.2025.10.74" />
     <!-- Microsoft.PowerPlatform.Dataverse.Client added in Phase 2 when query runners are implemented.
          XrmToolBoxPackage already provides IOrganizationService and McTools.Xrm.Connection. -->
+    <PackageReference Include="IronPython" Version="3.4.1" />
+    <PackageReference Include="IronPython.StdLib" Version="3.4.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
       <PrivateAssets>all</PrivateAssets>
@@ -71,6 +73,9 @@ to produce Markdown grounding files for non-agentic AI assistants.</Description>
 
   <ItemGroup>
     <EmbeddedResource Include="SampleConfig\**\*.*" />
+    <EmbeddedResource Include="PyLibs\pylibs.zip">
+      <LogicalName>Lspiguel.Xrm.D365ContextExporter.PyLibs.pylibs.zip</LogicalName>
+    </EmbeddedResource>
     <Reference Include="Microsoft.VisualBasic" />
   </ItemGroup>
 

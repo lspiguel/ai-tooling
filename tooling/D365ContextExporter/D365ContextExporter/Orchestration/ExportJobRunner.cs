@@ -127,34 +127,12 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
 
                 var invoker = new PythonInvoker(this.log);
                 invoker.Invoke(job, baseDir, runDir, cancellationToken);
-                this.AppendTokenCount(runDir);
                 this.CopyOutputToSpecDir(runDir, baseDir, job.Spec);
                 this.PrependLegalNotice(job, baseDir);
             }
 
             this.log($"[Export] Run complete. Outputs in: {runDir}");
             return runDir;
-        }
-
-        private void AppendTokenCount(string runDir)
-        {
-            var sidecar = Path.Combine(runDir, "token_count.txt");
-            var outputFile = Path.Combine(runDir, "output.md");
-
-            if (!File.Exists(sidecar) || !File.Exists(outputFile))
-            {
-                return;
-            }
-
-            var raw = File.ReadAllText(sidecar).Trim();
-            if (!int.TryParse(raw, out var tokenCount))
-            {
-                return;
-            }
-
-            this.log($"[Tokens] output.md token count (gpt-4o): {tokenCount:N0}");
-            var content = File.ReadAllText(outputFile);
-            File.WriteAllText(outputFile, $"> Token count (gpt-4o): {tokenCount:N0}\n\n" + content);
         }
 
         private void CopyOutputToSpecDir(string runDir, string baseDir, string specName)

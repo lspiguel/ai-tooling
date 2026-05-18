@@ -1,2 +1,8 @@
-Jinja2>=3.1.4
-tiktoken>=0.9.0
+# Development reference only — not used by the plugin.
+# The plugin bundles Jinja2 via PyLibs\pylibs.zip (IronPython mode).
+# Install these packages if you want to run transform.py standalone with CPython:
+#
+# Jinja2 is pinned to 2.10.3 because IronPython 3.4 does not support the
+# "async def" syntax introduced in Jinja2 2.11.0.
+Jinja2==2.10.3
+MarkupSafe==1.1.1

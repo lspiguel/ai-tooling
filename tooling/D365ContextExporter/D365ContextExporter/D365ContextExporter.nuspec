@@ -40,5 +40,15 @@ dotnet nuget pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExp
 
     <!-- Schema for IDE IntelliSense (installed alongside plugin) -->
     <file src="..\schema\context-exporter.schema.json" target="lib\net472\Plugins\schema" />
+
+    <!-- IronPython runtime -->
+    <file src="bin\Release\net48\IronPython.dll"                   target="lib\net472\Plugins" />
+    <file src="bin\Release\net48\IronPython.Modules.dll"           target="lib\net472\Plugins" />
+    <file src="bin\Release\net48\Microsoft.Dynamic.dll"            target="lib\net472\Plugins" />
+    <file src="bin\Release\net48\Microsoft.Scripting.dll"          target="lib\net472\Plugins" />
+    <file src="bin\Release\net48\Microsoft.Scripting.Metadata.dll" target="lib\net472\Plugins" />
+
+    <!-- IronPython standard library (required by Jinja2 at runtime) -->
+    <file src="bin\Release\net48\Lib\**\*" target="lib\net472\Plugins\Lib" />
   </files>
 </package>

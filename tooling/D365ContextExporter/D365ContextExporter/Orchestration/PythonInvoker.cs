@@ -7,13 +7,18 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
 {
     using System;
     using System.IO;
+    using System.Reflection;
     using System.Text;
     using System.Threading;
+
+    using IronPython.Hosting;
 
     using Lspiguel.Xrm.D365ContextExporter.Helpers;
     using Lspiguel.Xrm.D365ContextExporter.Models;
 
-    /// <summary>Thrown when transform.py exits with a non-zero code.</summary>
+    using Microsoft.Scripting.Hosting;
+
+    /// <summary>Thrown when transform.py fails during IronPython execution.</summary>
     internal sealed class PythonInvocationException : Exception
     {
         /// <summary>
@@ -26,18 +31,16 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
             this.StderrSnippet = stderrSnippet;
         }
 
-        /// <summary>Gets the exit code returned by the Python process.</summary>
+        /// <summary>Gets the exit code (always -1 for IronPython failures).</summary>
         public int ExitCode { get; }
 
-        /// <summary>Gets the last ~500 characters of stderr output.</summary>
+        /// <summary>Gets the Python traceback detail from IronPython.</summary>
         public string StderrSnippet { get; }
     }
 
-    /// <summary>Resolves a Python interpreter and invokes transform.py from the base directory's config\transformations\ folder.</summary>
+    /// <summary>Invokes transform.py in-process via IronPython 3.</summary>
     internal sealed class PythonInvoker
     {
-        private const int DefaultTimeoutMs = 5 * 60 * 1000;
-
         private readonly Action<string> log;
 
         /// <summary>
@@ -49,16 +52,13 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
             this.log = log;
         }
 
-        /// <summary>Invokes transform.py from the base directory's config\transformations\ folder.</summary>
+        /// <summary>Invokes transform.py from the base directory's config\transformations\ folder via IronPython.</summary>
         /// <param name="job">The spec configuration.</param>
         /// <param name="baseDir">The base directory containing the config/ subdirectory.</param>
         /// <param name="runDir">The run-specific directory containing intermediate.json.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         public void Invoke(ExportJob job, string baseDir, string runDir, CancellationToken cancellationToken)
         {
-            var interpreter = PythonBootstrapHelper.ResolveExecutable(job.Python);
-            this.log($"[Python] Using interpreter: {interpreter}");
-
             var transformationsDir = Path.Combine(baseDir, "config", "transformations");
             var transformScript = Path.Combine(transformationsDir, "transform.py");
 
@@ -75,38 +75,60 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
                     $"Template '{job.Transformation}' not found at: {templatePath}");
             }
 
-            var intermediatePath = Path.Combine(runDir, "intermediate.json");
-            var arguments = $"\"{transformScript}\""
-                + $" --input \"{intermediatePath}\""
-                + $" --template \"{templatePath}\""
-                + $" --out \"{runDir}\""
-                + $" --spec \"{job.Spec}\"";
+            var engine = Python.CreateEngine();
 
-            this.log($"[Python] Running transform.py ...");
+            var stdoutStream = new LoggingStream(line => this.log($"[Python] {line}"));
+            var stderrStream = new LoggingStream(line => this.log($"[Python:ERR] {line}"));
+            engine.Runtime.IO.SetOutput(stdoutStream, Encoding.UTF8);
+            engine.Runtime.IO.SetErrorOutput(stderrStream, Encoding.UTF8);
 
-            var stderr = new StringBuilder();
-            var exitCode = ProcessRunner.Run(
-                executable: interpreter,
-                arguments: arguments,
-                workingDirectory: transformationsDir,
-                onStdout: line => this.log($"[Python] {line}"),
-                onStderr: line =>
-                {
-                    this.log($"[Python:ERR] {line}");
-                    stderr.AppendLine(line);
-                },
-                timeoutMs: DefaultTimeoutMs,
-                cancellationToken: cancellationToken);
+            var pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? string.Empty;
+            var libDir = Path.Combine(pluginDir, "Lib");
+            var pylibsZip = Path.Combine(transformationsDir, "pylibs.zip");
 
-            if (exitCode != 0)
+            var paths = engine.GetSearchPaths();
+            if (Directory.Exists(libDir))
             {
-                var snippet = stderr.ToString();
-                if (snippet.Length > 500)
-                    snippet = snippet.Substring(snippet.Length - 500);
-                throw new PythonInvocationException(
-                    exitCode,
-                    $"transform.py exited with code {exitCode}. Check the log for details.",
-                    snippet);
+                paths.Add(libDir);
+            }
+
+            if (File.Exists(pylibsZip))
+            {
+                paths.Add(pylibsZip);
+            }
+
+            paths.Add(transformationsDir);
+            engine.SetSearchPaths(paths);
+
+            var scope = engine.CreateScope();
+            scope.SetVariable("input_path", Path.Combine(runDir, "intermediate.json"));
+            scope.SetVariable("template", templatePath);
+            scope.SetVariable("out_dir", runDir);
+            scope.SetVariable("spec", job.Spec);
+
+            this.log("[Python] Running transform.py via IronPython ...");
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                engine.ExecuteFile(transformScript, scope);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                var ops = engine.GetService<ExceptionOperations>();
+                var detail = ops != null ? ops.FormatException(ex) : ex.ToString();
+                this.log($"[Python:ERR] {detail}");
+                throw new PythonInvocationException(-1,
+                    "IronPython execution failed. Check the log for details.", detail);
+            }
+            finally
+            {
+                stdoutStream.Flush();
+                stderrStream.Flush();
             }
         }
     }

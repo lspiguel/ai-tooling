@@ -46,7 +46,6 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             // Transformations — Python
             ("SampleConfig.transformations.transform.py",            @"config\transformations\transform.py"),
             ("SampleConfig.transformations.filters.py",              @"config\transformations\filters.py"),
-            ("SampleConfig.transformations.requirements.txt",        @"config\transformations\requirements.txt"),
 
             // Spec configs
             ("SampleConfig.EntityDictionary.context-exporter-config.json",  @"config\EntityDictionary.context-exporter-config.json"),
@@ -128,6 +127,14 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             {
                 log($"[Setup] Skipped (exists): {legalDest}");
             }
+
+            // pylibs.zip is always overwritten — it is never user-modified.
+            var pylibsDest = Path.Combine(baseDir, "config", "transformations", "pylibs.zip");
+            WriteBinaryResource(
+                "Lspiguel.Xrm.D365ContextExporter.PyLibs.pylibs.zip",
+                pylibsDest,
+                log,
+                "[Setup] Deployed");
 
             // Write version.txt.
             var versionPath = Path.Combine(baseDir, "version.txt");
@@ -215,6 +222,16 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             var content = ReadResource(resourceName);
             Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
             File.WriteAllText(destPath, content, Encoding.UTF8);
+            log($"{logPrefix}: {destPath}");
+        }
+
+        private static void WriteBinaryResource(string resourceName, string destPath, Action<string> log, string logPrefix)
+        {
+            using var stream = Asm.GetManifestResourceStream(resourceName)
+                ?? throw new InvalidOperationException($"Embedded resource not found: {resourceName}");
+            Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
+            using var fs = new FileStream(destPath, FileMode.Create, FileAccess.Write);
+            stream.CopyTo(fs);
             log($"{logPrefix}: {destPath}");
         }
     }
