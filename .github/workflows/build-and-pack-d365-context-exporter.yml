@@ -3,8 +3,12 @@ name: Build and Pack D365ContextExporter
 on:
   push:
     branches: [main]
+    paths:
+      - 'tooling/D365ContextExporter/**'
   pull_request:
     branches: [main]
+    paths:
+      - 'tooling/D365ContextExporter/**'
 
 jobs:
   build:
