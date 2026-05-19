@@ -1,6 +1,6 @@
 # PowerShell script to convert .docx files to .md using pandoc
-# and .mmd files to .svg using mmdc
-# Markdown files are only converted if missing; SVG files are always overwritten
+# and .mmd files to .svg and .png (scale 3) using mmdc
+# Markdown files are only converted if missing; SVG/PNG files are always overwritten
 
 param(
     [string]$Path = ".",
@@ -57,27 +57,33 @@ foreach ($file in $files) {
         }
     }
     elseif ($DiagramExtensions -contains $extension) {
-        # Diagram files: convert to SVG using mmdc (always overwrite)
-        $outputPath = Join-Path $file.DirectoryName ($file.BaseName + ".svg")
-        
-        # Convert using mmdc
-        Write-Host "Converting: $inputPath -> $outputPath" -ForegroundColor Green
-        
-        try {
-            mmdc -i "$inputPath" -o "$outputPath"
-            
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "Successfully converted: $outputPath" -ForegroundColor Green
-                $convertedCount++
+        # Diagram files: convert to SVG and PNG using mmdc (always overwrite)
+        $svgPath = Join-Path $file.DirectoryName ($file.BaseName + ".svg")
+        $pngPath = Join-Path $file.DirectoryName ($file.BaseName + ".png")
+
+        foreach ($outputPath in @($svgPath, $pngPath)) {
+            Write-Host "Converting: $inputPath -> $outputPath" -ForegroundColor Green
+
+            try {
+                if ($outputPath -eq $pngPath) {
+                    mmdc -i "$inputPath" -o "$outputPath" --scale 3
+                } else {
+                    mmdc -i "$inputPath" -o "$outputPath"
+                }
+
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "Successfully converted: $outputPath" -ForegroundColor Green
+                    $convertedCount++
+                }
+                else {
+                    Write-Host "Error converting: $inputPath (mmdc exit code: $LASTEXITCODE)" -ForegroundColor Red
+                    $errorCount++
+                }
             }
-            else {
-                Write-Host "Error converting: $inputPath (mmdc exit code: $LASTEXITCODE)" -ForegroundColor Red
+            catch {
+                Write-Host "Error converting: $inputPath - $($_.Exception.Message)" -ForegroundColor Red
                 $errorCount++
             }
-        }
-        catch {
-            Write-Host "Error converting: $inputPath - $($_.Exception.Message)" -ForegroundColor Red
-            $errorCount++
         }
     }
 }
