@@ -43,11 +43,6 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             ("SampleConfig.transformations.solution-inventory.j2",   @"config\transformations\solution-inventory.j2"),
             ("SampleConfig.transformations.solutions-reference.j2",  @"config\transformations\solutions-reference.j2"),
 
-            // Transformations — Python
-            ("SampleConfig.transformations.transform.py",            @"config\transformations\transform.py"),
-            ("SampleConfig.transformations.filters.py",              @"config\transformations\filters.py"),
-            ("SampleConfig.transformations.requirements.txt",        @"config\transformations\requirements.txt"),
-
             // Spec configs
             ("SampleConfig.EntityDictionary.context-exporter-config.json",  @"config\EntityDictionary.context-exporter-config.json"),
             ("SampleConfig.SecurityModel.context-exporter-config.json",     @"config\SecurityModel.context-exporter-config.json"),
@@ -76,7 +71,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             var result = MessageBox.Show(
                 owner,
                 $"The selected folder does not contain any spec configurations.\n\n" +
-                $"Would you like to deploy the reference configuration (sample specs, FetchXML queries, Jinja2 templates, and Python scripts) to:\n\n{baseDir}",
+                $"Would you like to deploy the reference configuration (sample specs, FetchXML queries, and Scriban templates) to:\n\n{baseDir}",
                 "First-Time Setup",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
@@ -157,7 +152,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             var result = MessageBox.Show(
                 owner,
                 $"The plugin has been updated from {stored} to {current}.\n\n" +
-                "Would you like to update the reference configuration files (queries, templates, Python scripts, and sample specs)? " +
+                "Would you like to update the reference configuration files (queries, templates, and sample specs)? " +
                 "Your LEGAL.md and any custom files will not be modified.",
                 "Plugin Updated",
                 MessageBoxButtons.YesNo,

@@ -91,10 +91,11 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
 
             // Spot-check a few key files.
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "queries", "security-roles.fetch.xml")), Is.True, "security-roles.fetch.xml");
-            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "transform.py")), Is.True, "transform.py");
-            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "filters.py")), Is.True, "filters.py");
-            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "requirements.txt")), Is.True, "requirements.txt");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "entity-dictionary.j2")), Is.True, "entity-dictionary.j2");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "EntityDictionary.context-exporter-config.json")), Is.True, "EntityDictionary spec");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "transform.py")), Is.False, "transform.py must not be deployed");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "filters.py")), Is.False, "filters.py must not be deployed");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "requirements.txt")), Is.False, "requirements.txt must not be deployed");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "SecurityModel.context-exporter-config.json")), Is.True, "SecurityModel spec");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "SolutionsReference.context-exporter-config.json")), Is.True, "SolutionsReference spec");
             Assert.That(File.Exists(Path.Combine(_baseDir, "LEGAL.md")), Is.True, "LEGAL.md");

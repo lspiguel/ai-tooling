@@ -30,7 +30,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Models
         [JsonProperty("queries")]
         public List<QueryDefinition> Queries { get; set; } = new List<QueryDefinition>();
 
-        /// <summary>Gets or sets the Python runtime settings.</summary>
+        /// <summary>Gets or sets the Python runtime settings. Ignored from Phase 5 onward; the plugin renders templates in-process via Scriban. Retained for JSON deserialization compatibility with existing config files.</summary>
         [JsonProperty("python")]
         public PythonSettings Python { get; set; } = new PythonSettings();
 
