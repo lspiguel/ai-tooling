@@ -32,7 +32,7 @@ to produce Markdown grounding files for non-agentic AI assistants.</Description>
     <!-- Microsoft.PowerPlatform.Dataverse.Client added in Phase 2 when query runners are implemented.
          XrmToolBoxPackage already provides IOrganizationService and McTools.Xrm.Connection. -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Scriban" Version="5.12.0" />
+    <PackageReference Include="Scriban" Version="7.2.0" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
