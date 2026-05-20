@@ -33,6 +33,7 @@ to produce Markdown grounding files for non-agentic AI assistants.</Description>
          XrmToolBoxPackage already provides IOrganizationService and McTools.Xrm.Connection. -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Scriban" Version="7.2.0" />
+    <PackageReference Include="System.Text.Json" Version="10.0.8" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>

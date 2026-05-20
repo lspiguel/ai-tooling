@@ -7,6 +7,7 @@ namespace Lspiguel.Xrm.D365ContextExporter
 {
     using System;
     using System.IO;
+    using System.Reflection;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -23,8 +24,19 @@ namespace Lspiguel.Xrm.D365ContextExporter
     /// <summary>Root plugin control hosted by XrmToolBox.</summary>
     public partial class ContextExporterPluginControl : PluginControlBase
     {
+        // Subfolder next to the plugin DLL that holds private dependencies (e.g. Scriban, System.Text.Json).
+        // This isolates our versions from other plugins that may ship conflicting versions of the same assemblies.
+        private static readonly string PrivateLibDir = Path.Combine(
+            Path.GetDirectoryName(typeof(ContextExporterPluginControl).Assembly.Location)!,
+            "D365ContextExporter");
+
         private CancellationTokenSource? cts;
         private bool initialized;
+
+        static ContextExporterPluginControl()
+        {
+            AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ContextExporterPluginControl"/> class.
@@ -32,6 +44,18 @@ namespace Lspiguel.Xrm.D365ContextExporter
         public ContextExporterPluginControl()
         {
             this.InitializeComponent();
+        }
+
+        private static Assembly? OnAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            var name = new AssemblyName(args.Name).Name;
+            if (name is null)
+            {
+                return null;
+            }
+
+            var candidate = Path.Combine(PrivateLibDir, name + ".dll");
+            return File.Exists(candidate) ? Assembly.LoadFrom(candidate) : null;
         }
 
         /// <summary>Called by XrmToolBox when the user connects to an org or switches connection.</summary>
