@@ -91,7 +91,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
 
             // Spot-check a few key files.
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "queries", "security-roles.fetch.xml")), Is.True, "security-roles.fetch.xml");
-            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "entity-dictionary.j2")), Is.True, "entity-dictionary.j2");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "entity-dictionary.sbn")), Is.True, "entity-dictionary.sbn");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "EntityDictionary.context-exporter-config.json")), Is.True, "EntityDictionary spec");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "transform.py")), Is.False, "transform.py must not be deployed");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "filters.py")), Is.False, "filters.py must not be deployed");

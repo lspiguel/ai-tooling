@@ -1,0 +1,289 @@
+---
+{{ for pair in _meta.frontMatter -}}
+{{ pair.key }}: {{ pair.value }}
+{{ end -}}
+exportedAt: {{ _meta.exportedAtUtc }}
+environment: {{ _meta.environment.url }}
+---
+
+# {{ _meta.environment.orgName }} D365CE Customization Reference
+
+**Platform:** Dynamics 365 Customer Engagement
+
+## Solutions
+
+| Solution | Publisher | Version | Managed | Installed On |
+|---|---|---|---|---|
+{{ for sol in solutions | array.sort 'friendlyname' -}}
+| {{ sol.friendlyname }} | {{ sol["pub.publisherfriendlyname"] ?? "—" }} | {{ sol.version ?? "—" }} | {{ if sol.ismanaged }}Yes{{ else }}No{{ end }} | {{ sol.installedon ?? "—" | iso_date }} |
+{{ end }}
+
+---
+
+## Field Type Legend
+
+`str`=nvarchar, `text`=ntext, `lkp`=lookup, `opt`=picklist, `multiopt`=multiselectpicklist, `bool`=bit, `int`=int, `dec`=decimal, `money`=money, `dt`=datetime, `img`=image, `pk`=primarykey
+Required: **R**=required, **r**=recommended, `-`=none
+
+---
+
+## Custom Entities
+
+{{
+  custom_ents = []
+  std_ents = []
+  virtual_ents = []
+  for e in entities
+    is_virtual = e.IsVirtual != null && e.IsVirtual
+    if is_virtual
+      virtual_ents = virtual_ents | array.add e
+    else if e.IsCustomEntity
+      custom_ents = custom_ents | array.add e
+    else
+      std_ents = std_ents | array.add e
+    end
+  end
+  custom_ents = custom_ents | array.sort 'LogicalName'
+  std_ents = std_ents | array.sort 'LogicalName'
+  virtual_ents = virtual_ents | array.sort 'LogicalName'
+}}
+{{ for entity in custom_ents }}
+{{
+  dn = entity.DisplayName | display_label entity.LogicalName
+  desc = entity.Description | display_label ""
+  custom_attrs = []
+  for attr in (entity.Attributes ?? [])
+    if attr.IsCustomAttribute
+      custom_attrs = custom_attrs | array.add attr
+    end
+  end
+}}
+{{ if custom_attrs.size > 0 }}
+
+### {{ entity.LogicalName }} — "{{ dn }}"
+{{ if entity.IsActivity }}*(custom activity)*{{ end }}
+{{ if desc != "" }}{{ desc }}{{ end }}
+
+**Fields:**
+{{ for attr in custom_attrs | array.sort 'LogicalName' -}}
+{{ adn = attr.DisplayName | display_label attr.LogicalName -}}
+{{ req = (attr.RequiredLevel.Value ?? "None") | req_indicator -}}
+- {{ attr.LogicalName }} | {{ adn }} | {{ attr.AttributeType | attr_type_abbrev }} | {{ req }}
+{{ end }}
+**Forms:** {{ entity.SystemForms | format_forms }}
+**Views:** {{ entity.SavedQueries | format_views }}
+{{ end }}
+{{ end }}
+
+---
+
+## Standard Entity Extensions
+
+{{ for entity in std_ents }}
+{{
+  custom_attrs = []
+  for attr in (entity.Attributes ?? [])
+    if attr.IsCustomAttribute
+      custom_attrs = custom_attrs | array.add attr
+    end
+  end
+}}
+{{ if custom_attrs.size > 0 }}
+{{ dn = entity.DisplayName | display_label entity.LogicalName }}
+
+### {{ entity.LogicalName }} — "{{ dn }}"
+
+**Custom Fields:**
+{{ for attr in custom_attrs | array.sort 'LogicalName' -}}
+{{ adn = attr.DisplayName | display_label attr.LogicalName -}}
+{{ req = (attr.RequiredLevel.Value ?? "None") | req_indicator -}}
+- {{ attr.LogicalName }} | {{ adn }} | {{ attr.AttributeType | attr_type_abbrev }} | {{ req }}
+{{ end }}
+**Forms:** {{ entity.SystemForms | format_forms }}
+**Views:** {{ entity.SavedQueries | format_views }}
+{{ end }}
+{{ end }}
+
+---
+
+## Virtual Table Entities
+
+{{ if virtual_ents.size > 0 }}
+{{ for entity in virtual_ents }}
+{{ dn = entity.DisplayName | display_label entity.LogicalName }}
+
+### {{ entity.LogicalName }} *(Virtual)*
+
+{{ dn }}
+
+**Fields:**
+{{ for attr in (entity.Attributes ?? []) | array.sort 'LogicalName' -}}
+{{ adn = attr.DisplayName | display_label attr.LogicalName -}}
+{{ req = (attr.RequiredLevel.Value ?? "None") | req_indicator -}}
+- {{ attr.LogicalName }} | {{ adn }} | {{ attr.AttributeType | attr_type_abbrev }} | {{ req }}
+{{ end }}
+{{ end }}
+{{ else }}
+_No virtual table entities found._
+{{ end }}
+
+---
+
+## Option Sets (Global)
+
+| Logical Name | Display Name | Values |
+|---|---|---|
+{{ for os in globalOptionSets | array.sort 'Name' -}}
+{{
+  osdn = os.DisplayName | display_label os.Name
+  opt_labels = []
+  for opt in (os.Options ?? []) | array.sort 'Value'
+    opt_labels = opt_labels | array.add (opt.Label | display_label ("" + opt.Value))
+  end
+}}
+| {{ os.Name }} | {{ osdn }} | {{ opt_labels | array.join ", " }} |
+{{ end }}
+
+---
+
+## Plugin Assemblies & SDK Steps
+
+### Assemblies
+
+| Assembly | Plugin Types |
+|---|---|
+{{ for group in pluginAssemblies | group_by_key "name" -}}
+{{ if group.key != null && group.key != "" -}}
+{{ type_names = group.items | pluck "pt.typename" -}}
+| {{ group.key }} | {{ type_names.size }} types: {{ type_names | array.join ", " }} |
+{{ end -}}
+{{ end }}
+
+### SDK Message Processing Steps
+
+{{ custom_plugin_typenames = pluginAssemblies | pluck "pt.typename" }}
+| Step | Entity | Message | Stage | Mode |
+|---|---|---|---|---|
+{{ for step in sdkSteps | array.sort 'name' -}}
+{{ if custom_plugin_typenames | array.contains step["pt.typename"] -}}
+| {{ step.name }} | {{ step["flt.primaryobjecttypecode"] ?? "—" }} | {{ step["msg.name"] ?? "—" }} | {{ step.stage | plugin_stage }} | {{ step.mode | plugin_mode }} |
+{{ end -}}
+{{ end }}
+
+---
+
+## Custom APIs
+
+{{
+  api_resp_map = {}
+  for group in customApiResponses | group_by_key "uniquename"
+    api_resp_map[group.key] = group.items
+  end
+}}
+
+| API | Request Params | Response |
+|---|---|---|
+{{ for group in customApiRequests | group_by_key "uniquename" -}}
+{{ if group.key != null && group.key != "" -}}
+{{
+  params = []
+  for r in group.items
+    pname = r["req.uniquename"]
+    if pname != null && pname != ""
+      ptype = r["req.type"] | api_param_type
+      params = params | array.add (pname + "(" + ptype + ")")
+    end
+  end
+  resp_rows = api_resp_map[group.key] ?? []
+  resp_parts = []
+  for r in resp_rows
+    rname = r["resp.uniquename"]
+    if rname != null && rname != ""
+      rtype = r["resp.type"] | api_param_type
+      resp_parts = resp_parts | array.add (rname + "(" + rtype + ")")
+    end
+  end
+}}
+| {{ group.key }} | {{ if params.size > 0 }}{{ params | array.join ", " }}{{ else }}—{{ end }} | {{ if resp_parts.size > 0 }}{{ resp_parts | array.join ", " }}{{ else }}—{{ end }} |
+{{ end -}}
+{{ end }}
+
+---
+
+## Processes
+
+### Classic Workflows
+
+{{
+  classic_wfs = []
+  cloud_wfs = []
+  brs = []
+  for wf in workflows
+    if wf.category == 0
+      classic_wfs = classic_wfs | array.add wf
+    else if wf.category == 5
+      cloud_wfs = cloud_wfs | array.add wf
+    else if wf.category == 2
+      brs = brs | array.add wf
+    end
+  end
+  classic_wfs = classic_wfs | array.sort "name"
+  cloud_wfs = cloud_wfs | array.sort "name"
+}}
+{{ for ent_group in classic_wfs | group_by_key "primaryentity" -}}
+{{ if ent_group.key != null && ent_group.key != "" }}
+
+#### {{ ent_group.key | string.capitalize }}
+
+| Name | Trigger |
+|---|---|
+{{ for wf in ent_group.items | array.sort 'name' -}}
+| {{ wf.name }} | {{ wf | classic_trigger }} |
+{{ end }}
+{{ end -}}
+{{ end }}
+
+### Cloud Flows
+
+| Name | Trigger |
+|---|---|
+{{ for wf in cloud_wfs -}}
+| {{ wf.name }}{{ if (wf.statuscode ?? 2) != 2 }} *(inactive)*{{ end }} | {{ wf.name | flow_trigger }} |
+{{ end }}
+
+### Business Rules
+
+{{ for ent_group in brs | group_by_key "primaryentity" -}}
+{{ if ent_group.key != null && ent_group.key != "" -}}
+**{{ ent_group.key }}:** {{ for r in ent_group.items | array.sort 'name' -}}{{ r.name }}{{ if !for.last }}; {{ end }}{{ end }}
+{{ end -}}
+{{ end }}
+
+---
+
+## Security Roles
+
+{{ role_names = securityRoles | pluck "name" | array.sort }}
+{{ for name in role_names -}}
+- {{ name }}
+{{ end }}
+
+---
+
+## App Modules
+
+| App | Type | Managed |
+|---|---|---|
+{{ for app in appModules | array.sort 'name' -}}
+| {{ app.name }} | {{ if (app.uniquename ?? "") | string.downcase | string.contains "canvas" }}Canvas{{ else }}Model-Driven{{ end }} | {{ if app.ismanaged }}Yes{{ else }}No{{ end }} |
+{{ end }}
+
+---
+
+## Environment Variables
+
+| Variable | Display Name | Type |
+|---|---|---|
+{{ for ev in envVars | array.sort 'schemaname' -}}
+| {{ ev.schemaname }} | {{ ev.displayname ?? "—" }} | {{ ev.type | envvar_type }} |
+{{ end }}

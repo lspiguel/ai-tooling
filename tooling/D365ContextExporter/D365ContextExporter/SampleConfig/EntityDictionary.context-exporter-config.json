@@ -10,7 +10,7 @@
   "python": {
     "interpreter": "auto"
   },
-  "transformation": "entity-dictionary.j2",
+  "transformation": "entity-dictionary.sbn",
   "queries": [
     {
       "id": "entity-attributes",

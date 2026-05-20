@@ -10,7 +10,7 @@
   "python": {
     "interpreter": "auto"
   },
-  "transformation": "security-model.j2",
+  "transformation": "security-model.sbn",
   "queries": [
     {
       "id": "entity-attributes",

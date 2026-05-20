@@ -35,13 +35,13 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             ("SampleConfig.queries.solutions.fetch.xml",              @"config\queries\solutions.fetch.xml"),
             ("SampleConfig.queries.workflows.fetch.xml",              @"config\queries\workflows.fetch.xml"),
 
-            // Transformations — templates
-            ("SampleConfig.transformations.entity-dictionary.j2",    @"config\transformations\entity-dictionary.j2"),
-            ("SampleConfig.transformations.forms-and-views.j2",      @"config\transformations\forms-and-views.j2"),
-            ("SampleConfig.transformations.optionsets.j2",           @"config\transformations\optionsets.j2"),
-            ("SampleConfig.transformations.security-model.j2",       @"config\transformations\security-model.j2"),
-            ("SampleConfig.transformations.solution-inventory.j2",   @"config\transformations\solution-inventory.j2"),
-            ("SampleConfig.transformations.solutions-reference.j2",  @"config\transformations\solutions-reference.j2"),
+            // Transformations — Scriban templates
+            ("SampleConfig.transformations.entity-dictionary.sbn",    @"config\transformations\entity-dictionary.sbn"),
+            ("SampleConfig.transformations.forms-and-views.sbn",      @"config\transformations\forms-and-views.sbn"),
+            ("SampleConfig.transformations.optionsets.sbn",           @"config\transformations\optionsets.sbn"),
+            ("SampleConfig.transformations.security-model.sbn",       @"config\transformations\security-model.sbn"),
+            ("SampleConfig.transformations.solution-inventory.sbn",   @"config\transformations\solution-inventory.sbn"),
+            ("SampleConfig.transformations.solutions-reference.sbn",  @"config\transformations\solutions-reference.sbn"),
 
             // Spec configs
             ("SampleConfig.EntityDictionary.context-exporter-config.json",  @"config\EntityDictionary.context-exporter-config.json"),

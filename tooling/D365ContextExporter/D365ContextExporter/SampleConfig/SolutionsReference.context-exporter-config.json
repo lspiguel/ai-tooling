@@ -10,7 +10,7 @@
   "python": {
     "interpreter": "auto"
   },
-  "transformation": "solutions-reference.j2",
+  "transformation": "solutions-reference.sbn",
   "queries": [
     {
       "id": "solutions",
