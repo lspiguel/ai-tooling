@@ -54,6 +54,12 @@ namespace Lspiguel.Xrm.D365ContextExporter
                 return null;
             }
 
+            var thisAssembly = typeof(ContextExporterPluginControl).Assembly;
+            if (!Array.Exists(thisAssembly.GetReferencedAssemblies(), a => a.Name == name))
+            {
+                return null;
+            }
+
             var candidate = Path.Combine(PrivateLibDir, name + ".dll");
             return File.Exists(candidate) ? Assembly.LoadFrom(candidate) : null;
         }
