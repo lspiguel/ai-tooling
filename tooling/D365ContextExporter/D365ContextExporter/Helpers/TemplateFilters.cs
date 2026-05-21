@@ -114,25 +114,25 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
         /// <summary>Registers all custom filters as named delegates on <paramref name="target"/>.</summary>
         public static void RegisterAll(ScriptObject target)
         {
-            target["component_type_name"] = (Func<object, string>)ComponentTypeName;
-            target["schemaname_to_title"] = (Func<string, string>)SchemaNameToTitle;
-            target["markdown_table"] = (Func<ScriptArray, ScriptArray, string>)MarkdownTable;
-            target["csv_list"] = (Func<ScriptArray, string, string>)CsvList;
-            target["optionset_label"] = (Func<ScriptArray, object, string>)OptionsetLabel;
-            target["iso_date"] = (Func<string, string>)IsoDate;
-            target["attr_type_abbrev"] = (Func<object, string>)AttrTypeAbbrev;
-            target["req_indicator"] = (Func<object, string>)ReqIndicator;
-            target["format_forms"] = (Func<ScriptArray, string>)FormatForms;
-            target["format_views"] = (Func<ScriptArray, string>)FormatViews;
-            target["plugin_stage"] = (Func<object, string>)PluginStage;
-            target["plugin_mode"] = (Func<object, string>)PluginMode;
-            target["flow_trigger"] = (Func<string, string>)FlowTrigger;
-            target["classic_trigger"] = (Func<ScriptObject, string>)ClassicTrigger;
-            target["envvar_type"] = (Func<object, string>)EnvvarType;
-            target["api_param_type"] = (Func<object, string>)ApiParamType;
-            target["pluck"] = (Func<ScriptArray, string, ScriptArray>)Pluck;
-            target["group_by_key"] = (Func<ScriptArray, string, ScriptArray>)GroupByKey;
-            target["display_label"] = (Func<object, string, string>)DisplayLabel;
+            target.Import("component_type_name", new Func<object, string>(ComponentTypeName));
+            target.Import("schemaname_to_title", new Func<string, string>(SchemaNameToTitle));
+            target.Import("markdown_table", new Func<ScriptArray, ScriptArray, string>(MarkdownTable));
+            target.Import("csv_list", new Func<ScriptArray, string, string>(CsvList));
+            target.Import("optionset_label", new Func<ScriptArray, object, string>(OptionsetLabel));
+            target.Import("iso_date", new Func<string, string>(IsoDate));
+            target.Import("attr_type_abbrev", new Func<object, string>(AttrTypeAbbrev));
+            target.Import("req_indicator", new Func<object, string>(ReqIndicator));
+            target.Import("format_forms", new Func<ScriptArray, string>(FormatForms));
+            target.Import("format_views", new Func<ScriptArray, string>(FormatViews));
+            target.Import("plugin_stage", new Func<object, string>(PluginStage));
+            target.Import("plugin_mode", new Func<object, string>(PluginMode));
+            target.Import("flow_trigger", new Func<string, string>(FlowTrigger));
+            target.Import("classic_trigger", new Func<ScriptObject, string>(ClassicTrigger));
+            target.Import("envvar_type", new Func<object, string>(EnvvarType));
+            target.Import("api_param_type", new Func<object, string>(ApiParamType));
+            target.Import("pluck", new Func<ScriptArray, string, ScriptArray>(Pluck));
+            target.Import("group_by_key", new Func<ScriptArray, string, ScriptArray>(GroupByKey));
+            target.Import("display_label", new Func<object, string, string>(DisplayLabel));
         }
 
         private static string ComponentTypeName(object value)
@@ -270,12 +270,13 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
 
         private static string ReqIndicator(object value)
         {
-            if (value == null)
-            {
-                return "-";
-            }
+            string? strVal;
+            if (value is ScriptObject obj)
+                strVal = GetDictValue(obj, "Value")?.ToString();
+            else
+                strVal = value?.ToString();
 
-            return value.ToString() switch
+            return strVal switch
             {
                 "Required" => "**R**",
                 "Recommended" => "r",

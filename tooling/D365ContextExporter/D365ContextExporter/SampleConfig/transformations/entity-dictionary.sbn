@@ -13,7 +13,7 @@ environment: {{ _meta.environment.url }}
 {{ for entity in entityAttributes | array.sort 'LogicalName' }}
 ## {{ entity.LogicalName }}
 
-**Display Name:** {{ entity.DisplayName.UserLocalizedLabel.Label ?? entity.LogicalName }}
+**Display Name:** {{ display_label entity.DisplayName entity.LogicalName }}
 **Primary ID:** `{{ entity.PrimaryIdAttribute ?? "—" }}`
 **Primary Name:** `{{ entity.PrimaryNameAttribute ?? "—" }}`
 **Ownership:** {{ entity.OwnershipType ?? "—" }}
@@ -24,6 +24,6 @@ environment: {{ _meta.environment.url }}
 | Schema Name | Display Name | Type | Required | Custom |
 |-------------|--------------|------|----------|--------|
 {{ for attr in entity.Attributes | array.sort 'LogicalName' -}}
-| `{{ attr.LogicalName }}` | {{ attr.DisplayName.UserLocalizedLabel.Label ?? "—" }} | {{ attr.AttributeType ?? "—" }} | {{ attr.RequiredLevel.Value ?? "—" }} | {{ if attr.IsCustomAttribute }}✓{{ end }} |
+| `{{ attr.LogicalName }}` | {{ display_label attr.DisplayName "—" }} | {{ attr.AttributeType ?? "—" }} | {{ attr.RequiredLevel | req_indicator }} | {{ if attr.IsCustomAttribute }}✓{{ end }} |
 {{ end }}
 {{ end }}

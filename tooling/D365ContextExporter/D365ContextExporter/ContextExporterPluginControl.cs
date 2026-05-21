@@ -180,9 +180,7 @@ namespace Lspiguel.Xrm.D365ContextExporter
 
                         if (t.IsFaulted)
                         {
-                            var msg = t.Exception is AggregateException agg
-                                ? agg.Message
-                                : t.Exception?.GetBaseException().Message;
+                            var msg = t.Exception?.GetBaseException().Message;
                             this.progressControl.AppendLog($"ERROR: {msg}");
                         }
                         else if (!t.IsCanceled && t.Result != null)
