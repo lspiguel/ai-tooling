@@ -33,16 +33,12 @@ namespace Lspiguel.Xrm.D365ContextExporter
         private CancellationTokenSource? cts;
         private bool initialized;
 
-        static ContextExporterPluginControl()
-        {
-            AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ContextExporterPluginControl"/> class.
         /// </summary>
         public ContextExporterPluginControl()
         {
+            AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
             this.InitializeComponent();
         }
 
