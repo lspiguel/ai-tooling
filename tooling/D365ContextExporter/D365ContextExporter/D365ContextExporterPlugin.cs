@@ -5,8 +5,10 @@
 
 namespace Lspiguel.Xrm.D365ContextExporter
 {
+    using System;
     using System.ComponentModel.Composition;
-
+    using System.IO;
+    using System.Reflection;
     using XrmToolBox.Extensibility;
     using XrmToolBox.Extensibility.Interfaces;
 
@@ -21,7 +23,40 @@ namespace Lspiguel.Xrm.D365ContextExporter
     [ExportMetadata("SecondaryFontColor", "Gray")]
     public sealed class D365ContextExporterPlugin : PluginBase
     {
+        // Subfolder next to the plugin DLL that holds private dependencies (e.g. Scriban, System.Text.Json).
+        // This isolates our versions from other plugins that may ship conflicting versions of the same assemblies.
+        private static readonly string PrivateLibDir = Path.Combine(
+            Path.GetDirectoryName(typeof(ContextExporterPluginControl).Assembly.Location)!,
+            "D365ContextExporter");
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="D365ContextExporterPlugin"/> class.
+        /// </summary>
+        public D365ContextExporterPlugin()
+        {
+            // Handle the AppDomain's AssemblyResolve event to load dependencies from our private lib folder.
+            AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
+        }
+
         /// <inheritdoc/>
         public override IXrmToolBoxPluginControl GetControl() => new ContextExporterPluginControl();
+
+        private static Assembly? OnAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            var name = new AssemblyName(args.Name).Name;
+            if (name is null)
+            {
+                return null;
+            }
+
+            var thisAssembly = typeof(ContextExporterPluginControl).Assembly;
+            if (!Array.Exists(thisAssembly.GetReferencedAssemblies(), a => a.Name == name))
+            {
+                return null;
+            }
+
+            var candidate = Path.Combine(PrivateLibDir, name + ".dll");
+            return File.Exists(candidate) ? Assembly.LoadFrom(candidate) : null;
+        }
     }
 }
