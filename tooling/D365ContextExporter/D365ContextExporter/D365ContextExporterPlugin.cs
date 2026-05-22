@@ -26,7 +26,7 @@ namespace Lspiguel.Xrm.D365ContextExporter
         // Subfolder next to the plugin DLL that holds private dependencies (e.g. Scriban, System.Text.Json).
         // This isolates our versions from other plugins that may ship conflicting versions of the same assemblies.
         private static readonly string PrivateLibDir = Path.Combine(
-            Path.GetDirectoryName(typeof(ContextExporterPluginControl).Assembly.Location)!,
+            Paths.PluginsPath,
             "D365ContextExporter");
 
         /// <summary>
@@ -43,20 +43,9 @@ namespace Lspiguel.Xrm.D365ContextExporter
 
         private static Assembly? OnAssemblyResolve(object sender, ResolveEventArgs args)
         {
-            var name = new AssemblyName(args.Name).Name;
-            if (name is null)
-            {
-                return null;
-            }
-
-            var thisAssembly = typeof(ContextExporterPluginControl).Assembly;
-            if (!Array.Exists(thisAssembly.GetReferencedAssemblies(), a => a.Name == name))
-            {
-                return null;
-            }
-
-            var candidate = Path.Combine(PrivateLibDir, name + ".dll");
-            return File.Exists(candidate) ? Assembly.LoadFrom(candidate) : null;
+            var name = args.Name.Split(',')[0];
+            var path = Path.Combine(PrivateLibDir, $"{name}.dll");
+            return File.Exists(path) ? Assembly.LoadFrom(path) : null;
         }
     }
 }
