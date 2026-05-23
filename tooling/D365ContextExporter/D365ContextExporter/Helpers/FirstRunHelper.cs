@@ -44,8 +44,11 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             ("SampleConfig.transformations.solutions-reference.sbn",  @"config\transformations\solutions-reference.sbn"),
 
             // Spec configs
-            ("SampleConfig.EntityDictionary.context-exporter-config.json",  @"config\EntityDictionary.context-exporter-config.json"),
-            ("SampleConfig.SecurityModel.context-exporter-config.json",     @"config\SecurityModel.context-exporter-config.json"),
+            ("SampleConfig.EntityDictionary.context-exporter-config.json",   @"config\EntityDictionary.context-exporter-config.json"),
+            ("SampleConfig.FormsAndViews.context-exporter-config.json",      @"config\FormsAndViews.context-exporter-config.json"),
+            ("SampleConfig.Optionsets.context-exporter-config.json",         @"config\Optionsets.context-exporter-config.json"),
+            ("SampleConfig.SecurityModel.context-exporter-config.json",      @"config\SecurityModel.context-exporter-config.json"),
+            ("SampleConfig.SolutionInventory.context-exporter-config.json",  @"config\SolutionInventory.context-exporter-config.json"),
             ("SampleConfig.SolutionsReference.context-exporter-config.json", @"config\SolutionsReference.context-exporter-config.json"),
         };
 

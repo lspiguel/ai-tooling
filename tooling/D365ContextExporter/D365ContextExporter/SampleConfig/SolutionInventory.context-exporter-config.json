@@ -1,0 +1,22 @@
+{
+  "$schema": "../schema/context-exporter.schema.json",
+  "spec": "SolutionInventory",
+  "version": "1.0.0",
+  "legal": "LEGAL.md",
+  "frontMatter": {
+    "generatedBy": "D365 CE Context Exporter",
+    "purpose": "AI assistant grounding context — solution inventory"
+  },
+  "python": {
+    "interpreter": "auto"
+  },
+  "transformation": "solution-inventory.sbn",
+  "queries": [
+    {
+      "id": "solutions",
+      "type": "fetchxml",
+      "source": "solutions-detail.fetch.xml",
+      "resultKey": "solutions"
+    }
+  ]
+}
