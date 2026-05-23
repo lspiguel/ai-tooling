@@ -38,27 +38,49 @@ environment: {{ _meta.environment.url }}
   view_type_labels["4"] = "Quick Find"
   view_type_labels["8192"] = "Lookup"
 }}
-{{ for entity in formsAndViews | array.sort 'LogicalName' }}
+{{
+  forms_by_entity = {}
+  for f in forms
+    key = f.objecttypecode
+    if !forms_by_entity[key]
+      forms_by_entity[key] = []
+    end
+    forms_by_entity[key] = forms_by_entity[key] | array.add f
+  end
+
+  views_by_entity = {}
+  for v in views
+    key = v.returnedtypecode
+    if !views_by_entity[key]
+      views_by_entity[key] = []
+    end
+    views_by_entity[key] = views_by_entity[key] | array.add v
+  end
+}}
+{{ for entity in entities | array.sort 'LogicalName' }}
+{{ entity_forms = forms_by_entity[entity.LogicalName] }}
+{{ entity_views = views_by_entity[entity.LogicalName] }}
+{{ if (entity_forms == null || entity_forms.size == 0) && (entity_views == null || entity_views.size == 0) }}{{ continue }}{{ end }}
 ## {{ entity.LogicalName }}
 
 **Display Name:** {{ entity.DisplayName.UserLocalizedLabel.Label ?? entity.LogicalName }}
 
-{{ if entity.SystemForms != null && entity.SystemForms.size > 0 }}
+{{ if entity_forms != null && entity_forms.size > 0 }}
 ### Forms
 
 | Name | Type | Default |
 |------|------|---------|
-{{ for form in entity.SystemForms | array.sort 'Name' -}}
-| {{ form.Name }} | {{ form_type_labels[form.Type] ?? form.Type }} | {{ if form.IsDefault }}✓{{ end }} |
+{{ for form in entity_forms | array.sort 'name' -}}
+| {{ form.name }} | {{ form_type_labels[form.type] ?? form.type }} | {{ if form.isdefault }}✓{{ end }} |
 {{ end }}
 {{ end }}
-{{ if entity.SavedQueries != null && entity.SavedQueries.size > 0 }}
+{{ if entity_views != null && entity_views.size > 0 }}
 ### Views
 
 | Name | Type | Default |
 |------|------|---------|
-{{ for view in entity.SavedQueries | array.sort 'Name' -}}
-| {{ view.Name }} | {{ view_type_labels[view.QueryType] ?? view.QueryType }} | {{ if view.IsDefault }}✓{{ end }} |
+{{ for view in entity_views | array.sort 'name' -}}
+| {{ view.name }} | {{ view_type_labels[view.querytype] ?? view.querytype }} | {{ if view.isdefault }}✓{{ end }} |
 {{ end }}
 {{ end }}
 

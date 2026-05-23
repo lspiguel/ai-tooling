@@ -13,11 +13,25 @@
   "transformation": "forms-and-views.sbn",
   "queries": [
     {
-      "id": "forms-and-views",
+      "id": "entities",
       "type": "webapi",
-      "path": "EntityDefinitions?$select=LogicalName,DisplayName&$expand=SystemForms($select=Name,Type,IsDefault),SavedQueries($select=Name,QueryType,IsDefault)",
-      "resultKey": "formsAndViews",
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName",
+      "resultKey": "entities",
       "maxRecords": 500
+    },
+    {
+      "id": "system-forms",
+      "type": "webapi",
+      "path": "systemforms?$select=name,type,isdefault,objecttypecode",
+      "resultKey": "forms",
+      "maxRecords": 5000
+    },
+    {
+      "id": "saved-queries",
+      "type": "webapi",
+      "path": "savedqueries?$select=name,querytype,isdefault,returnedtypecode",
+      "resultKey": "views",
+      "maxRecords": 5000
     }
   ]
 }
