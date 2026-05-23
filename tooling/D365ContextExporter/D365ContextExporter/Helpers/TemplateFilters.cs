@@ -89,6 +89,15 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             [100000005] = "Secret",
         };
 
+        private static readonly IReadOnlyDictionary<int, string> PrivDepthMap = new Dictionary<int, string>
+        {
+            [0] = "None",
+            [1] = "User",
+            [2] = "Business Unit",
+            [4] = "Parent: Child BUs",
+            [8] = "Organization",
+        };
+
         private static readonly IReadOnlyDictionary<int, string> ApiParamTypeMap = new Dictionary<int, string>
         {
             [0] = "bool",
@@ -130,6 +139,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             target.Import("classic_trigger", new Func<ScriptObject, string>(ClassicTrigger));
             target.Import("envvar_type", new Func<object, string>(EnvvarType));
             target.Import("api_param_type", new Func<object, string>(ApiParamType));
+            target.Import("priv_depth", new Func<object, string>(PrivDepth));
             target.Import("pluck", new Func<ScriptArray, string, ScriptArray>(Pluck));
             target.Import("group_by_key", new Func<ScriptArray, string, ScriptArray>(GroupByKey));
             target.Import("display_label", new Func<object, string, string>(DisplayLabel));
@@ -459,6 +469,24 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             {
                 var key = ToInt(value);
                 return EnvVarTypeMap.TryGetValue(key, out var s) ? s : value.ToString()!;
+            }
+            catch
+            {
+                return value.ToString()!;
+            }
+        }
+
+        private static string PrivDepth(object value)
+        {
+            if (value == null)
+            {
+                return "—";
+            }
+
+            try
+            {
+                var key = ToInt(value);
+                return PrivDepthMap.TryGetValue(key, out var s) ? s : value.ToString();
             }
             catch
             {
