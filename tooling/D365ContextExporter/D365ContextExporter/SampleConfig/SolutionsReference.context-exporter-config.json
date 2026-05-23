@@ -26,6 +26,20 @@
       "maxRecords": 500
     },
     {
+      "id": "system-forms",
+      "type": "webapi",
+      "path": "systemforms?$select=name,type,objecttypecode",
+      "resultKey": "forms",
+      "maxRecords": 5000
+    },
+    {
+      "id": "saved-queries",
+      "type": "webapi",
+      "path": "savedqueries?$select=name,querytype,returnedtypecode",
+      "resultKey": "views",
+      "maxRecords": 5000
+    },
+    {
       "id": "global-optionsets",
       "type": "webapi",
       "path": "GlobalOptionSetDefinitions",

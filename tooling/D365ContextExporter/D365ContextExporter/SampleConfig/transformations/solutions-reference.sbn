@@ -75,8 +75,8 @@ Required: **R**=required, **r**=recommended, `-`=none
 {{ req = attr.RequiredLevel | req_indicator -}}
 | {{ attr.LogicalName }} | {{ adn }} | {{ attr.AttributeType | attr_type_abbrev }} | {{ req }} |
 {{ end }}
-**Forms:** {{ entity.SystemForms | format_forms }}
-**Views:** {{ entity.SavedQueries | format_views }}
+**Forms:** {{ forms | entity_forms entity.LogicalName | format_forms }}
+**Views:** {{ views | entity_views entity.LogicalName | format_views }}
 {{ end }}
 {{ end }}
 
@@ -107,8 +107,8 @@ Required: **R**=required, **r**=recommended, `-`=none
 {{ req = attr.RequiredLevel | req_indicator -}}
 | {{ attr.LogicalName }} | {{ adn }} | {{ attr.AttributeType | attr_type_abbrev }} | {{ req }} |
 {{ end }}
-**Forms:** {{ entity.SystemForms | format_forms }}
-**Views:** {{ entity.SavedQueries | format_views }}
+**Forms:** {{ forms | entity_forms entity.LogicalName | format_forms }}
+**Views:** {{ views | entity_views entity.LogicalName | format_views }}
 {{ end }}
 {{ end }}
 

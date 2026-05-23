@@ -133,6 +133,8 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             target.Import("req_indicator", new Func<object, string>(ReqIndicator));
             target.Import("format_forms", new Func<ScriptArray, string>(FormatForms));
             target.Import("format_views", new Func<ScriptArray, string>(FormatViews));
+            target.Import("entity_forms", new Func<ScriptArray, string, ScriptArray>(FilterFormsByEntity));
+            target.Import("entity_views", new Func<ScriptArray, string, ScriptArray>(FilterViewsByEntity));
             target.Import("plugin_stage", new Func<object, string>(PluginStage));
             target.Import("plugin_mode", new Func<object, string>(PluginMode));
             target.Import("flow_trigger", new Func<string, string>(FlowTrigger));
@@ -292,6 +294,42 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
                 "Recommended" => "r",
                 _ => "-",
             };
+        }
+
+        private static ScriptArray FilterFormsByEntity(ScriptArray forms, string entityLogicalName)
+        {
+            var result = new ScriptArray();
+            foreach (var form in forms ?? new ScriptArray())
+            {
+                if (form is ScriptObject obj)
+                {
+                    var code = GetDictValue(obj, "objecttypecode")?.ToString();
+                    if (string.Equals(code, entityLogicalName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        result.Add(form);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private static ScriptArray FilterViewsByEntity(ScriptArray views, string entityLogicalName)
+        {
+            var result = new ScriptArray();
+            foreach (var view in views ?? new ScriptArray())
+            {
+                if (view is ScriptObject obj)
+                {
+                    var code = GetDictValue(obj, "returnedtypecode")?.ToString();
+                    if (string.Equals(code, entityLogicalName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        result.Add(view);
+                    }
+                }
+            }
+
+            return result;
         }
 
         private static string FormatForms(ScriptArray forms)
@@ -597,7 +635,13 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
                 return null;
             }
 
-            return obj.ContainsKey(key) ? obj[key] : null;
+            if (obj.ContainsKey(key))
+            {
+                return obj[key];
+            }
+
+            var lower = key.ToLowerInvariant();
+            return lower != key && obj.ContainsKey(lower) ? obj[lower] : null;
         }
 
         private static int ToInt(object? value)
