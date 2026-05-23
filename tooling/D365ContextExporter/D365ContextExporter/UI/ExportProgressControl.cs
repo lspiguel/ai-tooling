@@ -75,6 +75,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.UI
 
             this.btnCancel.Enabled = running;
             this.lblProgress.Text = running ? "Running…" : string.Empty;
+            this.spinnerProgress.Visible = running;
         }
 
         private void btnCancel_Click(object sender, EventArgs e)
