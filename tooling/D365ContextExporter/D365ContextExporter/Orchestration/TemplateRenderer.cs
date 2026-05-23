@@ -73,7 +73,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
 
             TemplateFilters.RegisterAll(scriptObject);
 
-            var context = new TemplateContext { StrictVariables = true, LoopLimit = int.MaxValue };
+            var context = new TemplateContext { StrictVariables = true, LoopLimit = int.MaxValue, LimitToString = 0 };
             context.TemplateLoader = new FileSystemTemplateLoader(transformationsDir);
             context.PushGlobal(scriptObject);
 
