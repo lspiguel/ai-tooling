@@ -125,7 +125,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
                     runDir, job, environmentUrl, orgName, results);
                 this.log($"[Export] Intermediate JSON written: {intermediatePath}");
 
-                this.log($"[Render] Rendering template '{job.Transformation}'…");
+                this.log($"[Render] Rendering template '{job.Transformation}'… (this can take several minutes for large data sets)");
                 new TemplateRenderer(this.log).Render(job, baseDir, runDir);
                 this.CopyOutputToSpecDir(runDir, baseDir, job.Spec);
                 this.PrependLegalNotice(job, baseDir);
