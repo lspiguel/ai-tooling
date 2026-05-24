@@ -6,7 +6,7 @@ dotnet nuget pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExp
 <package>
   <metadata>
     <id>Lspiguel.Xrm.D365ContextExporter</id>
-    <version>0.2026.0.5</version>
+    <version>0.2026.0.6</version>
     <title>D365 CE Context Exporter for XrmToolBox</title>
     <authors>Luciano Spiguel</authors>
     <owners>Luciano Spiguel</owners>
@@ -19,7 +19,7 @@ dotnet nuget pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExp
       serialises results to an intermediate JSON file, and invokes a Python/Jinja2 post-processor
       to produce Markdown grounding files for non-agentic AI assistants.
     </description>
-    <releaseNotes>Alpha version for testing distribution.</releaseNotes>
+    <releaseNotes>This version replaces the python dependency Pre-release version for testing distribution.</releaseNotes>
     <copyright>Copyright 2026- Luciano Spiguel</copyright>
     <tags>XrmToolBox Documentation AI Markdown D365 Dataverse Grounding</tags>
     <dependencies>
@@ -41,7 +41,9 @@ dotnet nuget pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExp
     <!-- Schema for IDE IntelliSense (installed alongside plugin) -->
     <file src="..\schema\context-exporter.schema.json" target="lib\net472\Plugins\schema" />
 
-    <!-- Scriban template engine (NuGet dependency, must ship with plugin) -->
-    <file src="bin\Release\net48\Scriban.dll" target="lib\net472\Plugins" />
+    <!-- Scriban template engine dependencies (NuGet dependency, must ship with plugin) -->
+    <file src="bin\Release\net48\Scriban.dll" target="lib\net472\Plugins\D365ContextExporter" />
+    <file src="bin\Release\net48\System.Text.Encodings.Web.dll" target="lib\net472\Plugins\D365ContextExporter" />
+    <file src="bin\Release\net48\System.Text.Json.dll" target="lib\net472\Plugins\D365ContextExporter" />
   </files>
 </package>
