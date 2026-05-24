@@ -15,7 +15,7 @@
     {
       "id": "entities",
       "type": "webapi",
-      "path": "EntityDefinitions?$select=LogicalName,DisplayName",
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName,IsCustomEntity,IsManaged,IsCustomizable",
       "resultKey": "entities",
       "maxRecords": 500
     },

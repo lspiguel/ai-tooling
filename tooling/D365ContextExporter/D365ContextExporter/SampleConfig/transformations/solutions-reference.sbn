@@ -48,8 +48,8 @@ Required: **R**=required, **r**=recommended, `-`=none
   custom_ents = custom_ents | array.sort 'LogicalName'
   std_ents = std_ents | array.sort 'LogicalName'
   virtual_ents = virtual_ents | array.sort 'LogicalName'
-}}
-{{ for entity in custom_ents }}
+-}}
+{{ for entity in custom_ents -}}
 {{
   dn = entity.DisplayName | display_label entity.LogicalName
   desc = entity.Description | display_label ""
@@ -59,12 +59,12 @@ Required: **R**=required, **r**=recommended, `-`=none
       custom_attrs = custom_attrs | array.add attr
     end
   end
-}}
-{{ if custom_attrs.size > 0 }}
+-}}
+{{ if custom_attrs.size > 0 -}}
 
 ### {{ entity.LogicalName }} — "{{ dn }}"
-{{ if entity.IsActivity }}*(custom activity)*{{ end }}
-{{ if desc != "" }}{{ desc }}{{ end }}
+{{ if entity.IsActivity -}}*(custom activity)*{{ end -}}
+{{ if desc != "" -}}{{ desc -}}{{ end -}}
 
 **Fields:**
 
