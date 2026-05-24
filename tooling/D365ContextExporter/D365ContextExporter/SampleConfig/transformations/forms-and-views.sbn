@@ -1,4 +1,4 @@
----
+﻿---
 {{ for pair in _meta.frontMatter }}
 {{ pair.key }}: {{ pair.value }}
 {{ end }}
@@ -58,28 +58,28 @@ environment: {{ _meta.environment.url }}
   end
 -}}
 {{ for entity in entities | array.sort 'LogicalName' -}}
-{{ entity_forms = forms_by_entity[entity.LogicalName] -}}
-{{ entity_views = views_by_entity[entity.LogicalName] -}}
-{{ if (entity_forms == null || entity_forms.size == 0) && (entity_views == null || entity_views.size == 0) -}}{{ continue -}}{{ end -}}
+{{ ent_forms = forms_by_entity[entity.LogicalName] -}}
+{{ ent_views = views_by_entity[entity.LogicalName] -}}
+{{ if (ent_forms == null || ent_forms.size == 0) && (ent_views == null || ent_views.size == 0) -}}{{ continue -}}{{ end -}}
 ## {{ entity.LogicalName }}
 
 **Display Name:** {{ entity.DisplayName.UserLocalizedLabel.Label ?? entity.LogicalName }}
 
-{{ if entity_forms != null && entity_forms.size > 0 -}}
+{{ if ent_forms != null && ent_forms.size > 0 -}}
 ### Forms
 
 | Name | Type | Default |
 |------|------|---------|
-{{ for form in entity_forms | array.sort 'name' -}}
+{{ for form in ent_forms | array.sort 'name' -}}
 | {{ form.name }} | {{ form_type_labels[form.type] ?? form.type }} | {{ if form.isdefault }}✓{{ end }} |
 {{ end -}}
 {{ end }}
-{{ if entity_views != null && entity_views.size > 0 -}}
+{{ if ent_views != null && ent_views.size > 0 -}}
 ### Views
 
 | Name | Type | Default |
 |------|------|---------|
-{{ for view in entity_views | array.sort 'name' -}}
+{{ for view in ent_views | array.sort 'name' -}}
 | {{ view.name }} | {{ view_type_labels[view.querytype] ?? view.querytype }} | {{ if view.isdefault }}✓{{ end }} |
 {{ end -}}
 {{ end }}
