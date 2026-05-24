@@ -7,9 +7,7 @@ namespace Lspiguel.Xrm.D365ContextExporter
 {
     using System;
     using System.IO;
-    using System.Reflection;
     using System.Threading;
-    using System.Threading.Tasks;
 
     using Lspiguel.Xrm.D365ContextExporter.Helpers;
     using Lspiguel.Xrm.D365ContextExporter.Models;
@@ -136,8 +134,10 @@ namespace Lspiguel.Xrm.D365ContextExporter
             this.progressControl.ClearLog();
             this.progressControl.SetRunning(true);
 
-            Task.Run<string?>(
-                () =>
+            this.WorkAsync(new WorkAsyncInfo
+            {
+                Message = string.Empty,
+                Work = (worker, args) =>
                 {
                     var runner = new ExportJobRunner(
                         this.Service,
@@ -146,30 +146,29 @@ namespace Lspiguel.Xrm.D365ContextExporter
                         (current, total, queryId) =>
                             this.BeginInvoke((Action)(() =>
                                 this.progressControl.SetProgress(current, total, queryId))));
-                    return runner.Run(job, baseDir, this.cts.Token);
+                    args.Result = runner.Run(job, baseDir, cts.Token);
                 },
-                this.cts.Token).ContinueWith(t =>
+                PostWorkCallBack = e =>
                 {
-                    this.BeginInvoke((Action)(() =>
+                    this.progressControl.SetRunning(false);
+                    this.btnRun.Enabled = true;
+
+                    if (e.Error is OperationCanceledException)
                     {
-                        this.progressControl.SetRunning(false);
-                        this.btnRun.Enabled = true;
-
-                        if (t.IsFaulted)
-                        {
-                            var msg = t.Exception?.GetBaseException().Message;
-                            this.progressControl.AppendLog($"ERROR: {msg}");
-                        }
-                        else if (!t.IsCanceled && t.Result != null)
-                        {
-                            var specOutputPath = Path.Combine(
-                                baseDir, "output", $"{job.Spec}.context.md");
-
-                            this.outputPreview.ShowResult(specOutputPath);
-                            this.outputPreview.Visible = true;
-                        }
-                    }));
-                });
+                        // user cancelled — nothing more to do
+                    }
+                    else if (e.Error != null)
+                    {
+                        this.progressControl.AppendLog($"ERROR: {e.Error.GetBaseException().Message}");
+                    }
+                    else if (e.Result is string)
+                    {
+                        var specOutputPath = Path.Combine(baseDir, "output", $"{job.Spec}.context.md");
+                        this.outputPreview.ShowResult(specOutputPath);
+                        this.outputPreview.Visible = true;
+                    }
+                },
+            });
         }
 
         private void CheckAndOfferFirstRun(string dir)
