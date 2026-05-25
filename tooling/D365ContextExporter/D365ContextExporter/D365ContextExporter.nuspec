@@ -15,11 +15,9 @@ dotnet nuget pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExp
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>XrmToolBox plugin to produce grounding files for AI assistants</summary>
     <description>
-      XrmToolBox plugin that executes FetchXML and Web API queries against a Dataverse environment,
-      serialises results to an intermediate JSON file, and invokes a Python/Jinja2 post-processor
-      to produce Markdown grounding files for non-agentic AI assistants.
+      XrmToolBox plugin that executes FetchXML and Web API queries against a Dataverse environment, serialises results to an intermediate JSON file, and uses an internal scripting post-processor to produce Markdown grounding files for non-agentic AI assistants.
     </description>
-    <releaseNotes>This version replaces the python dependency Pre-release version for testing distribution.</releaseNotes>
+    <releaseNotes>This version removes the Python dependency. Pre-release version.</releaseNotes>
     <copyright>Copyright 2026- Luciano Spiguel</copyright>
     <tags>XrmToolBox Documentation AI Markdown D365 Dataverse Grounding</tags>
     <dependencies>
@@ -42,8 +40,8 @@ dotnet nuget pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExp
     <file src="..\schema\context-exporter.schema.json" target="lib\net472\Plugins\schema" />
 
     <!-- Scriban template engine dependencies (NuGet dependency, must ship with plugin) -->
-    <file src="bin\Release\net48\Scriban.dll" target="lib\net472\Plugins\D365ContextExporter" />
-    <file src="bin\Release\net48\System.Text.Encodings.Web.dll" target="lib\net472\Plugins\D365ContextExporter" />
-    <file src="bin\Release\net48\System.Text.Json.dll" target="lib\net472\Plugins\D365ContextExporter" />
+    <file src="bin\Debug\net48\Scriban.dll" target="lib\net472\Plugins\D365ContextExporter" />
+    <file src="bin\Debug\net48\System.Text.Encodings.Web.dll" target="lib\net472\Plugins\D365ContextExporter" />
+    <file src="bin\Debug\net48\System.Text.Json.dll" target="lib\net472\Plugins\D365ContextExporter" />
   </files>
 </package>
