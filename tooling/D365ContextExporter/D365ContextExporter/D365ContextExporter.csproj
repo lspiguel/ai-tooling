@@ -20,6 +20,10 @@ to produce Markdown grounding files for non-agentic AI assistants.</Description>
     <Copyright>Copyright 2026- Luciano Spiguel</Copyright>
     <PackageProjectUrl>https://github.com/lspiguel/ai-tooling</PackageProjectUrl>
     <PackageIcon>d365-context-exporter-icon-c-128px-transparent.png</PackageIcon>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,6 +38,7 @@ to produce Markdown grounding files for non-agentic AI assistants.</Description>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Scriban" Version="7.2.0" />
     <PackageReference Include="System.Text.Json" Version="10.0.8" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
