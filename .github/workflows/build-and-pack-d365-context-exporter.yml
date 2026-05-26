@@ -43,9 +43,7 @@ jobs:
         id: pack
         shell: pwsh
         run: |
-          $version = "1.0.${{ github.run_number }}"
           nuget pack tooling/D365ContextExporter/D365ContextExporter/D365ContextExporter.nuspec `
-            -Version $version `
             -BasePath tooling/D365ContextExporter/D365ContextExporter `
             -OutputDirectory nupkg
           $name = (Get-ChildItem nupkg/*.nupkg | Select-Object -First 1).Name
