@@ -6,17 +6,15 @@
     <AssemblyName>D365ContextExporter</AssemblyName>
     <Company>Luciano Spiguel</Company>
     <Authors>Luciano Spiguel</Authors>
-    <AssemblyVersion>0.2026.0.5</AssemblyVersion>
-    <FileVersion>0.2026.0.5</FileVersion>
-    <Version>0.2026.0.5</Version>
+    <AssemblyVersion>0.2026.0.7</AssemblyVersion>
+    <FileVersion>0.2026.0.7</FileVersion>
+    <Version>0.2026.0.7</Version>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <Platforms>AnyCPU</Platforms>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>CS1591</NoWarn>
-    <Description>XrmToolBox plugin that executes FetchXML and Web API queries against a Dataverse environment,
-serialises results to an intermediate JSON file, and invokes a Python/Jinja2 post-processor
-to produce Markdown grounding files for non-agentic AI assistants.</Description>
+    <Description>XrmToolBox plugin that executes FetchXML and Web API queries against a Dataverse environment, serialises results to an intermediate JSON file, and uses an internal scripting post-processor to produce Markdown grounding files for non-agentic AI assistants.</Description>
     <Copyright>Copyright 2026- Luciano Spiguel</Copyright>
     <PackageProjectUrl>https://github.com/lspiguel/ai-tooling</PackageProjectUrl>
     <PackageIcon>d365-context-exporter-icon-c-128px-transparent.png</PackageIcon>

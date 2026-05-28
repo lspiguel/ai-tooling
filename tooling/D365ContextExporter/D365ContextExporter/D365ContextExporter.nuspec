@@ -6,7 +6,7 @@ nuget.exe pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExport
 <package>
   <metadata>
     <id>Lspiguel.Xrm.D365ContextExporter</id>
-    <version>0.2026.0.6</version>
+    <version>0.2026.0.7</version>
     <title>D365 CE Context Exporter for XrmToolBox</title>
     <authors>Luciano Spiguel</authors>
     <owners>Luciano Spiguel</owners>
