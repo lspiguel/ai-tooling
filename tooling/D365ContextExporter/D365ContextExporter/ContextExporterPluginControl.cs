@@ -3,16 +3,15 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter
+namespace Lspiguel.Xrm.D365ContextExporter
 {
     using System;
     using System.IO;
     using System.Threading;
-    using System.Threading.Tasks;
 
-    using D365ContextExporter.Helpers;
-    using D365ContextExporter.Models;
-    using D365ContextExporter.Orchestration;
+    using Lspiguel.Xrm.D365ContextExporter.Helpers;
+    using Lspiguel.Xrm.D365ContextExporter.Models;
+    using Lspiguel.Xrm.D365ContextExporter.Orchestration;
 
     using McTools.Xrm.Connection;
 
@@ -75,7 +74,7 @@ namespace D365ContextExporter
 
         private void specPicker_SpecSelected(object sender, ExportJob? job)
         {
-            this.btnRun.Enabled = job != null && this.Service != null;
+            this.btnRun.Enabled = job != null;
             if (job != null)
             {
                 this.progressControl.AppendLog($"Spec selected: {job}");
@@ -89,6 +88,22 @@ namespace D365ContextExporter
 
         private void btnRun_Click(object sender, EventArgs e)
         {
+            if (this.specPicker.SelectedJob == null)
+            {
+                return;
+            }
+
+            if (this.Service == null)
+            {
+                this.ExecuteMethod(this.StartExport);
+                return;
+            }
+
+            this.StartExport();
+        }
+
+        private void StartExport()
+        {
             if (this.Service == null || this.specPicker.SelectedJob == null)
             {
                 return;
@@ -96,19 +111,6 @@ namespace D365ContextExporter
 
             var job = this.specPicker.SelectedJob;
             var baseDir = this.dirPicker.SelectedDirectory;
-
-            // Bootstrap check runs on UI thread so MessageBox is modal to the main window.
-            try
-            {
-                PythonBootstrapHelper.Check(
-                    job.Python,
-                    msg => this.progressControl.AppendLog(msg));
-            }
-            catch (Exception ex)
-            {
-                this.progressControl.AppendLog($"[Bootstrap] ERROR: {ex.Message}");
-                return;
-            }
 
             // Validate config before starting the background task.
             try
@@ -132,8 +134,10 @@ namespace D365ContextExporter
             this.progressControl.ClearLog();
             this.progressControl.SetRunning(true);
 
-            Task.Run<string?>(
-                () =>
+            this.WorkAsync(new WorkAsyncInfo
+            {
+                Message = string.Empty,
+                Work = (worker, args) =>
                 {
                     var runner = new ExportJobRunner(
                         this.Service,
@@ -142,32 +146,29 @@ namespace D365ContextExporter
                         (current, total, queryId) =>
                             this.BeginInvoke((Action)(() =>
                                 this.progressControl.SetProgress(current, total, queryId))));
-                    return runner.Run(job, baseDir, this.cts.Token);
+                    args.Result = runner.Run(job, baseDir, cts.Token);
                 },
-                this.cts.Token).ContinueWith(t =>
+                PostWorkCallBack = e =>
                 {
-                    this.BeginInvoke((Action)(() =>
+                    this.progressControl.SetRunning(false);
+                    this.btnRun.Enabled = true;
+
+                    if (e.Error is OperationCanceledException)
                     {
-                        this.progressControl.SetRunning(false);
-                        this.btnRun.Enabled = true;
-
-                        if (t.IsFaulted)
-                        {
-                            var msg = t.Exception is AggregateException agg
-                                ? agg.Message
-                                : t.Exception?.GetBaseException().Message;
-                            this.progressControl.AppendLog($"ERROR: {msg}");
-                        }
-                        else if (!t.IsCanceled && t.Result != null)
-                        {
-                            var specOutputPath = Path.Combine(
-                                baseDir, "output", $"{job.Spec}.context.md");
-
-                            this.outputPreview.ShowResult(specOutputPath);
-                            this.outputPreview.Visible = true;
-                        }
-                    }));
-                });
+                        // user cancelled — nothing more to do
+                    }
+                    else if (e.Error != null)
+                    {
+                        this.progressControl.AppendLog($"ERROR: {e.Error.GetBaseException().Message}");
+                    }
+                    else if (e.Result is string)
+                    {
+                        var specOutputPath = Path.Combine(baseDir, "output", $"{job.Spec}.context.md");
+                        this.outputPreview.ShowResult(specOutputPath);
+                        this.outputPreview.Visible = true;
+                    }
+                },
+            });
         }
 
         private void CheckAndOfferFirstRun(string dir)

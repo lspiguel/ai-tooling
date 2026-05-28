@@ -1,24 +1,50 @@
 <!--
-  Copy this file to Directory.Build.targets (in the same folder as D365ContextExporter.csproj)
+  Copy this file to Directory.Build.targets (in the same folder as the .sln)
   and update the XrmToolBoxPluginsDir path to match your local XrmToolBox installation.
-  This file is NOT committed to source control — add it to .gitignore.
+  This file is NOT committed to source control; add it to .gitignore.
 
   This replaces the machine-specific xcopy PostBuild that was removed from D365ContextExporter.csproj.
+
+  Deployment layout:
+    $(XrmToolBoxPluginsDir)\
+      D365ContextExporter.dll      (discovered by XrmToolBox)
+      D365ContextExporter.pdb
+      D365ContextExporter\         (private-lib subfolder, loaded via AssemblyResolve)
+        Scriban.dll
+        System.Text.Json.dll
+        System.Text.Encodings.Web.dll
 -->
 <Project>
   <PropertyGroup>
     <!-- Edit this to point to your local XrmToolBox Plugins folder. -->
     <XrmToolBoxPluginsDir>C:\Users\YourName\AppData\Roaming\MscrmTools\XrmToolBox\Plugins</XrmToolBoxPluginsDir>
+    <!-- Subfolder that holds the plugin's private dependencies, isolated from other plugins. -->
+    <PluginPrivateLibDir>$(XrmToolBoxPluginsDir)\D365ContextExporter</PluginPrivateLibDir>
   </PropertyGroup>
 
   <Target Name="CopyToXrmToolBox" AfterTargets="Build"
           Condition="'$(Configuration)' == 'Debug' AND Exists('$(XrmToolBoxPluginsDir)')">
+
+    <!-- Plugin DLL and symbols go in the root Plugins folder so XrmToolBox discovers them. -->
     <Copy SourceFiles="$(TargetPath)"
           DestinationFolder="$(XrmToolBoxPluginsDir)"
           SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(TargetDir)$(TargetName).pdb"
           DestinationFolder="$(XrmToolBoxPluginsDir)"
           SkipUnchangedFiles="true" />
-    <Message Text="[PostBuild] Copied $(TargetFileName) to $(XrmToolBoxPluginsDir)" Importance="High" />
+
+    <!-- Private dependencies go in a named subfolder. The plugin's AssemblyResolve handler
+         loads from this subfolder, keeping these versions isolated from other plugins. -->
+    <MakeDir Directories="$(PluginPrivateLibDir)" />
+    <ItemGroup>
+      <PrivateDeps Include="$(TargetDir)Scriban.dll;
+                            $(TargetDir)System.Text.Json.dll;
+                            $(TargetDir)System.Text.Encodings.Web.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PrivateDeps)"
+          DestinationFolder="$(PluginPrivateLibDir)"
+          SkipUnchangedFiles="true" />
+
+    <Message Text="[PostBuild] Copied $(TargetFileName) to $(XrmToolBoxPluginsDir); deps to $(PluginPrivateLibDir)" Importance="High" />
   </Target>
 </Project>

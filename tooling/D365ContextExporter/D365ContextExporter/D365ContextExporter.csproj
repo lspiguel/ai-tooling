@@ -2,18 +2,26 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <RootNamespace>D365ContextExporter</RootNamespace>
+    <RootNamespace>Lspiguel.Xrm.D365ContextExporter</RootNamespace>
     <AssemblyName>D365ContextExporter</AssemblyName>
     <Company>Luciano Spiguel</Company>
     <Authors>Luciano Spiguel</Authors>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <Version>1.0.0</Version>
+    <AssemblyVersion>0.2026.0.7</AssemblyVersion>
+    <FileVersion>0.2026.0.7</FileVersion>
+    <Version>0.2026.0.7</Version>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <Platforms>AnyCPU</Platforms>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>CS1591</NoWarn>
+    <Description>XrmToolBox plugin that executes FetchXML and Web API queries against a Dataverse environment, serialises results to an intermediate JSON file, and uses an internal scripting post-processor to produce Markdown grounding files for non-agentic AI assistants.</Description>
+    <Copyright>Copyright 2026- Luciano Spiguel</Copyright>
+    <PackageProjectUrl>https://github.com/lspiguel/ai-tooling</PackageProjectUrl>
+    <PackageIcon>d365-context-exporter-icon-c-128px-transparent.png</PackageIcon>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,6 +34,9 @@
     <!-- Microsoft.PowerPlatform.Dataverse.Client added in Phase 2 when query runners are implemented.
          XrmToolBoxPackage already provides IOrganizationService and McTools.Xrm.Connection. -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Scriban" Version="7.2.0" />
+    <PackageReference Include="System.Text.Json" Version="10.0.8" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
@@ -53,6 +64,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="d365-context-exporter-icon-c-128px-transparent.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
     <None Update="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>

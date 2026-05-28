@@ -3,14 +3,14 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter.Orchestration
+namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
 {
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Text;
 
-    using D365ContextExporter.Models;
+    using Lspiguel.Xrm.D365ContextExporter.Models;
 
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;

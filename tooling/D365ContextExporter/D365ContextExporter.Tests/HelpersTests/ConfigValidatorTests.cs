@@ -1,12 +1,12 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 
-using D365ContextExporter.Helpers;
-using D365ContextExporter.Models;
+using Lspiguel.Xrm.D365ContextExporter.Helpers;
+using Lspiguel.Xrm.D365ContextExporter.Models;
 
 using NUnit.Framework;
 
-namespace D365ContextExporter.Tests.HelpersTests
+namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
 {
     [TestFixture]
     public class ConfigValidatorTests
@@ -30,7 +30,7 @@ namespace D365ContextExporter.Tests.HelpersTests
 
         private static ExportJob MakeValidJob(string baseDir)
         {
-            var transformPath = Path.Combine(baseDir, "config", "transformations", "test.j2");
+            var transformPath = Path.Combine(baseDir, "config", "transformations", "test.sbn");
             File.WriteAllText(transformPath, "{{ entities }}");
 
             var fetchPath = Path.Combine(baseDir, "config", "queries", "test.fetch.xml");
@@ -39,7 +39,7 @@ namespace D365ContextExporter.Tests.HelpersTests
             return new ExportJob
             {
                 Spec = "TestSpec",
-                Transformation = "test.j2",
+                Transformation = "test.sbn",
                 Queries = new List<QueryDefinition>
                 {
                     new QueryDefinition { Id = "q1", Type = "fetchxml", Source = "test.fetch.xml", ResultKey = "entities" },
@@ -78,10 +78,10 @@ namespace D365ContextExporter.Tests.HelpersTests
         public void Validate_TransformationFileNotFound_ThrowsWithPath()
         {
             var job = MakeValidJob(_baseDir);
-            job.Transformation = "nonexistent.j2";
+            job.Transformation = "nonexistent.sbn";
 
             var ex = Assert.Throws<ConfigValidationException>(() => ConfigValidator.Validate(job, _baseDir));
-            Assert.That(ex!.Message, Does.Contain("nonexistent.j2"));
+            Assert.That(ex!.Message, Does.Contain("nonexistent.sbn"));
         }
 
         [Test]

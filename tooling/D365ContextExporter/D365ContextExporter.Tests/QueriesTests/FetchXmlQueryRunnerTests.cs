@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 
-using D365ContextExporter.Models;
-using D365ContextExporter.Queries;
+using Lspiguel.Xrm.D365ContextExporter.Models;
+using Lspiguel.Xrm.D365ContextExporter.Queries;
 
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
@@ -14,7 +14,7 @@ using Moq;
 
 using NUnit.Framework;
 
-namespace D365ContextExporter.Tests.QueriesTests
+namespace Lspiguel.Xrm.D365ContextExporter.Tests.QueriesTests
 {
     [TestFixture]
     public class FetchXmlQueryRunnerTests

@@ -1,12 +1,12 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 
-using D365ContextExporter.Helpers;
+using Lspiguel.Xrm.D365ContextExporter.Helpers;
 
 using NUnit.Framework;
 
-namespace D365ContextExporter.Tests.HelpersTests
+namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
 {
     [TestFixture]
     public class PathResolverTests

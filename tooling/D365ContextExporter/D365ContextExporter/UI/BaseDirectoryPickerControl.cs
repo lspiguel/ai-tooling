@@ -3,13 +3,13 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter.UI
+namespace Lspiguel.Xrm.D365ContextExporter.UI
 {
     using System;
     using System.IO;
     using System.Windows.Forms;
 
-    using D365ContextExporter.Properties;
+    using Lspiguel.Xrm.D365ContextExporter.Properties;
 
     /// <summary>
     /// A label, a read-only text box, and a Browse button that lets the user pick

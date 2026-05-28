@@ -3,7 +3,7 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter.UI
+namespace Lspiguel.Xrm.D365ContextExporter.UI
 {
     using System;
     using System.Diagnostics;

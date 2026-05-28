@@ -1,0 +1,37 @@
+{
+  "$schema": "../schema/context-exporter.schema.json",
+  "spec": "FormsAndViews",
+  "version": "1.0.0",
+  "legal": "LEGAL.md",
+  "frontMatter": {
+    "generatedBy": "D365 CE Context Exporter",
+    "purpose": "AI assistant grounding context — forms and views"
+  },
+  "python": {
+    "interpreter": "auto"
+  },
+  "transformation": "forms-and-views.sbn",
+  "queries": [
+    {
+      "id": "entities",
+      "type": "webapi",
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName,IsCustomEntity,IsManaged,IsCustomizable",
+      "resultKey": "entities",
+      "maxRecords": 500
+    },
+    {
+      "id": "system-forms",
+      "type": "webapi",
+      "path": "systemforms?$select=name,type,isdefault,objecttypecode",
+      "resultKey": "forms",
+      "maxRecords": 5000
+    },
+    {
+      "id": "saved-queries",
+      "type": "webapi",
+      "path": "savedqueries?$select=name,querytype,isdefault,returnedtypecode",
+      "resultKey": "views",
+      "maxRecords": 5000
+    }
+  ]
+}

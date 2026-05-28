@@ -1,13 +1,13 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
 
-using D365ContextExporter.Helpers;
+using Lspiguel.Xrm.D365ContextExporter.Helpers;
 
 using NUnit.Framework;
 
-namespace D365ContextExporter.Tests.HelpersTests
+namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
 {
     [TestFixture]
     public class FirstRunHelperTests
@@ -91,26 +91,14 @@ namespace D365ContextExporter.Tests.HelpersTests
 
             // Spot-check a few key files.
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "queries", "security-roles.fetch.xml")), Is.True, "security-roles.fetch.xml");
-            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "transform.py")), Is.True, "transform.py");
-            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "filters.py")), Is.True, "filters.py");
-            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "requirements.txt")), Is.True, "requirements.txt");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "entity-dictionary.sbn")), Is.True, "entity-dictionary.sbn");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "EntityDictionary.context-exporter-config.json")), Is.True, "EntityDictionary spec");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "transform.py")), Is.False, "transform.py must not be deployed");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "filters.py")), Is.False, "filters.py must not be deployed");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "requirements.txt")), Is.False, "requirements.txt must not be deployed");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "SecurityModel.context-exporter-config.json")), Is.True, "SecurityModel spec");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "SolutionsReference.context-exporter-config.json")), Is.True, "SolutionsReference spec");
             Assert.That(File.Exists(Path.Combine(_baseDir, "LEGAL.md")), Is.True, "LEGAL.md");
-        }
-
-        [Test]
-        public void DeployReferenceConfig_FirstRun_WritesVersionTxt()
-        {
-            FirstRunHelper.DeployReferenceConfig(_baseDir, new NullWin32Window(), _ => { }, overwrite: false);
-
-            var versionPath = Path.Combine(_baseDir, "version.txt");
-            Assert.That(File.Exists(versionPath), Is.True);
-
-            var written = File.ReadAllText(versionPath).Trim();
-            var expected = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
-            Assert.That(written, Is.EqualTo(expected));
         }
 
         [Test]
@@ -170,32 +158,6 @@ namespace D365ContextExporter.Tests.HelpersTests
         }
 
         // ── CheckVersion ─────────────────────────────────────────────────────
-
-        [Test]
-        public void CheckVersion_NoVersionTxt_WritesCurrentVersionSilently()
-        {
-            FirstRunHelper.CheckVersion(_baseDir, new NullWin32Window(), _ => { });
-
-            var versionPath = Path.Combine(_baseDir, "version.txt");
-            Assert.That(File.Exists(versionPath), Is.True);
-            var written = File.ReadAllText(versionPath).Trim();
-            var expected = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
-            Assert.That(written, Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void CheckVersion_VersionMatches_NoFileChange()
-        {
-            var current = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
-            var versionPath = Path.Combine(_baseDir, "version.txt");
-            File.WriteAllText(versionPath, current);
-            var beforeTicks = File.GetLastWriteTimeUtc(versionPath).Ticks;
-
-            FirstRunHelper.CheckVersion(_baseDir, new NullWin32Window(), _ => { });
-
-            // File should not have been rewritten.
-            Assert.That(File.GetLastWriteTimeUtc(versionPath).Ticks, Is.EqualTo(beforeTicks));
-        }
 
         /// <summary>Minimal IWin32Window that does not display any UI. PromptOrgName will return empty string.</summary>
         private sealed class NullWin32Window : IWin32Window

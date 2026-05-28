@@ -3,14 +3,14 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter.Helpers
+namespace Lspiguel.Xrm.D365ContextExporter.Helpers
 {
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
 
-    using D365ContextExporter.Models;
+    using Lspiguel.Xrm.D365ContextExporter.Models;
 
     /// <summary>Thrown when an <see cref="ExportJob"/> fails validation.</summary>
     internal sealed class ConfigValidationException : Exception

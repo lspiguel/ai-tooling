@@ -3,13 +3,13 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter.UI
+namespace Lspiguel.Xrm.D365ContextExporter.UI
 {
     using System;
     using System.Windows.Forms;
 
-    using D365ContextExporter.Helpers;
-    using D365ContextExporter.Models;
+    using Lspiguel.Xrm.D365ContextExporter.Helpers;
+    using Lspiguel.Xrm.D365ContextExporter.Models;
 
     /// <summary>
     /// A label and a combo box that lists available specs discovered under a base directory.

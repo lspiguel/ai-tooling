@@ -3,7 +3,7 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter.UI
+namespace Lspiguel.Xrm.D365ContextExporter.UI
 {
     using System;
     using System.Windows.Forms;
@@ -75,6 +75,7 @@ namespace D365ContextExporter.UI
 
             this.btnCancel.Enabled = running;
             this.lblProgress.Text = running ? "Running…" : string.Empty;
+            this.spinnerProgress.Visible = running;
         }
 
         private void btnCancel_Click(object sender, EventArgs e)

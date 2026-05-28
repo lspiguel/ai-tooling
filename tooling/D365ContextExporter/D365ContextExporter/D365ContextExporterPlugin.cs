@@ -3,10 +3,12 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter
+namespace Lspiguel.Xrm.D365ContextExporter
 {
+    using System;
     using System.ComponentModel.Composition;
-
+    using System.IO;
+    using System.Reflection;
     using XrmToolBox.Extensibility;
     using XrmToolBox.Extensibility.Interfaces;
 
@@ -21,7 +23,29 @@ namespace D365ContextExporter
     [ExportMetadata("SecondaryFontColor", "Gray")]
     public sealed class D365ContextExporterPlugin : PluginBase
     {
+        // Subfolder next to the plugin DLL that holds private dependencies (e.g. Scriban, System.Text.Json).
+        // This isolates our versions from other plugins that may ship conflicting versions of the same assemblies.
+        private static readonly string PrivateLibDir = Path.Combine(
+            Paths.PluginsPath,
+            "D365ContextExporter");
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="D365ContextExporterPlugin"/> class.
+        /// </summary>
+        public D365ContextExporterPlugin()
+        {
+            // Handle the AppDomain's AssemblyResolve event to load dependencies from our private lib folder.
+            AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
+        }
+
         /// <inheritdoc/>
         public override IXrmToolBoxPluginControl GetControl() => new ContextExporterPluginControl();
+
+        private static Assembly? OnAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            var name = args.Name.Split(',')[0];
+            var path = Path.Combine(PrivateLibDir, $"{name}.dll");
+            return File.Exists(path) ? Assembly.LoadFrom(path) : null;
+        }
     }
 }

@@ -10,7 +10,7 @@
   "python": {
     "interpreter": "auto"
   },
-  "transformation": "solutions-reference.j2",
+  "transformation": "solutions-reference.sbn",
   "queries": [
     {
       "id": "solutions",
@@ -21,9 +21,23 @@
     {
       "id": "entities",
       "type": "webapi",
-      "path": "EntityDefinitions?$select=LogicalName,DisplayName,Description,IsCustomEntity,IsActivity,PrimaryIdAttribute,PrimaryNameAttribute&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,RequiredLevel,IsCustomAttribute)",
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName,Description,IsActivity,PrimaryIdAttribute,PrimaryNameAttribute,IsCustomEntity,IsManaged,IsCustomizable&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,RequiredLevel,IsCustomAttribute)",
       "resultKey": "entities",
       "maxRecords": 500
+    },
+    {
+      "id": "system-forms",
+      "type": "webapi",
+      "path": "systemforms?$select=name,type,objecttypecode",
+      "resultKey": "forms",
+      "maxRecords": 5000
+    },
+    {
+      "id": "saved-queries",
+      "type": "webapi",
+      "path": "savedqueries?$select=name,querytype,returnedtypecode",
+      "resultKey": "views",
+      "maxRecords": 5000
     },
     {
       "id": "global-optionsets",

@@ -1,0 +1,22 @@
+{
+  "$schema": "../schema/context-exporter.schema.json",
+  "spec": "Optionsets",
+  "version": "1.0.0",
+  "legal": "LEGAL.md",
+  "frontMatter": {
+    "generatedBy": "D365 CE Context Exporter",
+    "purpose": "AI assistant grounding context — global option sets"
+  },
+  "python": {
+    "interpreter": "auto"
+  },
+  "transformation": "optionsets.sbn",
+  "queries": [
+    {
+      "id": "global-optionsets",
+      "type": "webapi",
+      "path": "GlobalOptionSetDefinitions",
+      "resultKey": "globalOptionSets"
+    }
+  ]
+}

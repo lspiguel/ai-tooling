@@ -3,7 +3,7 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter.Orchestration
+namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
 {
     using System;
     using System.Collections.Generic;
@@ -12,16 +12,16 @@ namespace D365ContextExporter.Orchestration
     using System.Net.Http;
     using System.Threading;
 
-    using D365ContextExporter.Helpers;
-    using D365ContextExporter.Models;
-    using D365ContextExporter.Queries;
+    using Lspiguel.Xrm.D365ContextExporter.Helpers;
+    using Lspiguel.Xrm.D365ContextExporter.Models;
+    using Lspiguel.Xrm.D365ContextExporter.Queries;
 
     using McTools.Xrm.Connection;
 
     using Microsoft.Xrm.Sdk;
     using Microsoft.Xrm.Tooling.Connector;
 
-    /// <summary>Orchestrates a single export run: executes all queries, writes intermediate outputs, and invokes Python.</summary>
+    /// <summary>Orchestrates a single export run: executes all queries, writes intermediate outputs, and renders the Scriban template.</summary>
     internal sealed class ExportJobRunner
     {
         private readonly IOrganizationService service;
@@ -48,7 +48,7 @@ namespace D365ContextExporter.Orchestration
             this.onProgress = onProgress;
         }
 
-        /// <summary>Executes all queries, writes intermediate JSON, and invokes Python to produce output.md.</summary>
+        /// <summary>Executes all queries, writes intermediate JSON, and renders the Scriban template to produce output.md.</summary>
         /// <param name="job">The loaded spec configuration.</param>
         /// <param name="baseDir">The base directory.</param>
         /// <param name="cancellationToken">Token used to observe cancellation requests.</param>
@@ -125,9 +125,8 @@ namespace D365ContextExporter.Orchestration
                     runDir, job, environmentUrl, orgName, results);
                 this.log($"[Export] Intermediate JSON written: {intermediatePath}");
 
-                var invoker = new PythonInvoker(this.log);
-                invoker.Invoke(job, baseDir, runDir, cancellationToken);
-                this.AppendTokenCount(runDir);
+                this.log($"[Render] Rendering template '{job.Transformation}'… (this can take several minutes for large data sets)");
+                new TemplateRenderer(this.log).Render(job, baseDir, runDir);
                 this.CopyOutputToSpecDir(runDir, baseDir, job.Spec);
                 this.PrependLegalNotice(job, baseDir);
             }
@@ -136,33 +135,12 @@ namespace D365ContextExporter.Orchestration
             return runDir;
         }
 
-        private void AppendTokenCount(string runDir)
-        {
-            var sidecar = Path.Combine(runDir, "token_count.txt");
-            var outputFile = Path.Combine(runDir, "output.md");
-
-            if (!File.Exists(sidecar) || !File.Exists(outputFile))
-            {
-                return;
-            }
-
-            var raw = File.ReadAllText(sidecar).Trim();
-            if (!int.TryParse(raw, out var tokenCount))
-            {
-                return;
-            }
-
-            this.log($"[Tokens] output.md token count (gpt-4o): {tokenCount:N0}");
-            var content = File.ReadAllText(outputFile);
-            File.WriteAllText(outputFile, $"> Token count (gpt-4o): {tokenCount:N0}\n\n" + content);
-        }
-
         private void CopyOutputToSpecDir(string runDir, string baseDir, string specName)
         {
             var sourceFile = Path.Combine(runDir, "output.md");
             if (!File.Exists(sourceFile))
             {
-                this.log("[Python] Warning: output.md not found in run directory after transform.");
+                this.log("[Render] Warning: output.md not found in run directory after render.");
                 return;
             }
 
@@ -171,7 +149,7 @@ namespace D365ContextExporter.Orchestration
 
             var destFile = Path.Combine(outputDir, $"{specName}.context.md");
             File.Copy(sourceFile, destFile, overwrite: true);
-            this.log($"[Python] Output copied to: {destFile}");
+            this.log($"[Render] Output copied to: {destFile}");
         }
 
         private void PrependLegalNotice(ExportJob job, string baseDir)

@@ -22,13 +22,13 @@
     },
     "transformation": {
       "type": "string",
-      "description": "Filename of the Jinja2 template in config/transformations/ used to render the output Markdown.",
+      "description": "Filename of the Scriban template in config/transformations/ used to render the output Markdown.",
       "examples": [
-        "entity-dictionary.j2",
-        "security-model.j2",
-        "optionsets.j2",
-        "forms-and-views.j2",
-        "solution-inventory.j2"
+        "entity-dictionary.sbn",
+        "security-model.sbn",
+        "optionsets.sbn",
+        "forms-and-views.sbn",
+        "solution-inventory.sbn"
       ]
     },
     "frontMatter": {
