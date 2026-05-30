@@ -1,9 +1,8 @@
 ---
 {{ for pair in _meta.frontMatter }}
-{{ pair.key }}: {{ pair.value }}
+{{ pair.key }}: {{ pair.value -}}
 {{ end }}
 exportedAt: {{ _meta.exportedAtUtc | date.to_string "%Y-%m-%dT%H:%M:%SZ" }}
-
 environment: {{ _meta.environment.url }}
 
 ---
@@ -41,5 +40,4 @@ environment: {{ _meta.environment.url }}
 ```
 
 ---
-
-{{ end }}
+{{ end -}}
