@@ -40,7 +40,8 @@
             // lblProgress
             // 
             this.lblProgress.AutoSize = true;
-            this.lblProgress.Location = new System.Drawing.Point(3, 2);
+            this.lblProgress.Location = new System.Drawing.Point(3, 9);
+            this.lblProgress.Margin = new System.Windows.Forms.Padding(3, 7, 3, 0);
             this.lblProgress.Name = "lblProgress";
             this.lblProgress.Size = new System.Drawing.Size(0, 13);
             this.lblProgress.TabIndex = 0;
