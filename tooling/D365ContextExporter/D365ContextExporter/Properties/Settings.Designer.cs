@@ -34,5 +34,17 @@ namespace Lspiguel.Xrm.D365ContextExporter.Properties {
                 this["BaseDirectory"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool WelcomeShown {
+            get {
+                return ((bool)(this["WelcomeShown"]));
+            }
+            set {
+                this["WelcomeShown"] = value;
+            }
+        }
     }
 }

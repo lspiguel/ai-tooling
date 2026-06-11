@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <style>
+    body { font-family: Segoe UI, Arial, sans-serif; font-size: 13px; margin: 16px 20px; }
+    h2  { font-size: 15px; margin-top: 0; color: #0078d4; }
+    ol  { padding-left: 20px; line-height: 1.7; }
+    code { background: #f3f3f3; border: 1px solid #ddd; border-radius: 2px; padding: 0 3px;
+           font-family: Consolas, monospace; font-size: 12px; }
+    .footer { margin-top: 14px; font-size: 11px; color: #666; }
+  </style>
+</head>
+<body>
+  <h2>Quick Start &#8212; D365 CE Context Exporter</h2>
+  <ol>
+    <li><strong>Install the plugin</strong> &#8212; open XrmToolBox, go to <em>Tool Library</em>, search for <em>D365 CE Context Exporter</em>, and install.</li>
+    <li><strong>Connect</strong> &#8212; connect XrmToolBox to your Dataverse environment.</li>
+    <li><strong>Pick a base directory</strong> &#8212; click the folder picker and choose (or create) an empty folder. On first use the plugin will offer to deploy the reference configuration there.</li>
+    <li><strong>Run first-time setup</strong> &#8212; accept the prompt to deploy sample specs, FetchXML queries, and Scriban templates to the folder.</li>
+    <li><strong>Select a spec</strong> &#8212; choose one of the available specs from the dropdown (six sample specs are provided out of the box).</li>
+    <li><strong>Click Run</strong> &#8212; the plugin executes all queries, renders the template, and places the output in <code>output\&lt;SpecName&gt;.context.md</code>.</li>
+    <li><strong>Upload</strong> &#8212; attach or paste the <code>.context.md</code> file into your AI assistant conversation as grounding context.</li>
+  </ol>
+  <p class="footer">This message is shown once. Find the full documentation in the plugin README.</p>
+</body>
+</html>

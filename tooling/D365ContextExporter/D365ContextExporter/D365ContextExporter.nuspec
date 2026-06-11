@@ -39,8 +39,7 @@ nuget.exe pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExport
     <!-- Schema for IDE IntelliSense (installed alongside plugin)
     <file src="..\schema\context-exporter.schema.json" target="lib\net472\Plugins\schema" /> -->
 
-    <!-- Scriban template engine dependencies (NuGet dependency, must ship with plugin) -->
-    <file src="bin\Release\net48\Scriban.dll" target="lib\net472\Plugins\D365ContextExporter" />
+    <!-- Runtime dependencies (Scriban is now source-embedded into the plugin DLL) -->
     <file src="bin\Release\net48\System.Text.Encodings.Web.dll" target="lib\net472\Plugins\D365ContextExporter" />
     <file src="bin\Release\net48\System.Text.Json.dll" target="lib\net472\Plugins\D365ContextExporter" />
   </files>
