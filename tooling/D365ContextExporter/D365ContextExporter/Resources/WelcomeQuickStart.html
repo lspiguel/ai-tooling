@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <style>
-    body { font-family: Segoe UI, Arial, sans-serif; font-size: 13px; margin: 16px 20px; }
+    body { font-family: Segoe UI, Arial, sans-serif; font-size: 13px; margin: 16px 20px; overflow-y: scroll; }
     h2  { font-size: 15px; margin-top: 0; color: #0078d4; }
     ol  { padding-left: 20px; line-height: 1.7; }
     code { background: #f3f3f3; border: 1px solid #ddd; border-radius: 2px; padding: 0 3px;
@@ -13,16 +13,17 @@
   </style>
 </head>
 <body>
-  <h2>Quick Start &#8212; D365 CE Context Exporter</h2>
-  <ol>
-    <li><strong>Install the plugin</strong> &#8212; open XrmToolBox, go to <em>Tool Library</em>, search for <em>D365 CE Context Exporter</em>, and install.</li>
+  <h2>D365 CE Context Exporter</h2>
+  <p>This plugin connects to your Dataverse environment and exports structured context files ready to be shared with an AI assistant. It queries your data, applies a template, and produces a concise <code>.context.md</code> document that gives the AI the right background to answer questions about your specific setup.</p>
+  <ol start="1">
     <li><strong>Connect</strong> &#8212; connect XrmToolBox to your Dataverse environment.</li>
     <li><strong>Pick a base directory</strong> &#8212; click the folder picker and choose (or create) an empty folder. On first use the plugin will offer to deploy the reference configuration there.</li>
-    <li><strong>Run first-time setup</strong> &#8212; accept the prompt to deploy sample specs, FetchXML queries, and Scriban templates to the folder.</li>
-    <li><strong>Select a spec</strong> &#8212; choose one of the available specs from the dropdown (six sample specs are provided out of the box).</li>
-    <li><strong>Click Run</strong> &#8212; the plugin executes all queries, renders the template, and places the output in <code>output\&lt;SpecName&gt;.context.md</code>.</li>
-    <li><strong>Upload</strong> &#8212; attach or paste the <code>.context.md</code> file into your AI assistant conversation as grounding context.</li>
+    <li><strong>Run first-time setup</strong> &#8212; accept the prompt to deploy sample specs, FetchXML queries, and <a href="https://scriban.github.io/docs/getting-started/">Scriban templates</a> to the folder.</li>
+    <li><strong>Select a spec</strong> &#8212; choose one of the available specs from the dropdown (several samples are provided out of the box).</li>
+    <li><strong>Click Run</strong> &#8212; the plugin executes the queries, renders the template, and saves the output to <code>output\&lt;SpecName&gt;.context.md</code>.</li>
+    <li><strong>Share with your AI assistant</strong> &#8212; attach or paste the <code>.context.md</code> file into your AI conversation as grounding context.</li>
   </ol>
-  <p class="footer">This message is shown once. Find the full documentation in the plugin README.</p>
+  <p>The <strong>config folder</strong> holds the specs, FetchXML queries, and <a href="https://scriban.github.io/docs/getting-started/">Scriban templates</a> that drive the export. These files are meant to be modified and extended to fit your needs &#8212; or even adapted to carry custom instructions for a specific AI agent.</p>
+  <p class="footer">This message is shown once. Find the full documentation in the plugin <a href="https://github.com/lspiguel/ai-tooling/blob/main/tooling/D365ContextExporter/README.md">README</a>.</p>
 </body>
 </html>

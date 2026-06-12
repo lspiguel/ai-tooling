@@ -17,7 +17,7 @@ nuget.exe pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExport
     <description>
       XrmToolBox plugin that executes FetchXML and Web API queries against a Dataverse environment, serialises results to an intermediate JSON file, and uses an internal scripting post-processor to produce Markdown grounding files for non-agentic AI assistants.
     </description>
-    <releaseNotes>This version removes the Python dependency. Pre-release version.</releaseNotes>
+    <releaseNotes>This version removes the Python dependency, embeds Scriban, and adds additional sample config files.</releaseNotes>
     <copyright>Copyright 2026- Luciano Spiguel</copyright>
     <tags>XrmToolBox Documentation AI Markdown D365 Dataverse Grounding</tags>
     <dependencies>

@@ -38,14 +38,14 @@ namespace Lspiguel.Xrm.D365ContextExporter.UI
                 | System.Windows.Forms.AnchorStyles.Right;
             this.webBrowser.Location = new System.Drawing.Point(0, 0);
             this.webBrowser.Name = "webBrowser";
-            this.webBrowser.ScrollBarsEnabled = false;
-            this.webBrowser.Size = new System.Drawing.Size(540, 310);
+            this.webBrowser.ScrollBarsEnabled = true;
+            this.webBrowser.Size = new System.Drawing.Size(810, 465);
             this.webBrowser.TabIndex = 0;
 
             // btnClose
             this.btnClose.Anchor = System.Windows.Forms.AnchorStyles.Bottom
                 | System.Windows.Forms.AnchorStyles.Right;
-            this.btnClose.Location = new System.Drawing.Point(453, 322);
+            this.btnClose.Location = new System.Drawing.Point(723, 483);
             this.btnClose.Name = "btnClose";
             this.btnClose.Size = new System.Drawing.Size(75, 25);
             this.btnClose.TabIndex = 1;
@@ -56,7 +56,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.UI
             // WelcomeForm
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(540, 359);
+            this.ClientSize = new System.Drawing.Size(810, 538);
             this.Controls.Add(this.webBrowser);
             this.Controls.Add(this.btnClose);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;

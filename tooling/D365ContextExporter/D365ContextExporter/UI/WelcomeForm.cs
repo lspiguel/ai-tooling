@@ -6,6 +6,7 @@
 namespace Lspiguel.Xrm.D365ContextExporter.UI
 {
     using System;
+    using System.Diagnostics;
     using System.IO;
     using System.Reflection;
     using System.Text;
@@ -23,6 +24,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.UI
         public WelcomeForm()
         {
             this.InitializeComponent();
+            this.webBrowser.Navigating += this.WebBrowser_Navigating;
             this.LoadHtml();
         }
 
@@ -38,6 +40,17 @@ namespace Lspiguel.Xrm.D365ContextExporter.UI
 
             using var reader = new StreamReader(stream, Encoding.UTF8);
             this.webBrowser.DocumentText = reader.ReadToEnd();
+        }
+
+        private void WebBrowser_Navigating(object sender, WebBrowserNavigatingEventArgs e)
+        {
+            var url = e.Url.ToString();
+            if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                e.Cancel = true;
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
         }
 
         private void btnClose_Click(object sender, EventArgs e)
