@@ -6,11 +6,14 @@
     <AssemblyName>D365ContextExporter</AssemblyName>
     <Company>Luciano Spiguel</Company>
     <Authors>Luciano Spiguel</Authors>
-    <AssemblyVersion>0.2026.0.7</AssemblyVersion>
-    <FileVersion>0.2026.0.7</FileVersion>
-    <Version>0.2026.0.7</Version>
+    <AssemblyVersion>1.2026.6.1</AssemblyVersion>
+    <FileVersion>1.2026.6.1</FileVersion>
+    <Version>1.2026.6.1</Version>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <PackageScribanIncludeSource>true</PackageScribanIncludeSource>
+    <PolySharpUsePublicAccessibilityForGeneratedTypes>true</PolySharpUsePublicAccessibilityForGeneratedTypes>
+    <PolySharpIncludeRuntimeSupportedAttributes>true</PolySharpIncludeRuntimeSupportedAttributes>
     <Platforms>AnyCPU</Platforms>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>CS1591</NoWarn>
@@ -34,7 +37,13 @@
     <!-- Microsoft.PowerPlatform.Dataverse.Client added in Phase 2 when query runners are implemented.
          XrmToolBoxPackage already provides IOrganizationService and McTools.Xrm.Connection. -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Scriban" Version="7.2.0" />
+    <PackageReference Include="Scriban" Version="7.2.0" IncludeAssets="Build" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
+    <PackageReference Include="PolySharp" Version="1.15.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="System.Text.Json" Version="10.0.8" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
@@ -60,6 +69,9 @@
     </Compile>
     <Compile Update="ContextExporterPluginControl.Designer.cs">
       <DependentUpon>ContextExporterPluginControl.cs</DependentUpon>
+    </Compile>
+    <Compile Update="UI\WelcomeForm.Designer.cs">
+      <DependentUpon>WelcomeForm.cs</DependentUpon>
     </Compile>
   </ItemGroup>
 
@@ -99,6 +111,13 @@
     <EmbeddedResource Update="ContextExporterPluginControl.resx">
       <DependentUpon>ContextExporterPluginControl.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Update="UI\WelcomeForm.resx">
+      <DependentUpon>WelcomeForm.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\WelcomeQuickStart.html" />
   </ItemGroup>
 
   <!-- Post-build DLL copy: use a local Directory.Build.targets override per developer.
