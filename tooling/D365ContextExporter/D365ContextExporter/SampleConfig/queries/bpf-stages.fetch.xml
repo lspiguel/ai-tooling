@@ -1,0 +1,18 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="processstage">
+    <attribute name="processstageid" />
+    <attribute name="stagename" />
+    <attribute name="processid" />
+    <attribute name="primaryentitytypecode" />
+    <attribute name="stagecategory" />
+    <link-entity name="workflow" from="workflowid" to="processid" alias="wf" link-type="inner">
+      <filter type="and">
+        <condition attribute="ismanaged" operator="eq" value="0" />
+        <condition attribute="type" operator="eq" value="1" />
+        <condition attribute="category" operator="eq" value="4" />
+      </filter>
+    </link-entity>
+    <order attribute="processid" descending="false" />
+    <order attribute="stagename" descending="false" />
+  </entity>
+</fetch>

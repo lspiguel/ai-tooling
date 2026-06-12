@@ -76,6 +76,18 @@
       "resultKey": "workflows"
     },
     {
+      "id": "business-process-flows",
+      "type": "fetchxml",
+      "source": "business-process-flows.fetch.xml",
+      "resultKey": "businessProcessFlows"
+    },
+    {
+      "id": "bpf-stages",
+      "type": "fetchxml",
+      "source": "bpf-stages.fetch.xml",
+      "resultKey": "bpfStages"
+    },
+    {
       "id": "app-modules",
       "type": "fetchxml",
       "source": "app-modules.fetch.xml",

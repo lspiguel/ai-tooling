@@ -1,0 +1,22 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="workflow">
+    <attribute name="workflowid" />
+    <attribute name="name" />
+    <attribute name="description" />
+    <attribute name="primaryentity" />
+    <attribute name="category" />
+    <attribute name="statecode" />
+    <attribute name="statuscode" />
+    <attribute name="ismanaged" />
+    <attribute name="createdon" />
+    <attribute name="modifiedon" />
+    <attribute name="ownerid" />
+    <attribute name="clientdata" />
+    <filter type="and">
+      <condition attribute="category" operator="eq" value="5" />
+      <condition attribute="type" operator="eq" value="1" />
+      <condition attribute="ismanaged" operator="eq" value="0" />
+    </filter>
+    <order attribute="name" descending="false" />
+  </entity>
+</fetch>
