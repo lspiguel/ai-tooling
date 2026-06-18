@@ -2,7 +2,7 @@
 # (.docx, .xlsx, .pptx) and .mmd files to .svg and .png (scale 3) using mmdc
 # Markdown, SVG, and PNG output files are only converted if missing
 # Embedded DOCX images are extracted to .attachments/{doc-name}-imageN.{ext}
-# under the root -Path folder, with markdown links rewritten accordingly.
+# in the same folder as the source file, with markdown links rewritten accordingly.
 
 param(
     [string]$Path = ".",
@@ -188,7 +188,6 @@ function Update-MarkdownImageReferences {
 # Combine all extensions to search for
 $allExtensions = $TextExtensions + $DiagramExtensions
 $rootPath = [System.IO.Path]::GetFullPath($Path)
-$attachmentsDir = Join-Path $rootPath ".attachments"
 
 # Get all files with specified extensions recursively
 $files = Get-ChildItem -Path $rootPath -Recurse -File | Where-Object {
@@ -215,6 +214,8 @@ foreach ($file in $files) {
             $skippedCount++
             continue
         }
+
+        $attachmentsDir = Join-Path $file.DirectoryName ".attachments"
 
         Write-Host "Converting: $inputPath -> $outputPath" -ForegroundColor Green
 
