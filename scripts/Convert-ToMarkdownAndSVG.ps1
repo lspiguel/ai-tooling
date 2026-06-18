@@ -10,6 +10,26 @@ param(
     [string[]]$DiagramExtensions = @(".mmd")
 )
 
+$missingTools = @()
+
+if ($TextExtensions.Count -gt 0 -and -not (Get-Command pandoc -ErrorAction SilentlyContinue)) {
+    $missingTools += "pandoc (required for office document conversion: $($TextExtensions -join ', '))"
+}
+
+if ($DiagramExtensions.Count -gt 0 -and -not (Get-Command mmdc -ErrorAction SilentlyContinue)) {
+    $missingTools += "mmdc (required for diagram conversion: $($DiagramExtensions -join ', '))"
+}
+
+if ($missingTools.Count -gt 0) {
+    Write-Host "Error: Required tools are not available on PATH:" -ForegroundColor Red
+    foreach ($tool in $missingTools) {
+        Write-Host "  - $tool" -ForegroundColor Red
+    }
+    Write-Host "`nInstall pandoc from https://pandoc.org/installing.html" -ForegroundColor Yellow
+    Write-Host "Install mmdc with: npm install -g @mermaid-js/mermaid-cli" -ForegroundColor Yellow
+    exit 1
+}
+
 function Get-SafeDocName {
     param([string]$Name)
 
