@@ -1,7 +1,7 @@
 # PowerShell script to convert office documents to .md using pandoc
 # (.docx, .xlsx, .pptx) and .mmd files to .svg and .png (scale 3) using mmdc
 # Markdown, SVG, and PNG output files are only converted if missing
-# Embedded DOCX images are extracted to .attachments/{doc-name}-imageN.{ext}
+# Embedded DOCX/PPTX images are extracted to .attachments/{doc-name}-imageN.{ext}
 # in the same folder as the source file, with markdown links rewritten accordingly.
 
 param(
@@ -46,7 +46,7 @@ function Get-RelativePathFromDirectory {
     return ($relative -replace '\\', '/')
 }
 
-function Move-ExtractedDocxImages {
+function Move-ExtractedMediaImages {
     param(
         [string]$ExtractMediaRoot,
         [string]$AttachmentsDirectory,
@@ -113,10 +113,11 @@ function Convert-OfficeDocumentToMarkdown {
     )
 
     $inputFormat = Get-PandocInputFormat -Extension $Extension
+    $extractMedia = $inputFormat -in @('docx', 'pptx')
     $tempMediaRoot = $null
 
     try {
-        if ($inputFormat -eq 'docx') {
+        if ($extractMedia) {
             $tempMediaRoot = Join-Path $env:TEMP ("pandoc-media-" + [guid]::NewGuid().ToString())
             New-Item -ItemType Directory -Path $tempMediaRoot -Force | Out-Null
             pandoc --from=$inputFormat --to=markdown --extract-media="$tempMediaRoot" "$InputPath" -o "$OutputPath"
@@ -134,10 +135,10 @@ function Convert-OfficeDocumentToMarkdown {
         }
 
         $extractedImageCount = 0
-        if ($inputFormat -eq 'docx') {
+        if ($extractMedia) {
             $safeDocName = Get-SafeDocName -Name ([System.IO.Path]::GetFileNameWithoutExtension($InputPath))
             $markdownDirectory = [System.IO.Path]::GetDirectoryName($OutputPath)
-            $imageMappings = Move-ExtractedDocxImages `
+            $imageMappings = Move-ExtractedMediaImages `
                 -ExtractMediaRoot $tempMediaRoot `
                 -AttachmentsDirectory $AttachmentsDirectory `
                 -DocName $safeDocName `
@@ -177,10 +178,15 @@ function Update-MarkdownImageReferences {
 
     foreach ($mapping in $ImageMappings) {
         $fileName = [regex]::Escape($mapping.SourceFileName)
-        $pattern = "!\[([^\]]*)\]\([^)]*$fileName[^)]*\)"
-        $replacement = "![`$1]($($mapping.AttachmentRelativePath))"
-        $content = [regex]::Replace($content, $pattern, $replacement, 1)
+        # Replace relative or absolute media paths ending with this filename.
+        $content = [regex]::Replace(
+            $content,
+            '[^\s\(!\[]*[/\\]' + $fileName + '(?=\s*(?:\)|"|''|\{))',
+            $mapping.AttachmentRelativePath)
     }
+
+    # Remove pandoc image title attributes, e.g. (.attachments/foo.png "Picture 2")
+    $content = $content -replace '\((\.attachments/[^)\s]+)\s+"[^"]*"\)', '($1)'
 
     [System.IO.File]::WriteAllText($MarkdownPath, $content)
 }
