@@ -4,9 +4,26 @@ An [XrmToolBox](https://www.xrmtoolbox.com/) plugin that exports Microsoft Dynam
 
 ## What it does
 
-The plugin connects to your Dataverse environment, runs a set of FetchXML and Web API queries defined in a spec configuration file, serialises the results to an intermediate JSON file, and renders a structured Markdown document using an in-process [Scriban](https://github.com/scriban/scriban) template. The resulting `.context.md` file is ready to upload to your AI assistant as grounding context.
+Here's something I noticed: not everyone has a full GitHub Copilot, Claude or Cursor license. Not everyone can wire up MCP servers, define custom skills, or point an agent at a live Dataverse environment. But most of us do have access to a web AI agent, or to an enterprise general agent like Microsoft 365 Copilot — and those tools can be genuinely useful, if only they knew what your system actually looks like.
 
-<!-- TODO: screenshot — plugin UI overview -->
+I built something to bridge that gap.
+
+D365 CE Context Exporter is a free XrmToolBox plugin that connects to your Dataverse environment, runs a set of queries, and generates a structured Markdown file. You upload that file to your AI assistant of choice, and suddenly it knows your entities, your attributes, your security roles, your solution structure.
+
+No need to spend time on every chat explaining what a contact record means in your org, how it's different from the out of the box contact.
+
+It includes 6 configurations ("specs") — entity dictionary, security model, forms & views, option sets, solution inventory — and if those don't cover what you need, the templates are plain text files you can edit yourself without touching any code.
+
+Runs entirely inside XrmToolBox.
+
+I'd love to hear from others in the D365 / Power Platform space — what metadata would you most want to export as AI grounding context? Always looking for ideas on what to add next.
+
+👉 Search for "D365ContextExporter" on the XrmToolBox Tool Library.<br>
+👉 https://github.com/lspiguel/ai-tooling
+
+#Dynamics365 #Dataverse #XrmToolBox #AIAssistants #PowerPlatform #OpenSource
+
+![D365 CE Context Exporter infographic](infographic.png)
 
 ## Prerequisites
 
@@ -16,6 +33,8 @@ The plugin connects to your Dataverse environment, runs a set of FetchXML and We
 | .NET Framework | 4.8 |
 
 ## Quickstart
+
+The plugin connects to your Dataverse environment, runs a set of FetchXML and Web API queries defined in a spec configuration file, serialises the results to an intermediate JSON file, and renders a structured Markdown document using an in-process [Scriban](https://github.com/scriban/scriban) template. The resulting `.context.md` file is ready to upload to your AI assistant as grounding context.
 
 1. **Install the plugin** — open XrmToolBox, go to _Tool Library_, search for _D365 CE Context Exporter_, and install.
 2. **Connect** — connect XrmToolBox to your Dataverse environment.
