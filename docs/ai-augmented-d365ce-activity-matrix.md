@@ -11,7 +11,7 @@
 
 Two constraints shape every cell:
 
-1. **Client data must not leave the client tenant.** This is the dividing line between the two columns more than capability is. Pasting environment detail into Claude.ai / ChatGPT crosses a boundary; doing the same work through M365 Copilot (in-tenant) or the **Dataverse MCP server** (data stays in the tenant, the agent only calls governed tools) does not. The matrix flags where this matters.
+1. **Client data must not leave the client tenant.** This is the dividing line between the two columns more than capability is. Pasting environment detail into Claude.ai / ChatGPT crosses a boundary; doing the same work through an **AI Assistant scoped to the tenant** or the **Dataverse MCP server** (data stays in the tenant, the agent only calls governed tools) does not. The matrix flags where this matters.
 2. **Human-in-the-loop at every decision point.** AI drafts; a person decides. The cells assume review gates, not autopilot.
 
 ---
@@ -20,14 +20,14 @@ Two constraints shape every cell:
 
 | Activity | [1] General-Purpose AI Assistants <br><sub>Claude.ai · ChatGPT · M365 Copilot (chat) · Gemini</sub> | [3] Coding Assistants & Agentic Environments <br><sub>Copilot agent mode / coding agent · Cursor · Claude Code · VS + Copilot</sub> |
 |---|---|---|
-| **Initial one-time setup** <br><sub>per person / per team</sub> | Stand up a reusable **"D365 CE house style" Project / Custom GPT** seeded with conventions (publisher prefix rules, StyleCop summary, user-story + AC templates, the tool taxonomy). Enable M365 Copilot. Curate a personal prompt library. | Baseline the dev box: VS Code + Power Platform Tools + Copilot/Cursor, **pac CLI**, XrmToolBox + plugins (**D365 Context Exporter**, FetchXML Builder). Build a **template repo** carrying canonical `.github/copilot-instructions.md`, `AGENTS.md`, `.github/agents/*.agent.md`, `.github/skills/*`. Register Dataverse MCP + ADO/GitHub MCP. Fix the solution-unpack git layout. |
-| **Project setup** <br><sub>per client / per engagement</sub> | Per-client **grounded Project** seeded with Context Exporter `.context.md` packs + SoW + architecture; pin client data-handling rules. Use **M365 Copilot scoped to the client tenant** for anything touching live data. | Clone repo; `pac solution unpack` into git; drop Context Exporter packs into `/context/`; fork the template instruction/agent files and fill client specifics (prefix, env URLs, naming); enable this environment's **Dataverse MCP** + ADO board MCP; run Copilot `/init` to bootstrap instructions from the actual repo. |
-| **Specification** | Draft requirements, user stories, ACs from stakeholder notes. **M365 Copilot** mines Teams/email/SharePoint for source material. Reconcile asks against the *existing* model (Context Exporter grounding) to catch "we already have a field for that." | Coding assistant + repo + Context Exporter + **ADO MCP** + **Dataverse MCP** (`describe`, `search`) → grounded gap analysis and a technical spec that names *real* entities/attributes/plugins. Feasibility checked against the unpacked solution, not from memory. |
-| **Planning** | Decompose epics → features, sequence, risk register, estimation rationale; produce the planning doc/deck. | Generate the **ADO work-item hierarchy via ADO MCP**; dependency + sequencing analysis from solution structure (and from **Plugin B — Import Dependency Pre-Flight**); draft ADRs (architecture skill). |
-| **Tasking** | Turn features into task checklists with crisp descriptions and a clear Definition of Done. | Create ADO tasks via MCP; scaffold branches; **Plugin 9 — PCF Scaffold Orchestrator** for PCF tasks; emit task-level technical notes grounded in the repo. |
-| **Implementation** | Generate/explain Power Fx, JS web resources, FetchXML, OData. Rubber-duck design. Use **maker-portal copilots** (Copilot in Power Apps / Power Automate, generative pages) for low-code build with HITL review. *Cannot touch the repo.* | The core build: plugins, PCF, web resources, Azure Functions, pipeline YAML, and **unit-test fixtures from the FetchXML Test Fixture Manager**. Agent mode for synchronous multi-file edits; coding agent for async PRs. pac CLI / **Dataverse coding-agent plugin** for environment gestures. |
-| **Validation / peer review** | Review design docs; generate test scenarios + UAT scripts; sanity-check an approach; cross-check work against the requirements doc (M365 Copilot). | Code review via a **`d365-code-reviewer.agent.md`** persona enforcing StyleCop + naming; PR descriptions + self-review; run tests; **Plugin A — Component Snapshot & Drift Tracker** for config drift; security/perf review; ADO/GitHub PR Copilot. |
-| **Documentation** | User docs, runbooks, release notes, training material; publish to SharePoint via M365 Copilot. | Generate technical docs + ADRs from code; **re-run Context Exporter** so the schema packs stay current as living docs; keep `copilot-instructions.md` / `AGENTS.md` honest (`/init` refresh). |
+| **Initial one-time setup** <br><sub>per person / per team</sub> | Stand up a reusable **"D365 CE house style" Project / Custom GPT** seeded with conventions (publisher prefix rules, StyleCop summary, user-story + AC templates, the tool taxonomy). Enable an AI Assistant. Curate a personal prompt library. | Baseline the dev box: VS Code + Power Platform Tools + Copilot/Cursor, **pac CLI**, XrmToolBox + plugins (**D365 Context Exporter**, FetchXML Builder). Build a **template repo** carrying canonical instructions and skills (i.e. `.github/copilot-instructions.md`, `AGENTS.md`, `.claude/*`, etc.). Register Dataverse MCP + ADO/GitHub MCP. Fix the solution-unpack git layout. |
+| **Project setup** <br><sub>per client / per engagement</sub> | Per-client **grounded Project** seeded with Context Exporter `.context.md` packs + SoW + architecture; pin client data-handling rules. Use an **AI Assistant scoped to the client tenant** for anything touching live data. | Setup ALM solution if available, if not setup `pac solution export`/`pac solution unpack` script to automate solution registration into git; clone repos; drop Context Exporter packs into `/context/`; fork the template instruction/agent files and fill client specifics (prefix, env URLs, naming); enable this environment's **Dataverse MCP** + ADO board MCP; run or clone initializations to bootstrap instructions from the actual repo. |
+| **Specification** | Draft requirements, user stories, ACs from stakeholder notes. The **AI Assistant** mines Teams/email/SharePoint for source material. Reconcile asks against the *existing* model (Context Exporter grounding) to catch "we already have a field for that." | Draft requirements, user stories, ACs from stakeholder notes. Coding assistant + repo + Context Exporter + **ADO MCP** + **Dataverse MCP** (`describe`, `search`) → grounded gap analysis and a technical spec that names *real* entities/attributes/plugins. Feasibility checked against the unpacked solution, not from memory. |
+| **Planning** | Decompose epics → features → stories, sequence, risk register, estimation rationale; produce the planning doc/deck. Push back into ADO using scripting. | Decompose epics → features → stories, sequence, risk register, estimation rationale; generate the **ADO work-item hierarchy via ADO MCP**; dependency + sequencing analysis from solution structure; draft ADRs (architecture skill). |
+| **Tasking** | Turn features into task checklists with crisp descriptions and a clear Definition of Done. | Create ADO tasks via MCP; scaffold branches; emit task-level technical notes grounded in the repo. |
+| **Implementation** | The **AI Assistant** helps in generating/explaining Power Fx, JS web resources, FetchXML, OData. Rubber-duck design. Use **maker-portal copilots** (Copilot in Power Apps / Power Automate, generative pages) for low-code. Pro-Code direct implementation is out of current capabilities for **AI Assistants**. | The core build: plugins, PCF, web resources, Azure Functions, pipeline YAML. The **Coding Assistant** also helps in generating/explaining Power Fx, JS web resources, FetchXML, OData.. pac CLI / **Dataverse coding-agent plugin** for environment gestures. |
+| **Validation / peer review** | Review design docs; generate test scenarios + UAT scripts; sanity-check an approach; cross-check work against the requirements doc (AI Assistant). | Code review via a **`d365-code-reviewer.agent.md`** persona enforcing StyleCop + naming; PR descriptions + self-review; run tests; **Plugin A — Component Snapshot & Drift Tracker** for config drift; security/perf review; ADO/GitHub PR Copilot. |
+| **Documentation** | User docs, runbooks, release notes, training material; publish to ADO wikis. | Generate technical docs + ADRs from code; publish to ADO wikis; **re-run Context Exporter** so the schema packs stay current as living docs; keep `copilot-instructions.md` / `AGENTS.md` honest (`/init` refresh). |
 
 ---
 
@@ -48,12 +48,12 @@ They're complementary, not competing — and the exporter remains the only optio
 
 ### 2. The instruction / agent / skill file stack — the grounding layer for Column 3
 
-Per the "context injection over custom agents" principle, this is now well-supported natively and stays file-based (no bespoke agent system to maintain):
+Per the "context injection over custom agents" principle, this is now well-supported natively and stays file-based (no bespoke agent system to maintain). Conventions vary by assistant; the GitHub Copilot set is shown below, with the Claude Code equivalent alongside:
 
-- `.github/copilot-instructions.md` — always-on, project-wide. Keep it under ~1,000 words or the signal gets buried. Publisher prefix, no early binding, StyleCop, Repository pattern, "tables change fast → describe via MCP, don't assume."
-- `AGENTS.md` — workflow rules: how to build, which test command, what "done" means. Nestable per subdirectory for a monorepo (plugins vs PCF vs web resources).
-- `.github/agents/*.agent.md` — lightweight named personas (plugin-dev, code-reviewer, PCF) with a constrained tool list and an optional pinned model. These *are* "context injection," not a custom agent platform — exactly the line you want.
-- `.github/skills/<name>/SKILL.md` — reusable task instructions auto-discovered by the agent.
+- `.github/copilot-instructions.md` (Claude Code: `CLAUDE.md`) — always-on, project-wide. Keep it under ~1,000 words or the signal gets buried. Publisher prefix, no early binding, StyleCop, Repository pattern, "tables change fast → describe via MCP, don't assume."
+- `AGENTS.md` — workflow rules: how to build, which test command, what "done" means. Nestable per subdirectory for a monorepo (plugins vs PCF vs web resources). Read natively by both ecosystems.
+- `.github/agents/*.agent.md` (Claude Code: `.claude/agents/*`) — lightweight named personas (plugin-dev, code-reviewer, PCF) with a constrained tool list and an optional pinned model. These *are* "context injection," not a custom agent platform — exactly the line you want.
+- `.github/skills/<name>/SKILL.md` (Claude Code: `.claude/skills/<name>/SKILL.md`) — reusable task instructions auto-discovered by the agent.
 
 Ship these from the template repo so every engagement starts consistent.
 
@@ -77,25 +77,25 @@ Work items, boards, and repos reached through their MCP servers (or the coding a
 
 **[1]** The deliverable is a *reusable* grounded surface, not a one-off chat. A Claude Project (or Custom GPT) carrying your conventions means every later spec/plan conversation inherits the house style without re-explaining it. Seed it with: naming + prefix rules, a StyleCop summary, your user-story/AC templates, and a one-paragraph statement of the data-boundary rule so the assistant itself reminds you when you're about to over-share.
 
-**[3]** The deliverable is a **template repo**. Everything reusable across clients lives here: the instruction stack (§2), starter `.agent.md` personas, a `/context/` convention, and a documented MCP registration procedure. New projects fork this instead of reinventing it. Decide the solution-unpack layout now — it's expensive to change later.
+**[3]** The deliverable is a **template repo**. Everything reusable across clients lives here: the instruction stack (§2), starter agent personas (`.agent.md` / `.claude/agents/*`), a `/context/` convention, and a documented MCP registration procedure. New projects fork this instead of reinventing it. Decide the solution-unpack layout now — it's expensive to change later.
 
 > **Build candidate:** a small "house starter pack" — `copilot-instructions.md`, `AGENTS.md`, and 3 `.agent.md` personas — versioned and distributable, the column-3 analogue of the Context Exporter's reference config.
 
 ### Project setup
 
-**[1]** One grounded Project per client, seeded with that client's Context Exporter packs + SoW + architecture. For anything involving *live* client data, route through **M365 Copilot in the client tenant** rather than a consumer assistant — same intelligence, no boundary crossing.
+**[1]** One grounded Project per client, seeded with that client's Context Exporter packs + SoW + architecture. For anything involving *live* client data, route through an **AI Assistant scoped to the client tenant** rather than a consumer assistant — same intelligence, no boundary crossing.
 
-**[3]** Mechanical and scriptable: clone, `pac solution unpack`, drop in the Context Exporter packs, fork the instruction files, fill in client specifics, enable the environment's Dataverse MCP + ADO board, run `/init`. This is a strong candidate for a checklist skill so it's identical every time.
+**[3]** Mechanical and scriptable: set up ALM-based solution sync if it's available, otherwise script `pac solution export`/`pac solution unpack`; clone the repo(s); drop in the Context Exporter packs; fork the instruction files; fill in client specifics; enable the environment's Dataverse MCP + ADO board; bootstrap instructions from the actual repo. This is a strong candidate for a checklist skill so it's identical every time.
 
 ### Specification
 
-**[1]** Two jobs: turn raw stakeholder input into structured stories/ACs, and *reconcile against what exists*. The second is where the Context Exporter pack earns its keep — the assistant can flag "you're asking for a field the OOTB contact already has" only if it can see the model. M365 Copilot adds requirement-mining from Teams/email/SharePoint.
+**[1]** Two jobs: turn raw stakeholder input into structured stories/ACs, and *reconcile against what exists*. The second is where the Context Exporter pack earns its keep — the assistant can flag "you're asking for a field the OOTB contact already has" only if it can see the model. The AI Assistant adds requirement-mining from Teams/email/SharePoint.
 
 **[3]** Same reconciliation, but live and deeper: `describe`/`search` over Dataverse MCP plus the unpacked solution means the gap analysis cites real schema, and the spec can name the actual plugins/steps a change will touch. ADO MCP pulls the related existing work items so the spec doesn't duplicate the backlog.
 
 ### Planning
 
-**[1]** Decomposition, sequencing, risk, estimation rationale — the assistant is a structured-thinking partner, output is a planning artifact a human owns.
+**[1]** Decomposition, sequencing, risk, estimation rationale — the assistant is a structured-thinking partner, output is a planning artifact a human owns and pushes back into ADO via scripting (no native work-item integration in this column).
 
 **[3]** Turn the plan into a real ADO work-item tree via MCP. The differentiator is *dependency-aware* sequencing grounded in solution structure — and **Plugin B (Import Dependency Pre-Flight)** is the purpose-built input here: an order-sensitive, read-only check of the import sequence feeds directly into how features get ordered.
 
@@ -123,9 +123,9 @@ The **FetchXML Test Fixture Manager** plugs in exactly here: it generates SDK-co
 
 ### Documentation
 
-**[1]** User-facing docs, runbooks, release notes, training. M365 Copilot publishes straight to SharePoint.
+**[1]** User-facing docs, runbooks, release notes, training; publish straight to ADO wikis.
 
-**[3]** Technical docs and ADRs generated from code, and — the D365-specific move — **re-running the Context Exporter** so the schema packs are regenerated as living documentation. The same artifact that grounds column 1 *is* your data-model doc. Keep the instruction files current in the same pass.
+**[3]** Technical docs and ADRs generated from code, published to ADO wikis alongside the column-1 material, and — the D365-specific move — **re-running the Context Exporter** so the schema packs are regenerated as living documentation. The same artifact that grounds column 1 *is* your data-model doc. Keep the instruction files current in the same pass.
 
 ---
 
