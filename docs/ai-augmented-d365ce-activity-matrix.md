@@ -168,8 +168,11 @@ Stubs for the pass that adds the rest of the taxonomy:
 - **[5] Agent Builder Frameworks** — Copilot Studio agents over Dataverse, multi-agent orchestration, Dataverse-event-triggered automation.
 - **[6] AI-Augmented Specialty Tools** — XrmToolBox AI plugins (incl. your own), ADO/GitHub PR Copilot, FetchXML authoring assists.
 
-## Open questions
+## Considerations
 
-1. Where exactly is the line on uploading Context Exporter packs to consumer assistants for a given client's contract? This should be a per-engagement decision recorded in project setup, not a default.
-2. Does the team's M365-Copilot-only licensing cover Dataverse MCP tool billing for the cases where col-3 work needs it? (It may, via the M365 Copilot license — worth confirming before relying on it.)
-3. Which `.agent.md` personas are worth standardizing first — plugin-dev and code-reviewer seem highest-value.
+**Data handling and AI assistant selection for client engagements.** Free or consumer-tier AI Assistants (column 1) are not suitable for client work. Engagements require an enterprise or professional tier that provides configurable privacy controls and a zero-data-retention policy, so that context material never trains the model. Any context extract shared with an assistant — Context Exporter packs, source code, documentation — must carry a legal boundary notice (e.g. `LEGAL.md` appended to the pack) that makes the proprietary nature of the material explicit. This is not a per-engagement judgment call; it is a baseline requirement.
+
+**Licensing.** Premium AI Assistant (column 1) licenses are likely needed for optimal functioning — larger context windows, higher rate limits, and tool-use support. Column 3 tooling may incur additional charges for MCP server calls and agent-skill usage. Because the ecosystem is evolving rapidly, the specific licenses required should be identified and budgeted at the start of each engagement rather than assumed from a previous one.
+
+**Human-in-the-loop discipline and the role of AI personas.** The "AI drafts; a person decides" principle is the load-bearing constraint. No AI personas or automated review agents should be configured by default. If personas or skills are introduced in a later stage to assist review, they must be positioned as a *final check after the human has already reviewed* — never as the first pass. This matters because people (and models) anchor on initial feedback: AI providing the first review would bias the human reviewer rather than complement them. Any review persona is therefore a last-stage detail-catcher, not a gatekeeper.
+
