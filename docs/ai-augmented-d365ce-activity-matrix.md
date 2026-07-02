@@ -159,14 +159,14 @@ The platform side is shifting fast enough that several cells should be re-checke
 
 ---
 
-## Not yet covered (next columns)
+## Not covered (taxonomies other than 1 and 3)
 
-Stubs for the pass that adds the rest of the taxonomy:
+The following AI taxonomies/tools are not yet integrated. May be used as productivity tools to enhance tasks, or to handle specific automation tasks.
 
 - **[2] Local / Desktop Automation Agents** — make.powerapps.com / PPAC navigation, XrmToolBox output extraction, repetitive maker-portal config.
 - **[4] Platform-Embedded Copilots** — already partly surfaced under col-1 implementation; deserves its own column (Copilot in apps, row summaries, Power Fx generation).
 - **[5] Agent Builder Frameworks** — Copilot Studio agents over Dataverse, multi-agent orchestration, Dataverse-event-triggered automation.
-- **[6] AI-Augmented Specialty Tools** — XrmToolBox AI plugins (incl. your own), ADO/GitHub PR Copilot, FetchXML authoring assists.
+- **[6] AI-Augmented Specialty Tools** — XrmToolBox AI plugins, ADO/GitHub PR Copilot, FetchXML authoring assists.
 
 ## Considerations
 
