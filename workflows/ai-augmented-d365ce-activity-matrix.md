@@ -11,7 +11,7 @@
 
 Two constraints shape every cell:
 
-1. **Client data must not leave the client tenant.** This is the dividing line between the two columns more than capability is. Pasting environment detail into Claude.ai / ChatGPT crosses a boundary; doing the same work through an **AI Assistant scoped to the tenant** or the **Dataverse MCP server** (data stays in the tenant, the agent only calls governed tools) does not. The matrix flags where this matters.
+1. **Client data must stay within a boundary cleared to hold it.** This — not raw capability — is the dividing line between the two columns, but the boundary is *contractual*, not merely the tenant wall: a destination qualifies if it's covered by the engagement's data agreement (DPA, zero data retention, no training on input — see [Considerations](#considerations)). Pasting environment detail into a *consumer* Claude.ai / ChatGPT account crosses it; doing the same work through an **enterprise-tier assistant under that agreement**, an **AI Assistant scoped to the tenant**, or the **Dataverse MCP server** (data stays in-tenant, only governed tool calls) does not. The bar scales with sensitivity — schema/metadata is lower-stakes than live PII or regulated rows — and some contracts forbid any subprocessor outright, so the acceptable destinations are a per-engagement determination. The matrix flags where this matters.
 2. **Human-in-the-loop at every decision point.** AI drafts; a person decides. The cells assume review gates, not autopilot.
 
 ---
