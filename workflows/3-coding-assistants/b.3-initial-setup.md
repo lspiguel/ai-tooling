@@ -15,8 +15,10 @@ This guide lists the package managers and CLI tools used to set up a machine for
 7. [Azure CLI](#7-azure-cli)
 8. [PandaDoc](#8-pandadoc)
 9. [mmdc (Mermaid CLI)](#9-mmdc-mermaid-cli)
-10. [Telling your AI assistant](#10-telling-your-ai-assistant)
-11. [Appendix: Combined unattended bootstrap script](#appendix-combined-unattended-bootstrap-script)
+10. [Git](#10-git)
+11. [GitHub Desktop](#11-github-desktop)
+12. [Telling your AI assistant](#12-telling-your-ai-assistant)
+13. [Appendix: Combined unattended bootstrap script](#appendix-combined-unattended-bootstrap-script)
 
 ---
 
@@ -178,7 +180,27 @@ npm install -g @mermaid-js/mermaid-cli
 
 ---
 
-## 10. Telling your AI assistant
+## 10. Git
+
+Distributed version control — the foundation for source control, branching, and working with GitHub repositories.
+
+```PowerShell
+choco install git -y
+```
+
+---
+
+## 11. GitHub Desktop
+
+GUI client for Git and GitHub — visual commits, branches, diffs, and pull requests without the command line. Bundles its own copy of Git, but installing the standalone `git` (section 10) is still recommended so the CLI is on your `PATH` for scripting and AI-assistant use.
+
+```PowerShell
+winget install --id GitHub.GitHubDesktop -e --silent --accept-package-agreements --accept-source-agreements
+```
+
+---
+
+## 12. Telling your AI assistant
 
 Even once these tools are installed, an AI coding assistant won't know they're available unless you tell it — it may otherwise default to walking you through manual installs or asking permission before using a CLI tool it doesn't know it has. Give it this context once, using whatever persistent instructions/memory mechanism it supports (a project instructions file such as `CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, or a chat-level "custom instructions"/memory feature):
 
@@ -194,6 +216,8 @@ The following developer tools are installed and available on this machine's comm
 - Azure CLI (`az`).
 - PandaDoc CLI — converts documents (PDF, DOCX) to/from Markdown.
 - Mermaid CLI (`mmdc`) — renders Mermaid diagrams to PNG/SVG/PDF.
+- Git (`git`).
+- GitHub Desktop — GUI client for Git and GitHub.
 
 When a task would benefit from one of these tools, use it, offer to describe usage steps, or prepare a command line for the user to execute.
 ```
@@ -237,6 +261,9 @@ choco install notepadplusplus postman git xrmtoolbox pandadoc -y
 
 # Visual Studio Code
 winget install --id Microsoft.VisualStudioCode -e --silent --accept-package-agreements --accept-source-agreements
+
+# GitHub Desktop (git itself is installed via Chocolatey above)
+winget install --id GitHub.GitHubDesktop -e --silent --accept-package-agreements --accept-source-agreements
 
 # PAC CLI
 dotnet tool install --global Microsoft.PowerApps.CLI.Tool
