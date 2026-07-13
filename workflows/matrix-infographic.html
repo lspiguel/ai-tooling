@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AI-Augmented D365 CE Delivery — Activity Matrix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14202E;
+    --ink-soft:#4A5A6B;
+    --paper:#E9ECF1;
+    --surface:#FFFFFF;
+    --rule:#C9D1DA;
+    --lane1:#6E56CF;      /* general-purpose assistants */
+    --lane1-bg:#F1EEFC;
+    --lane3:#0E7C86;      /* coding assistants & agents */
+    --lane3-bg:#E6F3F4;
+    --amber:#B86E10;
+    --amber-bg:#FDF3E4;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    padding:28px 20px 44px;
+    display:flex;
+    justify-content:center;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .poster{
+    width:100%;
+    max-width:100%;
+    background:var(--surface);
+    border:1px solid var(--rule);
+    border-radius:4px;
+  }
+
+  /* ---------- header ---------- */
+  .head{
+    padding:30px 34px 24px;
+    border-bottom:2px solid var(--ink);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:32px;
+    flex-wrap:wrap;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:31px;
+    font-weight:700;
+    letter-spacing:-.02em;
+    line-height:1.15;
+  }
+  .head p{
+    font-size:14px;
+    color:var(--ink-soft);
+    max-width:420px;
+    line-height:1.55;
+  }
+
+  /* ---------- shared section chrome ---------- */
+  .band{padding:26px 34px;}
+  .band + .band{border-top:1px solid var(--rule);}
+  .band-title{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:4px;
+  }
+  .band-note{font-size:13px;color:var(--ink-soft);margin-bottom:18px;line-height:1.5;}
+
+  /* ---------- lane key ---------- */
+  .lane-key{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:18px;}
+  .key{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);}
+  .swatch{width:12px;height:12px;border-radius:2px;flex-shrink:0;}
+  .swatch.one{background:var(--lane1);}
+  .swatch.three{background:var(--lane3);}
+  .key b{color:var(--ink);font-weight:600;}
+
+  /* ---------- the grid ---------- */
+  .scroller{overflow-x:auto;overflow-y:hidden;padding-bottom:10px;}
+  .grid{
+    display:grid;
+    grid-template-columns:88px repeat(2,minmax(150px,1fr)) 26px repeat(6,minmax(140px,1fr));
+    gap:6px;
+    min-width:1000px;
+  }
+  .phase-head{
+    grid-column:2 / span 2;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--amber);
+    padding-bottom:7px;
+    border-bottom:2px solid var(--amber);
+    margin-bottom:6px;
+  }
+  .phase-head.loop{
+    grid-column:5 / span 6;
+    color:var(--ink);
+    border-bottom:2px solid var(--ink);
+  }
+  .spacer{grid-row:span 4;}
+  .corner{grid-column:1;}
+
+  .col-label{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:13.5px;font-weight:600;
+    padding:0 0 8px;
+    border-bottom:1px solid var(--rule);
+    line-height:1.25;
+  }
+  .col-label span{
+    display:block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9.5px;font-weight:600;letter-spacing:.08em;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    margin-top:3px;
+  }
+
+  .lane-tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;font-weight:600;
+    display:flex;align-items:center;
+    padding-right:8px;
+    line-height:1.3;
+  }
+  .lane-tag.one{color:var(--lane1);}
+  .lane-tag.three{color:var(--lane3);}
+
+  .cell{
+    font-size:11.8px;
+    line-height:1.45;
+    padding:10px 11px;
+    border-radius:3px;
+    border-left:3px solid transparent;
+  }
+  .cell.one{background:var(--lane1-bg);border-left-color:var(--lane1);}
+  .cell.three{background:var(--lane3-bg);border-left-color:var(--lane3);}
+  .cell b{font-weight:600;display:block;margin-bottom:2px;}
+  .cell .ours{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;font-weight:600;
+    display:inline-block;margin-top:5px;
+    padding:2px 5px;border-radius:2px;
+    background:var(--ink);color:#fff;
+  }
+
+  /* ---------- return arc ---------- */
+  .arc-wrap{
+    grid-column:5 / span 6;
+    height:44px;
+    position:relative;
+    margin-top:2px;
+  }
+  .arc-wrap svg{width:100%;height:100%;overflow:visible;}
+  .arc-label{
+    position:absolute;left:50%;top:20px;transform:translateX(-50%);
+    background:var(--surface);
+    padding:0 10px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--ink);
+    white-space:nowrap;
+  }
+
+  /* ---------- backbone ---------- */
+  .backbone{background:#F7F8FA;}
+  .chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
+  .chip{
+    background:var(--surface);
+    border:1px solid var(--rule);
+    border-top:3px solid var(--ink);
+    border-radius:3px;
+    padding:12px 13px;
+  }
+  .chip h3{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:13px;font-weight:600;margin-bottom:4px;
+  }
+  .chip p{font-size:11.5px;color:var(--ink-soft);line-height:1.45;}
+  .chip .who{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9.5px;font-weight:600;letter-spacing:.06em;
+    margin-top:7px;display:block;
+  }
+  .who.one{color:var(--lane1);}
+  .who.three{color:var(--lane3);}
+  .who.both{color:var(--ink-soft);}
+
+  /* ---------- boundary ---------- */
+  .boundary{
+    margin-top:20px;
+    border:1px dashed var(--amber);
+    background:var(--amber-bg);
+    border-radius:3px;
+    padding:14px 16px;
+    display:flex;gap:14px;align-items:center;
+  }
+  .boundary .mark{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;font-weight:600;letter-spacing:.1em;
+    color:#fff;background:var(--amber);
+    padding:3px 7px;border-radius:2px;flex-shrink:0;
+    text-transform:uppercase;
+  }
+  .boundary p{font-size:13px;line-height:1.55;color:var(--ink);font-weight:600;}
+
+  footer{
+    padding:16px 34px 20px;
+    border-top:1px solid var(--rule);
+    display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;letter-spacing:.06em;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+  }
+
+  @media (max-width:820px){
+    h1{font-size:24px;}
+    .band{padding:22px 18px;}
+    .head{padding:24px 18px 20px;}
+    footer{padding:14px 18px 18px;}
+  }
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <div class="head">
+    <div>
+      <div class="eyebrow">Dynamics 365 CE · Power Platform</div>
+      <h1>Where AI fits in a delivery cycle</h1>
+    </div>
+    <p>The same activity looks different depending on where the AI runs. Two lanes, six repeating activities, one shared grounding layer that gets refreshed every pass.</p>
+  </div>
+
+  <!-- ===== MATRIX ===== -->
+  <div class="band">
+    <div class="band-title">The matrix</div>
+    <div class="band-note">Read across for the flow of work. Read down to compare what each lane can actually reach.</div>
+
+    <div class="lane-key">
+      <div class="key"><span class="swatch one"></span><b>Taxonomy 1 — General-purpose assistants.</b>&nbsp;Claude · ChatGPT · M365 Copilot chat. Reasons about what you give it. Cannot see the repo or the environment.</div>
+      <div class="key"><span class="swatch three"></span><b>Taxonomy 3 — Coding assistants &amp; agents.</b>&nbsp;Copilot agent mode · coding agent · Cursor · Claude Code. Reads the repo, calls tools, opens PRs.</div>
+    </div>
+
+    <div class="scroller">
+      <div class="grid">
+
+        <div class="corner"></div>
+        <div class="phase-head">Set up once</div>
+        <div class="spacer"></div>
+        <div class="phase-head loop">Repeats every increment</div>
+
+        <div class="corner"></div>
+        <div class="col-label">Initial setup<span>Per person</span></div>
+        <div class="col-label">Project setup<span>Per client</span></div>
+        <div class="col-label">Specification<span>01</span></div>
+        <div class="col-label">Planning<span>02</span></div>
+        <div class="col-label">Tasking<span>03</span></div>
+        <div class="col-label">Implementation<span>04</span></div>
+        <div class="col-label">Validation<span>05</span></div>
+        <div class="col-label">Documentation<span>06</span></div>
+
+        <!-- TAXONOMY 1 -->
+        <div class="lane-tag one">TAXONOMY&nbsp;1<br>General-purpose assistants.</div>
+        <div class="cell one"><b>House-style Project</b>Conventions, prefixes, story &amp; AC templates, prompt library.</div>
+        <div class="cell one"><b>Client Project</b>Seed with context packs, SoW, architecture.<span class="ours">Context Exporter</span></div>
+        <div class="cell one"><b>Stories &amp; ACs</b>Draft from stakeholder notes, then check the ask against what already exists.</div>
+        <div class="cell one"><b>Decompose</b>Epics → features, sequencing, risks, estimation rationale.</div>
+        <div class="cell one"><b>Task lists</b>Feature → tasks with an explicit definition of done.</div>
+        <div class="cell one"><b>Snippets &amp; maker copilots</b>Power Fx, JS, FetchXML. Copilot in Power Apps / Automate.</div>
+        <div class="cell one"><b>Test scenarios</b>UAT scripts, design review, cross-check against the ACs.</div>
+        <div class="cell one"><b>User docs</b>Runbooks, release notes, training material.</div>
+
+        <!-- TAXONOMY 3 -->
+        <div class="lane-tag three">TAXONOMY&nbsp;3<br>Coding assistants &amp; agents.</div>
+        <div class="cell three"><b>Template repo</b>Instruction stack, agent personas, MCP registrations, dev tooling.</div>
+        <div class="cell three"><b>Wire it up</b>Clone, unpack solutions to git, connect Dataverse &amp; ADO.</div>
+        <div class="cell three"><b>Grounded spec</b>Live schema + unpacked solution → a spec that names real components.</div>
+        <div class="cell three"><b>Work-item tree</b>Created in ADO.</div>
+        <div class="cell three"><b>Tasks &amp; branches</b>Scaffolded.</div>
+        <div class="cell three"><b>Build</b>Plugins, PCF, web resources, pipelines — with tests that run offline.<span class="ours">Fixture Manager</span></div>
+        <div class="cell three"><b>Review</b>Reviewer agent on conventions. Config drift caught separately.<span class="ours">Plugin A</span></div>
+        <div class="cell three"><b>Living docs</b>ADRs from code. Re-export the packs so grounding stays true.<span class="ours">Context Exporter</span></div>
+
+        <!-- return arc -->
+        <div class="arc-wrap">
+          <svg viewBox="0 0 1000 44" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M 960 2 C 960 34, 900 40, 500 40 C 100 40, 40 34, 40 8"
+                  fill="none" stroke="#14202E" stroke-width="1.5" stroke-dasharray="5 4"/>
+            <path d="M 40 2 L 35 11 L 45 11 Z" fill="#14202E"/>
+          </svg>
+          <div class="arc-label">Next increment — with the ground truth updated</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BACKBONE ===== -->
+  <div class="band backbone">
+    <div class="band-title">The grounding layer</div>
+    <div class="band-note">Every cell above depends on these. They are what turns a plausible answer into a correct one — and step 06 feeds straight back into them.</div>
+
+    <div class="chips">
+      <div class="chip">
+        <h3>Context packs</h3>
+        <p>Markdown snapshots of entities, security model and solutions. Upload to any assistant.</p>
+        <span class="who one">Taxonomy 1 · D365 Context Exporter</span>
+      </div>
+      <div class="chip">
+        <h3>Instruction &amp; agent files</h3>
+        <p>Conventions the agent reads before it starts. Named personas for review, plugin work, PCF.</p>
+        <span class="who three">Taxonomy 3 · copilot-instructions · AGENTS.md · *.agent.md</span>
+      </div>
+      <div class="chip">
+        <h3>Solutions unpacked in git</h3>
+        <p>Config becomes diffable files. The agent reads what exists instead of guessing.</p>
+        <span class="who three">Taxonomy 3 · pac solution unpack</span>
+      </div>
+      <div class="chip">
+        <h3>Dataverse MCP</h3>
+        <p>Live, governed tool access — describe, search, query. Data never leaves the tenant.</p>
+        <span class="who three">Taxonomy 3 · admin allow-lists the client</span>
+      </div>
+      <div class="chip">
+        <h3>Boards &amp; repos</h3>
+        <p>ADO and GitHub, so specs and plans write to the real backlog rather than a chat window.</p>
+        <span class="who both">Both lanes</span>
+      </div>
+    </div>
+
+    <div class="boundary">
+      <span class="mark">The line</span>
+      <p>Human in the loop at every gate.</p>
+    </div>
+  </div>
+
+  <footer>
+    <span>Activity × AI tool taxonomy · v0.1</span>
+  </footer>
+
+</div>
+</body>
+</html>
