@@ -1,0 +1,20 @@
+/* Summer Bouquet — converted from palette.scss
+   https://coolors.co/f0b67f-fe5f55-d6d1b1-c7efcf-eef5db */
+:root{
+  /* base palette */
+  --light-caramel:#f0b67f;
+  --vibrant-coral:#fe5f55;
+  --sand-dune:#d6d1b1;
+  --tea-green:#c7efcf;
+  --beige:#eef5db;
+
+  /* derived shades — same hues, darkened for text/border contrast on light surfaces */
+  --caramel-deep:#a15f16;
+  --coral-deep:#d83b31;
+  --green-deep:#2c9367;
+
+  /* derived tints — soft fills that read as pastels of the base hues */
+  --coral-tint:#ffe9e7;
+  --caramel-tint:#fbedd7;
+  --paper-tint:#f5f6e8;
+}

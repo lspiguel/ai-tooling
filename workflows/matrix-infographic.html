@@ -7,19 +7,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="palette.css">
 <style>
   :root{
-    --ink:#14202E;
-    --ink-soft:#4A5A6B;
-    --paper:#E9ECF1;
+    --ink:#2a2822;                    /* warm near-black */
+    --ink-soft:#6d6759;
+    --paper:var(--beige);            /* page background */
     --surface:#FFFFFF;
-    --rule:#C9D1DA;
-    --lane1:#6E56CF;      /* general-purpose assistants */
-    --lane1-bg:#F1EEFC;
-    --lane3:#0E7C86;      /* coding assistants & agents */
-    --lane3-bg:#E6F3F4;
-    --amber:#B86E10;
-    --amber-bg:#FDF3E4;
+    --rule:var(--sand-dune);
+    --lane1:var(--coral-deep);       /* general-purpose assistants */
+    --lane1-bg:var(--coral-tint);
+    --lane3:var(--green-deep);       /* coding assistants & agents */
+    --lane3-bg:var(--tea-green);
+    --amber:var(--caramel-deep);
+    --amber-bg:var(--caramel-tint);
   }
 
   *{box-sizing:border-box;margin:0;padding:0;}
@@ -172,6 +173,7 @@
     height:44px;
     position:relative;
     margin-top:2px;
+    color:var(--ink);
   }
   .arc-wrap svg{width:100%;height:100%;overflow:visible;}
   .arc-label{
@@ -185,7 +187,7 @@
   }
 
   /* ---------- backbone ---------- */
-  .backbone{background:#F7F8FA;}
+  .backbone{background:var(--paper-tint);}
   .chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
   .chip{
     background:var(--surface);
@@ -309,8 +311,8 @@
         <div class="arc-wrap">
           <svg viewBox="0 0 1000 44" preserveAspectRatio="none" aria-hidden="true">
             <path d="M 960 2 C 960 34, 900 40, 500 40 C 100 40, 40 34, 40 8"
-                  fill="none" stroke="#14202E" stroke-width="1.5" stroke-dasharray="5 4"/>
-            <path d="M 40 2 L 35 11 L 45 11 Z" fill="#14202E"/>
+                  fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 4"/>
+            <path d="M 40 2 L 35 11 L 45 11 Z" fill="currentColor"/>
           </svg>
           <div class="arc-label">Next increment — with the ground truth updated</div>
         </div>
