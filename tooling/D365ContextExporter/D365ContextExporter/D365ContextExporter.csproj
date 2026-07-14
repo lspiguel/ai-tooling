@@ -6,9 +6,9 @@
     <AssemblyName>D365ContextExporter</AssemblyName>
     <Company>Luciano Spiguel</Company>
     <Authors>Luciano Spiguel</Authors>
-    <AssemblyVersion>1.2026.6.1</AssemblyVersion>
-    <FileVersion>1.2026.6.1</FileVersion>
-    <Version>1.2026.6.1</Version>
+    <AssemblyVersion>1.2026.7.1</AssemblyVersion>
+    <FileVersion>1.2026.7.1</FileVersion>
+    <Version>1.2026.7.1</Version>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <PackageScribanIncludeSource>true</PackageScribanIncludeSource>

@@ -6,7 +6,7 @@ nuget.exe pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExport
 <package>
   <metadata>
     <id>Lspiguel.Xrm.D365ContextExporter</id>
-    <version>1.2026.6.1</version>
+    <version>1.2026.7.1</version>
     <title>D365 CE Context Exporter for XrmToolBox</title>
     <authors>Luciano Spiguel</authors>
     <owners>Luciano Spiguel</owners>
@@ -17,7 +17,7 @@ nuget.exe pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExport
     <description>
       XrmToolBox plugin that executes FetchXML and Web API queries against a Dataverse environment, serialises results to an intermediate JSON file, and uses an internal scripting post-processor to produce Markdown grounding files for non-agentic AI assistants.
     </description>
-    <releaseNotes>This version removes the Python dependency, embeds Scriban, and adds additional sample config files.</releaseNotes>
+    <releaseNotes>This version fixes some issues on the sample config, add some new specs, upgrades Scriban to avoid a vulnerability.</releaseNotes>
     <copyright>Copyright 2026- Luciano Spiguel</copyright>
     <tags>XrmToolBox Documentation AI Markdown D365 Dataverse Grounding</tags>
     <dependencies>
