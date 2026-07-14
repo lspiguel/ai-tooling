@@ -23,22 +23,23 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
         {
             // Queries
             ("SampleConfig.queries.app-modules.fetch.xml",            @"config\queries\app-modules.fetch.xml"),
+            ("SampleConfig.queries.bpf-stages.fetch.xml",             @"config\queries\bpf-stages.fetch.xml"),
+            ("SampleConfig.queries.business-process-flows.fetch.xml", @"config\queries\business-process-flows.fetch.xml"),
+            ("SampleConfig.queries.cloud-flows.fetch.xml",            @"config\queries\cloud-flows.fetch.xml"),
             ("SampleConfig.queries.custom-api-responses.fetch.xml",   @"config\queries\custom-api-responses.fetch.xml"),
             ("SampleConfig.queries.custom-apis.fetch.xml",            @"config\queries\custom-apis.fetch.xml"),
             ("SampleConfig.queries.env-vars.fetch.xml",               @"config\queries\env-vars.fetch.xml"),
             ("SampleConfig.queries.plugin-assemblies.fetch.xml",      @"config\queries\plugin-assemblies.fetch.xml"),
             ("SampleConfig.queries.sdk-steps.fetch.xml",              @"config\queries\sdk-steps.fetch.xml"),
             ("SampleConfig.queries.security-roles.fetch.xml",         @"config\queries\security-roles.fetch.xml"),
-            ("SampleConfig.queries.solutions-and-entities.fetch.xml", @"config\queries\solutions-and-entities.fetch.xml"),
-            ("SampleConfig.queries.solutions-components.fetch.xml",   @"config\queries\solutions-components.fetch.xml"),
             ("SampleConfig.queries.solutions-detail.fetch.xml",       @"config\queries\solutions-detail.fetch.xml"),
-            ("SampleConfig.queries.solutions.fetch.xml",              @"config\queries\solutions.fetch.xml"),
             ("SampleConfig.queries.workflows.fetch.xml",              @"config\queries\workflows.fetch.xml"),
 
             // Transformations — Scriban templates
             ("SampleConfig.transformations.entity-dictionary.sbn",    @"config\transformations\entity-dictionary.sbn"),
             ("SampleConfig.transformations.forms-and-views.sbn",      @"config\transformations\forms-and-views.sbn"),
             ("SampleConfig.transformations.optionsets.sbn",           @"config\transformations\optionsets.sbn"),
+            ("SampleConfig.transformations.power-automate-flows.sbn", @"config\transformations\power-automate-flows.sbn"),
             ("SampleConfig.transformations.security-model.sbn",       @"config\transformations\security-model.sbn"),
             ("SampleConfig.transformations.solution-inventory.sbn",   @"config\transformations\solution-inventory.sbn"),
             ("SampleConfig.transformations.solutions-reference.sbn",  @"config\transformations\solutions-reference.sbn"),
@@ -47,9 +48,13 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             ("SampleConfig.EntityDictionary.context-exporter-config.json",   @"config\EntityDictionary.context-exporter-config.json"),
             ("SampleConfig.FormsAndViews.context-exporter-config.json",      @"config\FormsAndViews.context-exporter-config.json"),
             ("SampleConfig.Optionsets.context-exporter-config.json",         @"config\Optionsets.context-exporter-config.json"),
+            ("SampleConfig.PowerAutomateFlows.context-exporter-config.json", @"config\PowerAutomateFlows.context-exporter-config.json"),
             ("SampleConfig.SecurityModel.context-exporter-config.json",      @"config\SecurityModel.context-exporter-config.json"),
             ("SampleConfig.SolutionInventory.context-exporter-config.json",  @"config\SolutionInventory.context-exporter-config.json"),
             ("SampleConfig.SolutionsReference.context-exporter-config.json", @"config\SolutionsReference.context-exporter-config.json"),
+
+            // JSON Schema — deployed beside the spec configs so their relative "./context-exporter.schema.json" reference resolves for IDE IntelliSense.
+            ("SampleConfig.context-exporter.schema.json",                    @"config\context-exporter.schema.json"),
         };
 
         // LEGAL.md handled separately (never overwritten on upgrade, and org-name substitution applied on first deploy).

@@ -276,6 +276,44 @@ _No virtual table entities found._
 
 ---
 
+## Business Process Flows
+
+{{
+  bpf_stage_map = {}
+  for stage in bpfStages
+    pid = stage.processid
+    if pid != null
+      pid_id = pid.id ?? pid
+      if bpf_stage_map[pid_id] == null
+        bpf_stage_map[pid_id] = []
+      end
+      bpf_stage_map[pid_id] = bpf_stage_map[pid_id] | array.add stage
+    end
+  end
+}}
+{{ for bpf in businessProcessFlows | array.sort 'name' -}}
+{{
+  bpf_id = bpf.workflowid ?? bpf._id
+  stages = bpf_stage_map[bpf_id] ?? []
+}}
+
+### {{ bpf.name }}{{ if (bpf.statuscode ?? 2) != 2 }} *(inactive)*{{ end }}
+
+**Entity:** `{{ bpf.primaryentity }}`
+
+{{ if stages.size > 0 -}}
+| Stage | Entity |
+|---|---|
+{{ for stage in stages | array.sort 'stagename' -}}
+| {{ stage.stagename }} | {{ stage.primaryentitytypecode ?? bpf.primaryentity }} |
+{{ end }}
+{{ else -}}
+_No stages found._
+{{ end -}}
+{{ end }}
+
+---
+
 ## Security Roles
 
 {{ role_names = securityRoles | pluck "name" | array.sort }}

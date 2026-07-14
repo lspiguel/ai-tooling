@@ -1,5 +1,5 @@
 {
-  "$schema": "../schema/context-exporter.schema.json",
+  "$schema": "./context-exporter.schema.json",
   "spec": "SolutionsReference",
   "version": "1.0.0",
   "legal": "LEGAL.md",
@@ -74,6 +74,18 @@
       "type": "fetchxml",
       "source": "workflows.fetch.xml",
       "resultKey": "workflows"
+    },
+    {
+      "id": "business-process-flows",
+      "type": "fetchxml",
+      "source": "business-process-flows.fetch.xml",
+      "resultKey": "businessProcessFlows"
+    },
+    {
+      "id": "bpf-stages",
+      "type": "fetchxml",
+      "source": "bpf-stages.fetch.xml",
+      "resultKey": "bpfStages"
     },
     {
       "id": "app-modules",

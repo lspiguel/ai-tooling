@@ -1,5 +1,5 @@
 {
-  "$schema": "../schema/context-exporter.schema.json",
+  "$schema": "./context-exporter.schema.json",
   "spec": "SolutionInventory",
   "version": "1.0.0",
   "legal": "LEGAL.md",

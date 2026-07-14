@@ -1,0 +1,22 @@
+{
+  "$schema": "./context-exporter.schema.json",
+  "spec": "PowerAutomateFlows",
+  "version": "1.0.0",
+  "legal": "LEGAL.md",
+  "frontMatter": {
+    "generatedBy": "D365 CE Context Exporter",
+    "purpose": "AI assistant grounding context — Power Automate cloud flows with source definitions"
+  },
+  "python": {
+    "interpreter": "auto"
+  },
+  "transformation": "power-automate-flows.sbn",
+  "queries": [
+    {
+      "id": "cloud-flows",
+      "type": "fetchxml",
+      "source": "cloud-flows.fetch.xml",
+      "resultKey": "flows"
+    }
+  ]
+}

@@ -98,6 +98,12 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "requirements.txt")), Is.False, "requirements.txt must not be deployed");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "SecurityModel.context-exporter-config.json")), Is.True, "SecurityModel spec");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "SolutionsReference.context-exporter-config.json")), Is.True, "SolutionsReference spec");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "context-exporter.schema.json")), Is.True, "schema deployed beside specs");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "PowerAutomateFlows.context-exporter-config.json")), Is.True, "PowerAutomateFlows spec");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "power-automate-flows.sbn")), Is.True, "power-automate-flows transformation");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "queries", "cloud-flows.fetch.xml")), Is.True, "cloud-flows query");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "queries", "business-process-flows.fetch.xml")), Is.True, "business-process-flows query");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "queries", "bpf-stages.fetch.xml")), Is.True, "bpf-stages query");
             Assert.That(File.Exists(Path.Combine(_baseDir, "LEGAL.md")), Is.True, "LEGAL.md");
         }
 
