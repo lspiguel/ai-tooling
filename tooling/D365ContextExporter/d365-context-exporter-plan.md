@@ -467,6 +467,15 @@ Work is broken into five phases, each independently deliverable.
 - Add `Scriban` NuGet package; add `Scriban.dll` to the nuspec. No Python runtime or IronPython packages are shipped.
 - **Exit criteria:** plugin installs and runs with no Python on the user's machine; all templates and filters produce equivalent output to the Jinja2 originals; no token-count blockquote appears in any output file.
 
+### Phase 6 — Scriban source embedding + first-run welcome popup (sprint 6)
+
+> See [`d365-context-exporter-phase6.md`](d365-context-exporter-phase6.md) for the full implementation plan.
+
+- Compile Scriban source directly into the plugin DLL using `PackageScribanIncludeSource=true` and `IncludeAssets="Build"` on the package reference. `Scriban.dll` is eliminated from the output; the `AssemblyResolve` handler is kept intact for the remaining runtime dependencies (`System.Text.Json`, `System.Text.Encodings.Web`). Three polyfill packages required for .NET Framework 4.8 are added (`Microsoft.CSharp`, `System.Threading.Tasks.Extensions`, `PolySharp`).
+- Add a `WelcomeShown` boolean user setting. On the plugin control's first `Load` event (before any directory prompts), if the flag is false, flip it, save, and show a modal `WelcomeForm` dialog containing the Quick Start section of the README rendered as HTML via the built-in `WebBrowser` control. The HTML is stored as an embedded assembly resource (`Resources/WelcomeQuickStart.html`).
+- Remove `Scriban.dll` from the nuspec and from the `Directory.Build.targets` private-deps copy list.
+- **Exit criteria:** `Scriban.dll` is absent from the build output and the nupkg; the welcome dialog appears exactly once on first plugin load; all existing tests pass.
+
 ## Testing Strategy
 
 Following the project's testing conventions (Moq-based, no Fakes frameworks):

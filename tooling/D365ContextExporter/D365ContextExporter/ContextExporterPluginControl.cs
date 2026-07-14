@@ -12,6 +12,8 @@ namespace Lspiguel.Xrm.D365ContextExporter
     using Lspiguel.Xrm.D365ContextExporter.Helpers;
     using Lspiguel.Xrm.D365ContextExporter.Models;
     using Lspiguel.Xrm.D365ContextExporter.Orchestration;
+    using Lspiguel.Xrm.D365ContextExporter.Properties;
+    using Lspiguel.Xrm.D365ContextExporter.UI;
 
     using McTools.Xrm.Connection;
 
@@ -48,6 +50,7 @@ namespace Lspiguel.Xrm.D365ContextExporter
 
         private void ContextExporterPluginControl_Load(object sender, EventArgs e)
         {
+            this.ShowWelcomeIfFirstLoad();
             this.dirPicker.LoadSettings();
             this.initialized = true;
             if (!string.IsNullOrEmpty(this.dirPicker.SelectedDirectory))
@@ -169,6 +172,21 @@ namespace Lspiguel.Xrm.D365ContextExporter
                     }
                 },
             });
+        }
+
+        private void ShowWelcomeIfFirstLoad()
+        {
+            if (Settings.Default.WelcomeShown)
+            {
+                return;
+            }
+
+            // Flip before showing — prevents re-trigger if ShowDialog throws.
+            Settings.Default.WelcomeShown = true;
+            Settings.Default.Save();
+
+            using var form = new WelcomeForm();
+            form.ShowDialog(this);
         }
 
         private void CheckAndOfferFirstRun(string dir)
