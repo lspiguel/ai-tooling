@@ -6,9 +6,9 @@
     <AssemblyName>D365ContextExporter</AssemblyName>
     <Company>Luciano Spiguel</Company>
     <Authors>Luciano Spiguel</Authors>
-    <AssemblyVersion>1.2026.6.1</AssemblyVersion>
-    <FileVersion>1.2026.6.1</FileVersion>
-    <Version>1.2026.6.1</Version>
+    <AssemblyVersion>1.2026.7.1</AssemblyVersion>
+    <FileVersion>1.2026.7.1</FileVersion>
+    <Version>1.2026.7.1</Version>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <PackageScribanIncludeSource>true</PackageScribanIncludeSource>
@@ -37,7 +37,7 @@
     <!-- Microsoft.PowerPlatform.Dataverse.Client added in Phase 2 when query runners are implemented.
          XrmToolBoxPackage already provides IOrganizationService and McTools.Xrm.Connection. -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Scriban" Version="7.2.0" IncludeAssets="Build" />
+    <PackageReference Include="Scriban" Version="7.2.5" IncludeAssets="Build" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
     <PackageReference Include="PolySharp" Version="1.15.0">
