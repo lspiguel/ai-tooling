@@ -10,17 +10,17 @@
 <link rel="stylesheet" href="palette.css">
 <style>
   :root{
-    --ink:#2a2822;                    /* warm near-black */
-    --ink-soft:#6d6759;
-    --paper:var(--beige);            /* page background */
-    --surface:#FFFFFF;
-    --rule:var(--sand-dune);
-    --lane1:var(--coral-deep);       /* general-purpose assistants */
-    --lane1-bg:var(--coral-tint);
-    --lane3:var(--green-deep);       /* coding assistants & agents */
-    --lane3-bg:var(--tea-green);
-    --amber:var(--caramel-deep);
-    --amber-bg:var(--caramel-tint);
+    --ink:var(--content-strong);      /* warm near-black */
+    --ink-soft:var(--content-muted);
+    --paper:var(--surface-base);            /* page background */
+    --surface:var(--surface-raised);
+    --rule:var(--neutral);
+    --lane1:var(--primary-shaded);       /* general-purpose assistants */
+    --lane1-bg:var(--primary-softer);
+    --lane3:var(--secondary-shaded);       /* coding assistants & agents */
+    --lane3-bg:var(--secondary-softer);
+    --amber:var(--tertiary-shaded);
+    --amber-bg:var(--tertiary-softer);
   }
 
   *{box-sizing:border-box;margin:0;padding:0;}
@@ -173,7 +173,7 @@
     font-size:10px;font-weight:600;
     display:inline-block;margin-top:5px;
     padding:2px 5px;border-radius:2px;
-    background:var(--ink);color:#fff;
+    background:var(--ink);color:var(--surface);
   }
 
   /* ---------- return arc (runs down the loop rows and back up to [1]) ---------- */
@@ -212,7 +212,7 @@
 
   /* ---------- backbone (inset panel, sits above the grid) ---------- */
   .backbone{
-    background:var(--paper-tint);
+    background:var(--surface-softer);
     border:1px solid var(--rule);
     border-radius:3px;
     padding:18px 20px;
@@ -252,7 +252,7 @@
   .boundary .mark{
     font-family:'IBM Plex Mono',monospace;
     font-size:10px;font-weight:600;letter-spacing:.1em;
-    color:#fff;background:var(--amber);
+    color:var(--surface);background:var(--amber);
     padding:3px 7px;border-radius:2px;flex-shrink:0;
     text-transform:uppercase;
   }
