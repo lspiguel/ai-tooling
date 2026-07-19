@@ -1,4 +1,4 @@
-# [C.1] Project Setup — Context Exporter grounding for a general-purpose assistant
+# [C.1] Project Setup — the engagement reference: Context Exporter grounding for a general-purpose assistant
 
 ## Contents
 
@@ -142,7 +142,7 @@ Create **one grounded Project per client** and seed it:
 4. **Pin the client's data-handling rules** into the Project's custom instructions — a short paragraph stating the boundary (which tier is approved, what must never be pasted in, that outputs are drafts for human review). This makes the assistant remind *you* when a request would over-share.
 5. **Record the source environment URL and the export date** in the instructions so everyone knows how fresh the grounding is and which tenant it reflects.
 
-From here the assistant inherits the client's model on every [1.1] Specification / [2.1] Planning / [5.1] Validation conversation without re-explaining it.
+From here the assistant inherits the client's model on every [1.1] Specification / Intent, [2.1] Planning / Design, and [5.1] Validation conversation without re-explaining it.
 
 ---
 

@@ -202,7 +202,7 @@ winget install --id GitHub.GitHubDesktop -e --silent --accept-package-agreements
 
 ## 12. Telling your AI assistant
 
-Even once these tools are installed, an AI coding assistant won't know they're available unless you tell it — it may otherwise default to walking you through manual installs or asking permission before using a CLI tool it doesn't know it has. Give it this context once, using whatever persistent instructions/memory mechanism it supports (a project instructions file such as `CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, or a chat-level "custom instructions"/memory feature):
+Even once these tools are installed, an AI coding assistant won't know they're available unless you tell it — it may otherwise default to walking you through manual installs or asking permission before using a CLI tool it doesn't know it has. Give it this context once, using whatever persistent **user-level** instructions or memory mechanism it supports (a global/personal config, not a project-committed file — this is machine-specific, not project-specific):
 
 ```text
 The following developer tools are installed and available on this machine's command line. Assume they can be used directly, and commit this to your memory:

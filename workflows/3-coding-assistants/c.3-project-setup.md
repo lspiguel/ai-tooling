@@ -1,4 +1,4 @@
-# [C.3] Project Setup — git repo initialization and solution export automation
+# [C.3] Project Setup — ALM and/or repository wiring: git repo initialization and solution export automation
 
 > **Prefer ALM if it exists.** If the engagement already has a Power Platform Pipelines / Azure DevOps "export & unpack" ALM process, use it — this local script is the fallback for when there is no pipeline yet, or for a developer's own working copy. Either way the *folder layout* below is what the assistant reads.
 
@@ -8,10 +8,9 @@
 2. [Standard repository layout](#2-standard-repository-layout)
 3. [Initialize the repository](#3-initialize-the-repository)
 4. [The `.gitignore`](#4-the-gitignore)
-5. [The AI instruction stack](#5-the-ai-instruction-stack)
-6. [The solution export/unpack script](#6-the-solution-exportunpack-script)
-7. [First run and commit](#7-first-run-and-commit)
-8. [Wire up MCP and finish grounding](#8-wire-up-mcp-and-finish-grounding)
+5. [The solution export/unpack script](#5-the-solution-exportunpack-script)
+6. [First run and commit](#6-first-run-and-commit)
+7. [Wire up MCP and finish grounding](#7-wire-up-mcp-and-finish-grounding)
 
 ---
 
@@ -23,7 +22,7 @@
 | PAC CLI (`pac`) | `dotnet tool install --global Microsoft.PowerApps.CLI.Tool`. Provides `solution export`/`unpack` and `auth`. |
 | VS Code + Copilot / Cursor / Claude Code | The coding assistant that will read the repo. |
 | A connection to the client's Dataverse environment | Export from the environment that is the source of truth for configuration — usually **Dev**. |
-| The engagement's **template repo** | Fork the [B.3] template so the instruction/agent/skill files start consistent; this guide fills in the client specifics. |
+| The engagement's **template repo** | Fork the [B.3] template so the repo layout and automation scripts start consistent; this guide fills in the client specifics. |
 
 ---
 
@@ -33,13 +32,6 @@ One repo (or a small set) per engagement, with a fixed top-level layout so the a
 
 ```
 <client>-d365/
-├── .github/
-│   ├── copilot-instructions.md     Always-on project instructions (Copilot)
-│   ├── agents/                     *.agent.md personas (reviewer, plugin-dev, PCF)
-│   └── skills/                     <name>/SKILL.md reusable task instructions
-├── .claude/                        Claude Code equivalents (agents/, skills/)
-├── AGENTS.md                       Build/test/"done" workflow rules (both ecosystems)
-├── CLAUDE.md                       Claude Code always-on instructions
 ├── src/                            PRO-CODE
 │   ├── Plugins/                    Plugin & Custom API assemblies
 │   ├── PCF/                        PCF controls
@@ -56,7 +48,7 @@ One repo (or a small set) per engagement, with a fixed top-level layout so the a
 └── README.md
 ```
 
-Rationale for the split: **`src/`** is code that compiles, **`solutions/`** is Dataverse configuration unpacked to a diffable tree, **`webresources/`** is hand-authored client-script kept editable (not just the base64 blob inside the solution), **AI instruction files** live where each assistant natively discovers them. Keeping these separate is what makes drift detection and grounded gap analysis meaningful later.
+Rationale for the split: **`src/`** is code that compiles, **`solutions/`** is Dataverse configuration unpacked to a diffable tree, **`webresources/`** is hand-authored client-script kept editable (not just the base64 blob inside the solution). Keeping these separate is what makes drift detection and grounded gap analysis meaningful later.
 
 > Decide whether `webresources/` is authored here and deployed *into* the solution, or unpacked *out of* it, and stick to one direction — mixing the two causes merge pain.
 
@@ -75,8 +67,6 @@ New-Item -ItemType Directory -Force -Path $repo | Out-Null
 
 # Standard folders
 $folders = @(
-    ".github/agents", ".github/skills",
-    ".claude/agents", ".claude/skills",
     "src/Plugins", "src/PCF", "src/Functions",
     "solutions",
     "webresources",
@@ -96,7 +86,7 @@ git init -b main
 Write-Host "Initialized $repo"
 ```
 
-> Clone the [B.3] template repo instead of `git init` if you want the instruction stack, agent personas, and skills to arrive pre-populated — then delete the template's git history (`Remove-Item -Recurse -Force .git; git init -b main`) and lay the client folders on top.
+> Clone the [B.3] template repo instead of `git init` if you want the repo layout and automation scripts to arrive pre-populated — then delete the template's git history (`Remove-Item -Recurse -Force .git; git init -b main`) and lay the client folders on top.
 
 ---
 
@@ -133,20 +123,7 @@ Keep the `.zip` **out** of git deliberately: the diffable `solutions/<Name>/src/
 
 ---
 
-## 5. The AI instruction stack
-
-Fork the template files and fill in the client specifics — this is what carries conventions into every assistant session:
-
-- **`copilot-instructions.md` / `CLAUDE.md`** — always-on, project-wide. Set the **publisher prefix**, environment URLs, "no early binding," StyleCop, Repository pattern, and the standing rule *"tables change fast → describe via Dataverse MCP, don't assume schema."* Keep it under ~1,000 words.
-- **`AGENTS.md`** — how to build, which test command, what "done" means. Nestable per subdirectory (`src/Plugins` vs `src/PCF`).
-- **`.github/agents/*.agent.md`** (`.claude/agents/*`) — named personas with a constrained tool list.
-- **`.github/skills/<name>/SKILL.md`** (`.claude/skills/*`) — reusable task instructions, auto-discovered.
-
-Fill in per client: **publisher prefix**, **environment URLs**, **naming conventions**, and the **data-boundary rule**. See [B.3](./b.3-initial-setup.md) for the canonical stack.
-
----
-
-## 6. The solution export/unpack script
+## 5. The solution export/unpack script
 
 Drop this in `scripts/Export-Solutions.ps1`. It authenticates against the environment, exports each named solution (unmanaged, and optionally managed), and unpacks it into `solutions/<Name>/src/` — a clean, diffable tree ready to commit.
 
@@ -214,7 +191,7 @@ Notes:
 
 ---
 
-## 7. First run and commit
+## 6. First run and commit
 
 ```PowerShell
 # From the repo root
@@ -229,13 +206,12 @@ Review the unpacked tree under `solutions/<Name>/src/` — you should see the en
 
 ---
 
-## 8. Wire up MCP and finish grounding
+## 7. Wire up MCP and finish grounding
 
 With the repo grounded, complete the [C.3] setup from the matrix:
 
 - **Drop the Context Exporter packs** into `context/` (produced per [C.1](../1-general-purpose-assistants/c.1-project-setup.md)) — the same `.context.md` snapshots, now sitting next to the code for the assistant to read.
 - **Register this environment's Dataverse MCP** so the assistant can `describe`/`search` live schema and read current rows, not just the point-in-time unpack. Remember: the admin must **allow-list the client per environment**, and tool calls from non-Copilot-Studio agents are **billable**.
 - **Register the ADO/GitHub MCP** so the spec/plan/task rows can read and write the backlog.
-- **Bootstrap the instruction files** from the actual repo (`/init` or the equivalent) so `copilot-instructions.md` / `CLAUDE.md` reflect what's really there.
 
 This whole sequence — init → unpack → ground → wire-MCP — is a strong candidate for a **`d365-project-setup` skill** so it runs identically on every engagement.

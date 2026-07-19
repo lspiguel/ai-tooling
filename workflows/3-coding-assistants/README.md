@@ -14,19 +14,19 @@ Phase-specific prompts have been organized into per-activity guides following th
 
 | Guide | What it covers |
 |---|---|
-| [B.3 — Initial setup](./b.3-initial-setup.md) | Dev-box baseline: Visual Studio, package managers, CLI tools |
-| [C.3 — Project setup](./c.3-project-setup.md) | Repo layout, solution export/unpack automation, the AI instruction stack, MCP wiring |
+| [B.3 — Initial setup](./b.3-initial-setup.md) | Agent-driven tooling: Visual Studio, package managers, CLI tools, IDEs |
+| [C.3 — Project setup](./c.3-project-setup.md) | ALM and/or repository wiring: repo layout, solution export/unpack automation, MCP wiring |
 
 ### The delivery loop
 
 | Guide | What it covers |
 |---|---|
-| [1.3 — Specification](./1.3-specification.md) | Grounded gap analysis, field-reference/impact search, technical specs naming real components |
-| [2.3 — Planning](./2.3-planning.md) | ADO work-item tree via MCP, sequencing from solution structure, risk register, ADRs |
-| [3.3 — Tasking](./3.3-tasking.md) | Repo-grounded task notes, branch scaffolding, coding-agent pre-flight |
-| [4.3 — Implementation](./4.3-implementation.md) | Plugins, web resources, PCF, Azure Functions, pipelines, queries, async coding-agent delegation |
-| [5.3 — Validation / peer review](./5.3-validation-peer-review.md) | Conventions-aware code review, config/security/flow review, drift detection, PR hygiene |
-| [6.3 — Documentation](./6.3-documentation.md) | Technical docs from code, solution summaries, instruction-file refresh, living schema packs |
+| [1.3 — Specification / Intent](./1.3-specification.md) | User stories & ACs focused on intent, Ask Mode exploration, grounded gap analysis, field-reference/impact search |
+| [2.3 — Planning / Design](./2.3-planning.md) | Plan Mode: detailed implementation plan, peer review of the plan, sequencing from solution structure, risk register, ADRs |
+| [3.3 — Tasking](./3.3-tasking.md) | Expand the plan: checklists, unit test conditions, ADO tasks via MCP, branch scaffolding, coding-agent pre-flight |
+| [4.3 — Implementation / Build](./4.3-implementation.md) | Agent Mode with human in the loop: plugins, web resources, PCF, Azure Functions, pipelines, queries, async coding-agent delegation |
+| [5.3 — Validation / Peer review](./5.3-validation-peer-review.md) | Ask Mode with adversary personas, unit-test coverage, config/security/flow review, drift detection, PR hygiene |
+| [6.3 — Documentation / Information sharing](./6.3-documentation.md) | Automated docs: technical docs from code, wiki updates, runbook review, instruction-file refresh |
 
 ---
 
@@ -298,7 +298,7 @@ that appear to have no references in forms, views, plugins, or other flows?
 ```
 Create a GitHub Actions workflow that triggers on pull requests targeting main.
 For each changed .cs file, call the Anthropic API to review the code
-against these rules: [paste rules from AGENTS.md or best-practices.md].
+against these rules: [paste rules from best-practices.md].
 Post the findings as a PR comment. Use a repository secret for the API key.
 ```
 
@@ -313,7 +313,7 @@ Post the findings as a PR comment. Use a repository secret for the API key.
 | **Constrain scope explicitly** | "Do not change any existing logic, only add comments" |
 | **Ask for issues, not fixes** | "List what could be improved, do not make changes yet" |
 | **Chain iteratively** | Start broad → refine by layer (business logic → queries → tests) |
-| **Reference conventions by name** | "Follow StyleCop / INVEST / Gherkin / the naming convention in AGENTS.md" |
+| **Reference conventions by name** | "Follow StyleCop / INVEST / Gherkin / the project's naming convention" |
 | **Separate concerns** | Generate class → move queries → generate tests → enforce style (separate prompts) |
 
 ---
