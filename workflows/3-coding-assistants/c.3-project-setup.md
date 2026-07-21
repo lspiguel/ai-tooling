@@ -2,19 +2,9 @@
 
 > **Prefer ALM if it exists.** If the engagement already has a Power Platform Pipelines / Azure DevOps "export & unpack" ALM process, use it — this local script is the fallback for when there is no pipeline yet, or for a developer's own working copy. Either way the *folder layout* below is what the assistant reads.
 
-## Contents
-
-1. [Prerequisites](#1-prerequisites)
-2. [Standard repository layout](#2-standard-repository-layout)
-3. [Initialize the repository](#3-initialize-the-repository)
-4. [The `.gitignore`](#4-the-gitignore)
-5. [The solution export/unpack script](#5-the-solution-exportunpack-script)
-6. [First run and commit](#6-first-run-and-commit)
-7. [Wire up MCP and finish grounding](#7-wire-up-mcp-and-finish-grounding)
-
 ---
 
-## 1. Prerequisites
+## What you need in place
 
 | Requirement | Notes |
 |---|---|
@@ -26,7 +16,33 @@
 
 ---
 
-## 2. Standard repository layout
+## 1. Prepare the local, personal Context repository
+
+```
+<client>-Context/
+├── .gitignore
+├── context-exporter/        D365 Context Exporter folder
+│   ├── config/              Configuration files
+│   ├── output/              Contenxt packs to be supplied to the General AI Assistants
+│   └── runs/                Ignored by .gitignore
+├── XXX-story-1
+│   ├── XXX-story-1.md       Replicated user stories content in markdown
+│   ├── ...
+│   └── ...
+├── YYY-story-2
+├── ZZZ-story-3
+├── offline-access/
+│   ├── deployment/
+│   ├── guides/
+│   ├── sow/
+│   ├── ...
+│   └── runbooks/
+└── ...
+```
+
+---
+
+## 2. Project repository layout
 
 One repo (or a small set) per engagement, with a fixed top-level layout so the assistant — and every teammate — always finds things in the same place:
 
