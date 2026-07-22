@@ -48,7 +48,7 @@ Working list compiled from all files under `workflows/`. The per-file "Open poin
 - [x] ~~Is the "pre-flight for the coding agent" step something you want as a standard gate, or optional?~~ — resolved: removed. Dropped the "Pre-flight a task for the async coding agent" prompt from `3.3-tasking.md` entirely, and the matching "coding-agent pre-flight" mention from the column-3 README's guide table.
 
 **[4.3] Implementation** (`3-coding-assistants/4.3-implementation.md`)
-- [ ] This file curates a subset and links to the README for the rest — right balance, or should it inline more (e.g. the full testing/mock prompts)?
+- [x] ~~This file curates a subset and links to the README for the rest~~ — resolved: inline everything. Copied in every prompt previously reached only via a "More (...): [README § ...]" link — plugin mock-fix/targeted-mock/error-code prompts, JS code-explanation/ribbon-command prompts, PCF hooks-migration/dead-code/mock-harness prompts, the full Azure Functions config-class/logging/JSON-output-testing/dynamic-field-handling set, and FetchXML→QueryExpression + unused-components — removed the "More (...)" link lines, and dropped the review-checkpoints table's "(From the README guardrails...)" attribution since the table is now self-contained. The README itself is untouched — duplication across both files is intentional.
 - [ ] Should the **Dataverse coding-agent plugin** (preview) get its own activity section (environment gestures: import, publish, test-data) once piloted?
 - [ ] FetchXML Test Fixture Manager (Phase 1 done, per the build backlog) — worth an activity section here on offline test fixtures?
 
