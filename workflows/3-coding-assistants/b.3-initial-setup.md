@@ -13,7 +13,7 @@ This guide lists the package managers and CLI tools used to set up a machine for
 5. [Visual Studio Code](#5-visual-studio-code)
 6. [PAC CLI (Power Platform CLI)](#6-pac-cli-power-platform-cli)
 7. [Azure CLI](#7-azure-cli)
-8. [PandaDoc](#8-pandadoc)
+8. [Pandoc](#8-pandoc)
 9. [mmdc (Mermaid CLI)](#9-mmdc-mermaid-cli)
 10. [Git](#10-git)
 11. [GitHub Desktop](#11-github-desktop)
@@ -160,12 +160,12 @@ winget install --exact --id Microsoft.AzureCLI --silent --accept-package-agreeme
 
 ---
 
-## 8. PandaDoc
+## 8. Pandoc
 
-Document automation tool; converts most document formats (PDF, DOCX) to Markdown and vice versa.
+Universal document converter; converts between most document formats (PDF, DOCX, HTML) and Markdown in both directions.
 
 ```Shell
-choco install pandadoc -y
+choco install pandoc -y
 ```
 
 ---
@@ -214,7 +214,7 @@ The following developer tools are installed and available on this machine's comm
 - Visual Studio Code.
 - PAC CLI (`pac`).
 - Azure CLI (`az`).
-- PandaDoc CLI — converts documents (PDF, DOCX) to/from Markdown.
+- Pandoc — converts documents (PDF, DOCX) to/from Markdown.
 - Mermaid CLI (`mmdc`) — renders Mermaid diagrams to PNG/SVG/PDF.
 - Git (`git`).
 - GitHub Desktop — GUI client for Git and GitHub.
@@ -257,7 +257,7 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.We
 choco feature enable -n allowGlobalConfirmation
 
 # Chocolatey-managed tools
-choco install notepadplusplus postman git xrmtoolbox pandadoc -y
+choco install notepadplusplus postman git xrmtoolbox pandoc -y
 
 # Visual Studio Code
 winget install --id Microsoft.VisualStudioCode -e --silent --accept-package-agreements --accept-source-agreements

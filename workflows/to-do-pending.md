@@ -86,9 +86,9 @@ Broken or inconsistent cross-references:
 
 Content / naming to verify:
 
-- [ ] **PandaDoc vs Pandoc** (`b.1` §8, `b.3` §8, both bootstrap appendices): the description ("converts PDF/DOCX to/from Markdown") and the intended tool is almost certainly **Pandoc** (`choco install pandoc`); PandaDoc is an unrelated e-signature SaaS and `choco install pandadoc` is not the doc converter. Verify and correct the tool name, package id, and the "Telling your AI assistant" prompt lines in both files.
+- [x] **PandaDoc → Pandoc** (`b.1` §8, `b.3` §8, both bootstrap appendices): corrected tool name, package id (`choco install pandoc`), description, and the "Telling your AI assistant" prompt lines in both files.
 - [ ] `b.1` and `b.3` share the identical title "Package Managers and Tools for Work Automation" — retitle to distinguish (e.g. "[B.1] Initial Setup — …" / "[B.3] Initial Setup — …") and to match how the READMEs and matrix refer to them.
-- [ ] `b.1`/`b.3` duplicate most sections (Chocolatey, VS Code, PAC CLI, Azure CLI, PandaDoc, mmdc, Git, GitHub Desktop) — decide: intentional duplication (each column self-contained) or extract a shared base file.
+- [x] `b.1`/`b.3` duplicate most sections (Chocolatey, VS Code, PAC CLI, Azure CLI, Pandoc, mmdc, Git, GitHub Desktop) — decide: intentional duplication (each column self-contained) or extract a shared base file. - INTENTIONAL
 
 ---
 
