@@ -78,17 +78,18 @@ Typos / grammar (mechanical, safe to fix):
 
 Broken or inconsistent cross-references:
 
-- [ ] `6.1-documentation.md` links to `[C.1 §6](./c.1-project-setup.md#6-run-the-specs)` — c.1 only has sections 1–4; "run the specs" is step 9 inside §2. Fix the anchor or restructure c.1.
-- [ ] `6.3-documentation.md` links to `[C.1 §9](../1-general-purpose-assistants/c.1-project-setup.md#9-refresh-cadence)` — refresh cadence is c.1 **§4**. Fix.
-- [ ] `b.1-initial-setup.md` + `b.3-initial-setup.md` — intro says "see section 10 for a ready-to-use prompt" but the "Telling your AI assistant" prompt is **section 12** in both files.
-- [ ] `4.3-implementation.md` references "**Plugin 9 — PCF Scaffold Orchestrator** (build backlog)" — the matrix's build-backlog table doesn't list it. Add it to the matrix backlog or drop the reference.
-- [ ] `ai-augmented-d365ce-activity-matrix.md` — Considerations item 1 contains "see [Considerations](#considerations)" *inside* the Considerations section itself (self-reference left over from when the text lived in the matrix table). Remove.
+- [x] `6.1-documentation.md` link retargeted from the nonexistent "C.1 §6" to `[C.1 §2](./c.1-project-setup.md#2-install-the-context-exporter-plugin)` (the "Run the specs" step lives inside §2 as step 9, which has no anchor of its own).
+- [x] `6.3-documentation.md` link fixed from "C.1 §9" to `[C.1 §4](../1-general-purpose-assistants/c.1-project-setup.md#4-refresh-cadence)`.
+- [x] `b.1-initial-setup.md` + `b.3-initial-setup.md` — "see section 10" → "see section 12".
+- [x] `4.3-implementation.md` — dropped the unverifiable "Plugin 9 — PCF Scaffold Orchestrator" callout; no such item exists anywhere else in the repo (the matrix only substantiates Plugin A), so removing beat fabricating a backlog entry. Revisit if this plugin is real and should be added to the matrix's build-backlog table.
+- [x] `ai-augmented-d365ce-activity-matrix.md` — removed the self-referencing "see [Considerations](#considerations)" from inside the Considerations section.
 
 Content / naming to verify:
 
 - [x] **PandaDoc → Pandoc** (`b.1` §8, `b.3` §8, both bootstrap appendices): corrected tool name, package id (`choco install pandoc`), description, and the "Telling your AI assistant" prompt lines in both files.
 - [ ] `b.1` and `b.3` share the identical title "Package Managers and Tools for Work Automation" — retitle to distinguish (e.g. "[B.1] Initial Setup — …" / "[B.3] Initial Setup — …") and to match how the READMEs and matrix refer to them.
 - [x] `b.1`/`b.3` duplicate most sections (Chocolatey, VS Code, PAC CLI, Azure CLI, Pandoc, mmdc, Git, GitHub Desktop) — decide: intentional duplication (each column self-contained) or extract a shared base file. - INTENTIONAL
+- [ ] **"Plugin B" is referenced but never specced.** `ai-augmented-d365ce-activity-matrix.md` line 45 says grounding "makes drift detection (Plugin A) and import pre-flight (Plugin B) meaningful," but the build-backlog table only lists Plugin A — Plugin B has no row, no name, no notes anywhere in the repo. Either add it to the backlog table (if it's a real planned item, e.g. a solution-import pre-flight checker) or drop the parenthetical from line 45.
 
 ---
 

@@ -2,7 +2,7 @@
 
 This guide lists the package managers and CLI tools used to set up a machine for AI-augmented development work. Each section includes both an **interactive** install (for reference) and an **unattended** install (for scripted/repeatable provisioning). Unless noted otherwise, unattended commands should be run from a PowerShell console opened **as Administrator**.
 
-> After installing any of these, remember to tell your AI assistant that you have them available — see section 10 for a ready-to-use prompt.
+> After installing any of these, remember to tell your AI assistant that you have them available — see section 12 for a ready-to-use prompt.
 
 ## Contents
 

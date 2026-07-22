@@ -2,7 +2,7 @@
 
 This guide lists the package managers and CLI tools used to set up a machine for AI-augmented development work. This profile targets general-purpose, functionally-oriented assistant work, where Python is used only occasionally — so tooling is installed via Chocolatey rather than pulling in the full Visual Studio IDE. Each section gives an **unattended** install suitable for scripted/repeatable provisioning. Unless noted otherwise, commands should be run from a PowerShell console opened **as Administrator**.
 
-> After installing any of these, remember to tell your AI assistant that you have them available — see section 10 for a ready-to-use prompt.
+> After installing any of these, remember to tell your AI assistant that you have them available — see section 12 for a ready-to-use prompt.
 
 ## Contents
 
