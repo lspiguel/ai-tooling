@@ -67,14 +67,14 @@ Working list compiled from all files under `workflows/`. The per-file "Open poin
 
 Typos / grammar (mechanical, safe to fix):
 
-- [ ] `1.1-specification.md` + `1.3-specification.md` — "costructed" → "constructed"; "managent" → "management"; the "Capturing intent" bullet reads awkwardly ("describing what will be costructed is expected to provide to the overall system") — rewrite the sentence.
-- [ ] `1.3-specification.md` — "before committing to one redaction" — "redaction" likely means "wording/formulation"; rephrase.
-- [ ] `2.3-planning.md` — "team menbers" → "members"; "ellaborate" → "elaborate".
-- [ ] `3.1-tasking.md` + `3.3-tasking.md` — "technical tea" → "technical team"; the fourth bullet is garbled and **cut off mid-sentence**: "…task checklist with crisp descriptions and an explicit " (probably "explicit Definition of Done"). Also missing punctuation: "estimate effort, assign tasks The matrix calls…".
-- [ ] `4.1-implementation.md` + `4.3-implementation.md` — "Build unit tests were applicable or manually perform testing were not" → "where applicable … where not".
-- [ ] `5.1-validation-peer-review.md` + `5.3-validation-peer-review.md` — "HITL discipline: and AI review comes *after*…" → "an AI review".
-- [ ] `6.3-documentation.md` — "If no automated ALM is in plase" → "in place".
-- [ ] `c.1-project-setup.md` + `c.3-project-setup.md` — folder-tree comment "Contenxt packs" → "Context packs".
+- [x] `1.1-specification.md` + `1.3-specification.md` — "costructed" → "constructed"; "managent" → "management"; rewrote the awkward "Capturing intent" bullet.
+- [x] `1.3-specification.md` — "before committing to one redaction" — reworded to "formulation".
+- [x] `2.3-planning.md` — "team menbers" → "members"; "ellaborate" → "elaborate".
+- [x] `3.1-tasking.md` + `3.3-tasking.md` — "technical tea" → "technical team"; completed the cut-off sentence to "…an explicit Definition of Done."; added the missing period after "assign tasks".
+- [x] `4.1-implementation.md` + `4.3-implementation.md` — "were applicable … were not" → "where applicable … where not".
+- [x] `5.1-validation-peer-review.md` + `5.3-validation-peer-review.md` — "and AI review comes *after*…" → "an AI review comes *after*…".
+- [x] `6.3-documentation.md` — "in plase" → "in place".
+- [x] `c.1-project-setup.md` + `c.3-project-setup.md` — folder-tree comment "Contenxt packs" → "Context packs".
 
 Broken or inconsistent cross-references:
 
