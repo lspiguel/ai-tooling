@@ -9,34 +9,33 @@ Working list compiled from all files under `workflows/`. The per-file "Open poin
 ### Column 1 — General-Purpose AI Assistants
 
 **[1.1] Specification** (`1-general-purpose-assistants/1.1-specification.md`)
-- [ ] The **reconciliation** and **requirement-mining** prompts are new drafts (not from the README) — do they match how you actually phrase these?
+- [x] The **reconciliation** and **requirement-mining** prompts are new drafts (not from the README) — do they match how you actually phrase these?
 
 **[2.1] Planning** (`1-general-purpose-assistants/2.1-planning.md`)
-- [ ] The design/sequencing/risk prompts are new drafts (no README source) — adjust to your house style.
-- [ ] Does the design **deck** (as opposed to doc) need its own prompt (e.g. Marp/PowerPoint outline generation)?
+- [x] The design/sequencing/risk prompts are new drafts (no README source) — adjust to your house style.
 
 **[3.1] Tasking** (`1-general-purpose-assistants/3.1-tasking.md`)
-- [ ] The checklist prompts are new drafts — the READMEs have no tasking-specific prompts. Do you have existing tasking prompts in your personal library ([B.1]) to fold in?
-- [ ] Confirm your standard **DoD items** so the first prompt's list stops being a guess.
-- [ ] **Which ADO import mechanism do you actually use** — `az boards` CLI, REST API, or CSV bulk import? The script prompt currently offers all three; pin it once confirmed.
+- [x] The checklist prompts are new drafts — the READMEs have no tasking-specific prompts. Do you have existing tasking prompts in your personal library ([B.1]) to fold in?
+- [x] Confirm your standard **DoD items** so the first prompt's list stops being a guess.
+- [x] **Which ADO import mechanism do you actually use** — `az boards` CLI, REST API, or CSV bulk import? The script prompt currently offers all three; pin it once confirmed.
 
 **[4.1] Implementation** (`1-general-purpose-assistants/4.1-implementation.md`)
-- [ ] The FetchXML/OData prompts are borrowed from the column-3 README (they work identically in chat) — OK to duplicate across both columns, or should one link to the other?
-- [ ] The Power Fx and rubber-ducking prompts are new drafts — review.
-- [ ] How deep should maker-portal copilot coverage go here? The matrix stubs it as future column [4] — currently just one bridging prompt.
+- [x] The FetchXML/OData prompts are borrowed from the column-3 README (they work identically in chat) — OK to duplicate across both columns, or should one link to the other?
+- [x] The Power Fx and rubber-ducking prompts are new drafts — review.
+- [x] How deep should maker-portal copilot coverage go here? The matrix stubs it as future column [4] — currently just one bridging prompt.
 
 **[5.1] Validation / Peer review** (`1-general-purpose-assistants/5.1-validation-peer-review.md`)
-- [ ] UAT-script, design-review, and cross-check prompts are new drafts (README only covers test-case generation + accessibility) — review.
-- [ ] Should the design-review prompt be split per artifact type (solution design vs integration design vs data-migration plan)?
+- [x] UAT-script, design-review, and cross-check prompts are new drafts (README only covers test-case generation + accessibility) — review.
+- [x] Should the design-review prompt be split per artifact type (solution design vs integration design vs data-migration plan)?
 
 **[6.1] Documentation** (`1-general-purpose-assistants/6.1-documentation.md`)
-- [ ] Release-notes, user-guide, and training prompts are new drafts (README covers runbook + changelog) — review.
+- [x] Release-notes, user-guide, and training prompts are new drafts (README covers runbook + changelog) — review.
 - [ ] What's the actual publishing flow to the **ADO wiki** — copy-paste, or a scripted push worth documenting here?
 
 ### Column 3 — Coding Assistants & Agentic Environments
 
 **[1.3] Specification** (`3-coding-assistants/1.3-specification.md`)
-- [ ] The gap-analysis, spec, and backlog prompts are new drafts built from the matrix cell; the two impact prompts come from the README. Does the gap-analysis flow match the planned **`d365-gap-analysis` skill** (build backlog) closely enough to become its seed?
+- [x] The gap-analysis, spec, and backlog prompts are new drafts built from the matrix cell; the two impact prompts come from the README. Does the gap-analysis flow match the planned **`d365-gap-analysis` skill** (build backlog) closely enough to become its seed?
 - [ ] Which ADO MCP do you target — Microsoft's `azure-devops-mcp`, or something else? Affects the exact query phrasing.
 
 **[2.3] Planning** (`3-coding-assistants/2.3-planning.md`)
