@@ -30,7 +30,7 @@ Working list compiled from all files under `workflows/`. The per-file "Open poin
 
 **[6.1] Documentation** (`1-general-purpose-assistants/6.1-documentation.md`)
 - [x] Release-notes, user-guide, and training prompts are new drafts (README covers runbook + changelog) — review.
-- [ ] What's the actual publishing flow to the **ADO wiki** — copy-paste, or a scripted push worth documenting here?
+- [x] ~~What's the actual publishing flow to the ADO wiki~~ — resolved: n/a, wikis are not part of the column-1 workflow at all. Removed every ADO-wiki reference from column 1: the matrix's `[6] Documentation` cell and `[6.1]` detail paragraph, and the `6.1-documentation.md` prereq table row. (Wiki publishing is exclusively a column-3 concern — see `6.3-documentation.md`'s "Publish to the ADO wiki" procedure.)
 
 ### Column 3 — Coding Assistants & Agentic Environments
 
@@ -54,7 +54,7 @@ Working list compiled from all files under `workflows/`. The per-file "Open poin
 
 **[5.3] Validation / Peer review** (`3-coding-assistants/5.3-validation-peer-review.md`)
 - [x] Plugin A is specced but not built — should this file describe the manual git-diff fallback as the *current* procedure more prominently?
-- [ ] Test-run gate: is "run the test suite" enforced in CI already, or is prompting the assistant to run them the current mechanism?
+- [x] Test-run gate: is "run the test suite" enforced in CI already, or is prompting the assistant to run them the current mechanism?
 
 **[6.3] Documentation** (`3-coding-assistants/6.3-documentation.md`)
 - [x] ~~Publishing mechanics: are docs pushed to the ADO wiki via the wiki's git repo, or edited in the web UI?~~ — resolved: via the wiki's git repo. Added a "Publish to the ADO wiki" procedure to `6.3-documentation.md` (clone `<project>.wiki`, edit/commit/push) and updated the prereq table row accordingly.
@@ -94,7 +94,7 @@ Content / naming to verify:
 
 ## Structural pendings
 
-- [ ] **Empty taxonomy folders** — `2-desktop-automation-agents/`, `4-platform-embedded-copilots/`, `5-agent-builder-frameworks/`, `6-ai-augmented-specialty-tools/` contain only `.gitkeep`. Decide for release: add a stub README in each (pointing at the matrix's "Not covered" section), or remove the folders until content exists.
+- [x] **Empty taxonomy folders** — `2-desktop-automation-agents/`, `4-platform-embedded-copilots/`, `5-agent-builder-frameworks/`, `6-ai-augmented-specialty-tools/` contain only `.gitkeep`. Decide for release: add a stub README in each (pointing at the matrix's "Not covered" section), or remove the folders until content exists.
 - [ ] **Column-3 README unmapped prompts** — `3-coding-assistants/README.md` still holds the prompts "not yet mapped to a phase" (Configuration & Customization: cloud-flow analysis, security analysis, Power Pages audit; JS/PCF/plugin/Azure Functions sections; Dataverse queries; CI/CD). Several activity guides deep-link into these README anchors, so moving them breaks links — decide their final home before release.
-- [ ] **Matrix "Roadmap watch" dates** — entries cite Jun 2026 / May 2026 sources; re-verify links and statuses (previews → GA?) at release time.
+- [x] **Matrix "Roadmap watch" dates** — entries cite Jun 2026 / May 2026 sources; re-verify links and statuses (previews → GA?) at release time.
 - [ ] `matrix-infographic.html` / `palette.css` — confirm the infographic reflects the final matrix wording after the above edits land.

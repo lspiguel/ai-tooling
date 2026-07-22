@@ -20,7 +20,7 @@
 | **[3] Tasking** | **Sprint planning.** Estimate effort, assign tasks, generate test plans; turn features into task checklists with crisp descriptions and a clear Definition of Done. [[3.1]](./1-general-purpose-assistants/3.1-tasking.md) | **Expand the plan.** Task out & prepare checklists, define unit test conditions; create ADO tasks via the **Azure DevOps CLI** (`az boards`); scaffold branches; emit task-level technical notes grounded in the repo. [[3.3]](./3-coding-assistants/3.3-tasking.md) |
 | **[4] Implementation / Build** | **General coding help.** Prompt for code snippets, samples and step-by-step configuration instructions — Power Fx, JS web resources, FetchXML, OData. Rubber-duck design. Use **maker-portal copilots** (Copilot in Power Apps / Power Automate, generative pages) for low-code. Pro-Code direct implementation is out of current capabilities for **AI Assistants**. [[4.1]](./1-general-purpose-assistants/4.1-implementation.md) | **Agent Mode.** Automated implementation with a human in the loop — the core build: plugins, PCF, web resources, Azure Functions, pipeline YAML; step-by-step configuration instructions where skills and tooling are unavailable. pac CLI for environment gestures. [[4.3]](./3-coding-assistants/4.3-implementation.md) |
 | **[5] Validation / Peer review** | **Test scenarios.** Test plans + UAT scripts; review design docs; peer review on pull requests; cross-check work against the ACs (AI Assistant). [[5.1]](./1-general-purpose-assistants/5.1-validation-peer-review.md) | **Review.** Use **Ask Mode with an adversary reviewer prompt** for automated review (after the human pass) — enforcing StyleCop + naming; check unit-test coverage; peer review on pull requests; test plans + UAT scripts; **Plugin A — Component Snapshot & Drift Tracker** for config drift; security/perf review; ADO/GitHub PR Copilot. [[5.3]](./3-coding-assistants/5.3-validation-peer-review.md) |
-| **[6] Documentation / Information sharing** | **User-driven docs.** Runbooks, documentation & release notes written with AI assistance; training material; publish to ADO wikis; **re-run Context Exporter** so grounding stays true — the schema packs are the living data-model docs. [[6.1]](./1-general-purpose-assistants/6.1-documentation.md) | **Automated docs.** Automated documentation & wiki updates generated from code (technical docs, ADRs); runbook review. [[6.3]](./3-coding-assistants/6.3-documentation.md) |
+| **[6] Documentation / Information sharing** | **User-driven docs.** Runbooks, documentation & release notes written with AI assistance; training material; **re-run Context Exporter** so grounding stays true — the schema packs are the living data-model docs. [[6.1]](./1-general-purpose-assistants/6.1-documentation.md) | **Automated docs.** Automated documentation & wiki updates generated from code (technical docs, ADRs); runbook review. [[6.3]](./3-coding-assistants/6.3-documentation.md) |
 
 ---
 
@@ -84,7 +84,7 @@ Write user stories & ACs: turn raw stakeholder input into the epic → feature �
 
 ### [6.1] Documentation / Information sharing
 
-**User-driven docs**: user-facing docs, runbooks, release notes, training, written with AI assistance; publish straight to ADO wikis. Re-export the context packs so grounding stays true — regenerating them is itself a documentation act.
+**User-driven docs**: user-facing docs, runbooks, release notes, training, written with AI assistance. Re-export the context packs so grounding stays true — regenerating them is itself a documentation act.
 
 ---
 
@@ -122,7 +122,7 @@ Use **Ask Mode with an adversary reviewer prompt** for automated review: explici
 
 ### [6.3] Documentation / Information sharing
 
-**Automated docs**: technical docs and ADRs generated from code, automated wiki updates, and runbook review — published to ADO wikis alongside the column-1 material. The context-pack re-export is column 1's move ([6.1]).
+**Automated docs**: technical docs and ADRs generated from code, automated wiki updates, and runbook review — published to the ADO wiki via its git repo. The context-pack re-export is column 1's move ([6.1]).
 
 ---
 
