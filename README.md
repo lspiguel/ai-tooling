@@ -15,7 +15,7 @@ Tools are organized by their **deployment context and execution model** — that
 Web, desktop, or mobile chat interfaces offering broad reasoning, generation, and task support. Not specialized to a specific execution environment. Agentic capabilities (tool use, browsing, code execution) may be available depending on the platform.
 
 **Characteristics:** conversational, broad knowledge, document generation, research, planning  
-**Examples:** Claude.ai, ChatGPT, Gemini, Microsoft 365 Copilot (chat mode)  
+**Examples:** Claude.ai, ChatGPT, Gemini, Microsoft 365 Copilot (Premium)  
 
 ### 2. Local / Desktop Automation Agents
 

@@ -1,0 +1,100 @@
+# To-do / Pending — workflows release polish
+
+Working list compiled from all files under `workflows/`. The per-file "Open points for iteration" sections have been moved here verbatim (grouped by file); the "Spotted during review" sections at the end list additional edits found while sweeping the folder.
+
+---
+
+## Open questions moved out of the activity guides
+
+### Column 1 — General-Purpose AI Assistants
+
+**[1.1] Specification** (`1-general-purpose-assistants/1.1-specification.md`)
+- [ ] The **reconciliation** and **requirement-mining** prompts are new drafts (not from the README) — do they match how you actually phrase these?
+
+**[2.1] Planning** (`1-general-purpose-assistants/2.1-planning.md`)
+- [ ] The design/sequencing/risk prompts are new drafts (no README source) — adjust to your house style.
+- [ ] Does the design **deck** (as opposed to doc) need its own prompt (e.g. Marp/PowerPoint outline generation)?
+
+**[3.1] Tasking** (`1-general-purpose-assistants/3.1-tasking.md`)
+- [ ] The checklist prompts are new drafts — the READMEs have no tasking-specific prompts. Do you have existing tasking prompts in your personal library ([B.1]) to fold in?
+- [ ] Confirm your standard **DoD items** so the first prompt's list stops being a guess.
+- [ ] **Which ADO import mechanism do you actually use** — `az boards` CLI, REST API, or CSV bulk import? The script prompt currently offers all three; pin it once confirmed.
+
+**[4.1] Implementation** (`1-general-purpose-assistants/4.1-implementation.md`)
+- [ ] The FetchXML/OData prompts are borrowed from the column-3 README (they work identically in chat) — OK to duplicate across both columns, or should one link to the other?
+- [ ] The Power Fx and rubber-ducking prompts are new drafts — review.
+- [ ] How deep should maker-portal copilot coverage go here? The matrix stubs it as future column [4] — currently just one bridging prompt.
+
+**[5.1] Validation / Peer review** (`1-general-purpose-assistants/5.1-validation-peer-review.md`)
+- [ ] UAT-script, design-review, and cross-check prompts are new drafts (README only covers test-case generation + accessibility) — review.
+- [ ] Should the design-review prompt be split per artifact type (solution design vs integration design vs data-migration plan)?
+
+**[6.1] Documentation** (`1-general-purpose-assistants/6.1-documentation.md`)
+- [ ] Release-notes, user-guide, and training prompts are new drafts (README covers runbook + changelog) — review.
+- [ ] What's the actual publishing flow to the **ADO wiki** — copy-paste, or a scripted push worth documenting here?
+
+### Column 3 — Coding Assistants & Agentic Environments
+
+**[1.3] Specification** (`3-coding-assistants/1.3-specification.md`)
+- [ ] The gap-analysis, spec, and backlog prompts are new drafts built from the matrix cell; the two impact prompts come from the README. Does the gap-analysis flow match the planned **`d365-gap-analysis` skill** (build backlog) closely enough to become its seed?
+- [ ] Which ADO MCP do you target — Microsoft's `azure-devops-mcp`, or something else? Affects the exact query phrasing.
+
+**[2.3] Planning** (`3-coding-assistants/2.3-planning.md`)
+- [ ] The matrix mentions an **"architecture skill"** for ADR drafting — does this skill exist yet, or is the ADR prompt the placeholder for it?
+- [ ] Estimation: kept in column 1's sprint planning ([3.1]) for now — should this column carry its own estimation-rationale prompt?
+
+**[3.3] Tasking** (`3-coding-assistants/3.3-tasking.md`)
+- [ ] All prompts here are new drafts — neither README covers tasking. Confirm your **branch-naming convention** so the scaffold prompt stops being a placeholder.
+- [ ] Should branch scaffolding be per-story or per-task in your workflow?
+- [ ] Is the "pre-flight for the coding agent" step something you want as a standard gate, or optional?
+
+**[4.3] Implementation** (`3-coding-assistants/4.3-implementation.md`)
+- [ ] This file curates a subset and links to the README for the rest — right balance, or should it inline more (e.g. the full testing/mock prompts)?
+- [ ] Should the **Dataverse coding-agent plugin** (preview) get its own activity section (environment gestures: import, publish, test-data) once piloted?
+- [ ] FetchXML Test Fixture Manager (Phase 1 done, per the build backlog) — worth an activity section here on offline test fixtures?
+
+**[5.3] Validation / Peer review** (`3-coding-assistants/5.3-validation-peer-review.md`)
+- [ ] Plugin A is specced but not built — should this file describe the manual git-diff fallback as the *current* procedure more prominently?
+- [ ] Test-run gate: is "run the test suite" enforced in CI already, or is prompting the assistant to run them the current mechanism?
+
+**[6.3] Documentation** (`3-coding-assistants/6.3-documentation.md`)
+- [ ] Publishing mechanics: are docs pushed to the ADO wiki via the wiki's git repo (scriptable, fits this column) or edited in the web UI? Worth a short procedure section once confirmed.
+- [ ] Should the **Context Exporter CI refresh** get a scaffold pipeline YAML here now, or wait until the headless run exists?
+
+---
+
+## Spotted during review — text fixes needed
+
+Typos / grammar (mechanical, safe to fix):
+
+- [ ] `1.1-specification.md` + `1.3-specification.md` — "costructed" → "constructed"; "managent" → "management"; the "Capturing intent" bullet reads awkwardly ("describing what will be costructed is expected to provide to the overall system") — rewrite the sentence.
+- [ ] `1.3-specification.md` — "before committing to one redaction" — "redaction" likely means "wording/formulation"; rephrase.
+- [ ] `2.3-planning.md` — "team menbers" → "members"; "ellaborate" → "elaborate".
+- [ ] `3.1-tasking.md` + `3.3-tasking.md` — "technical tea" → "technical team"; the fourth bullet is garbled and **cut off mid-sentence**: "…task checklist with crisp descriptions and an explicit " (probably "explicit Definition of Done"). Also missing punctuation: "estimate effort, assign tasks The matrix calls…".
+- [ ] `4.1-implementation.md` + `4.3-implementation.md` — "Build unit tests were applicable or manually perform testing were not" → "where applicable … where not".
+- [ ] `5.1-validation-peer-review.md` + `5.3-validation-peer-review.md` — "HITL discipline: and AI review comes *after*…" → "an AI review".
+- [ ] `6.3-documentation.md` — "If no automated ALM is in plase" → "in place".
+- [ ] `c.1-project-setup.md` + `c.3-project-setup.md` — folder-tree comment "Contenxt packs" → "Context packs".
+
+Broken or inconsistent cross-references:
+
+- [ ] `6.1-documentation.md` links to `[C.1 §6](./c.1-project-setup.md#6-run-the-specs)` — c.1 only has sections 1–4; "run the specs" is step 9 inside §2. Fix the anchor or restructure c.1.
+- [ ] `6.3-documentation.md` links to `[C.1 §9](../1-general-purpose-assistants/c.1-project-setup.md#9-refresh-cadence)` — refresh cadence is c.1 **§4**. Fix.
+- [ ] `b.1-initial-setup.md` + `b.3-initial-setup.md` — intro says "see section 10 for a ready-to-use prompt" but the "Telling your AI assistant" prompt is **section 12** in both files.
+- [ ] `4.3-implementation.md` references "**Plugin 9 — PCF Scaffold Orchestrator** (build backlog)" — the matrix's build-backlog table doesn't list it. Add it to the matrix backlog or drop the reference.
+- [ ] `ai-augmented-d365ce-activity-matrix.md` — Considerations item 1 contains "see [Considerations](#considerations)" *inside* the Considerations section itself (self-reference left over from when the text lived in the matrix table). Remove.
+
+Content / naming to verify:
+
+- [ ] **PandaDoc vs Pandoc** (`b.1` §8, `b.3` §8, both bootstrap appendices): the description ("converts PDF/DOCX to/from Markdown") and the intended tool is almost certainly **Pandoc** (`choco install pandoc`); PandaDoc is an unrelated e-signature SaaS and `choco install pandadoc` is not the doc converter. Verify and correct the tool name, package id, and the "Telling your AI assistant" prompt lines in both files.
+- [ ] `b.1` and `b.3` share the identical title "Package Managers and Tools for Work Automation" — retitle to distinguish (e.g. "[B.1] Initial Setup — …" / "[B.3] Initial Setup — …") and to match how the READMEs and matrix refer to them.
+- [ ] `b.1`/`b.3` duplicate most sections (Chocolatey, VS Code, PAC CLI, Azure CLI, PandaDoc, mmdc, Git, GitHub Desktop) — decide: intentional duplication (each column self-contained) or extract a shared base file.
+
+---
+
+## Structural pendings
+
+- [ ] **Empty taxonomy folders** — `2-desktop-automation-agents/`, `4-platform-embedded-copilots/`, `5-agent-builder-frameworks/`, `6-ai-augmented-specialty-tools/` contain only `.gitkeep`. Decide for release: add a stub README in each (pointing at the matrix's "Not covered" section), or remove the folders until content exists.
+- [ ] **Column-3 README unmapped prompts** — `3-coding-assistants/README.md` still holds the prompts "not yet mapped to a phase" (Configuration & Customization: cloud-flow analysis, security analysis, Power Pages audit; JS/PCF/plugin/Azure Functions sections; Dataverse queries; CI/CD). Several activity guides deep-link into these README anchors, so moving them breaks links — decide their final home before release.
+- [ ] **Matrix "Roadmap watch" dates** — entries cite Jun 2026 / May 2026 sources; re-verify links and statuses (previews → GA?) at release time.
+- [ ] `matrix-infographic.html` / `palette.css` — confirm the infographic reflects the final matrix wording after the above edits land.
