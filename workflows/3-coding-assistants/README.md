@@ -23,7 +23,7 @@ Phase-specific prompts have been organized into per-activity guides following th
 |---|---|
 | [1.3 — Specification / Intent](./1.3-specification.md) | User stories & ACs focused on intent, Ask Mode exploration, grounded gap analysis, field-reference/impact search |
 | [2.3 — Planning / Design](./2.3-planning.md) | Plan Mode: detailed implementation plan, peer review of the plan, sequencing from solution structure, repo-grounded estimation rationale, risk register, ADRs |
-| [3.3 — Tasking](./3.3-tasking.md) | Expand the plan: checklists, unit test conditions, ADO tasks via the Azure DevOps CLI, branch scaffolding, coding-agent pre-flight |
+| [3.3 — Tasking](./3.3-tasking.md) | Expand the plan: checklists, unit test conditions, ADO tasks via the Azure DevOps CLI, branch scaffolding |
 | [4.3 — Implementation / Build](./4.3-implementation.md) | Agent Mode with human in the loop: plugins, web resources, PCF, Azure Functions, pipelines, queries, async coding-agent delegation |
 | [5.3 — Validation / Peer review](./5.3-validation-peer-review.md) | Ask Mode with adversary personas, unit-test coverage, config/security/flow review, drift detection, PR hygiene |
 | [6.3 — Documentation / Information sharing](./6.3-documentation.md) | Automated docs: technical docs from code, wiki updates, runbook review, instruction-file refresh |

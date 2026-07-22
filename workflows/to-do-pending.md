@@ -43,9 +43,9 @@ Working list compiled from all files under `workflows/`. The per-file "Open poin
 - [x] ~~Estimation: kept in column 1's sprint planning ([3.1]) for now~~ — resolved: yes. Added a repo-grounded "Estimation rationale grounded in the repo" activity to `2.3-planning.md` (cites real touched components, plugin/flow complexity, cross-solution dependencies, and test-coverage gaps instead of column-1's category-only cost drivers), plus a matching review-checkpoint row. Updated the matrix's `[2] Planning / Design` cell, the `[2.3]` detail paragraph, and the column-3 README's guide table to mention it.
 
 **[3.3] Tasking** (`3-coding-assistants/3.3-tasking.md`)
-- [ ] All prompts here are new drafts — neither README covers tasking. Confirm your **branch-naming convention** so the scaffold prompt stops being a placeholder.
-- [ ] Should branch scaffolding be per-story or per-task in your workflow?
-- [ ] Is the "pre-flight for the coding agent" step something you want as a standard gate, or optional?
+- [x] ~~Confirm your branch-naming convention~~ — resolved: branches are per-story, named `{username}/{storyId}-{shortened-kebab-title}` (e.g. `jsmith/1234-add-account-validation`). Updated the "Scaffold the branch" prompt in `3.3-tasking.md` from the bracketed placeholder to this convention.
+- [x] ~~Should branch scaffolding be per-story or per-task~~ — resolved: per-story.
+- [x] ~~Is the "pre-flight for the coding agent" step something you want as a standard gate, or optional?~~ — resolved: removed. Dropped the "Pre-flight a task for the async coding agent" prompt from `3.3-tasking.md` entirely, and the matching "coding-agent pre-flight" mention from the column-3 README's guide table.
 
 **[4.3] Implementation** (`3-coding-assistants/4.3-implementation.md`)
 - [ ] This file curates a subset and links to the README for the rest — right balance, or should it inline more (e.g. the full testing/mock prompts)?
