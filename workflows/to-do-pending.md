@@ -53,7 +53,7 @@ Working list compiled from all files under `workflows/`. The per-file "Open poin
 - [x] ~~FetchXML Test Fixture Manager (Phase 1 done, per the build backlog) — worth an activity section here?~~ — resolved: it doesn't exist. Removed its row entirely from the matrix's build-backlog table.
 
 **[5.3] Validation / Peer review** (`3-coding-assistants/5.3-validation-peer-review.md`)
-- [ ] Plugin A is specced but not built — should this file describe the manual git-diff fallback as the *current* procedure more prominently?
+- [x] Plugin A is specced but not built — should this file describe the manual git-diff fallback as the *current* procedure more prominently?
 - [ ] Test-run gate: is "run the test suite" enforced in CI already, or is prompting the assistant to run them the current mechanism?
 
 **[6.3] Documentation** (`3-coding-assistants/6.3-documentation.md`)
