@@ -23,7 +23,7 @@
 ├── .gitignore
 ├── context-exporter/        D365 Context Exporter folder
 │   ├── config/              Configuration files
-│   ├── output/              Contenxt packs to be supplied to the General AI Assistants
+│   ├── output/              Context packs to be supplied to the General AI Assistants
 │   └── runs/                Ignored by .gitignore
 ├── XXX-story-1
 │   ├── XXX-story-1.md       Replicated user stories content in markdown
