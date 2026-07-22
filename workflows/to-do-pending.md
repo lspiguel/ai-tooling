@@ -49,7 +49,7 @@ Working list compiled from all files under `workflows/`. The per-file "Open poin
 
 **[4.3] Implementation** (`3-coding-assistants/4.3-implementation.md`)
 - [x] ~~This file curates a subset and links to the README for the rest~~ — resolved: inline everything. Copied in every prompt previously reached only via a "More (...): [README § ...]" link — plugin mock-fix/targeted-mock/error-code prompts, JS code-explanation/ribbon-command prompts, PCF hooks-migration/dead-code/mock-harness prompts, the full Azure Functions config-class/logging/JSON-output-testing/dynamic-field-handling set, and FetchXML→QueryExpression + unused-components — removed the "More (...)" link lines, and dropped the review-checkpoints table's "(From the README guardrails...)" attribution since the table is now self-contained. The README itself is untouched — duplication across both files is intentional.
-- [ ] Should the **Dataverse coding-agent plugin** (preview) get its own activity section (environment gestures: import, publish, test-data) once piloted?
+- [x] ~~Should the Dataverse coding-agent plugin (preview) get its own activity section~~ — resolved: no such plugin exists, removed every mention. Fixed in the matrix (`[4] Implementation / Build` cell, the `[A.5] Dataverse MCP server` section's closing sentence, and the "Dataverse plugin for coding agents + Business skills" roadmap-watch bullet dropped entirely) and in `4.3-implementation.md` ("Environment gestures... go through pac CLI" — the plugin alternative removed).
 - [ ] FetchXML Test Fixture Manager (Phase 1 done, per the build backlog) — worth an activity section here on offline test fixtures?
 
 **[5.3] Validation / Peer review** (`3-coding-assistants/5.3-validation-peer-review.md`)
