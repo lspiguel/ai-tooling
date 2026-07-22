@@ -95,6 +95,6 @@ Content / naming to verify:
 ## Structural pendings
 
 - [x] **Empty taxonomy folders** — `2-desktop-automation-agents/`, `4-platform-embedded-copilots/`, `5-agent-builder-frameworks/`, `6-ai-augmented-specialty-tools/` contain only `.gitkeep`. Decide for release: add a stub README in each (pointing at the matrix's "Not covered" section), or remove the folders until content exists.
-- [ ] **Column-3 README unmapped prompts** — `3-coding-assistants/README.md` still holds the prompts "not yet mapped to a phase" (Configuration & Customization: cloud-flow analysis, security analysis, Power Pages audit; JS/PCF/plugin/Azure Functions sections; Dataverse queries; CI/CD). Several activity guides deep-link into these README anchors, so moving them breaks links — decide their final home before release.
+- [x] ~~Column-3 README unmapped prompts~~ — resolved: no concern. Leaving them in the README as-is; no reorganization needed before release.
 - [x] **Matrix "Roadmap watch" dates** — entries cite Jun 2026 / May 2026 sources; re-verify links and statuses (previews → GA?) at release time.
 - [ ] `matrix-infographic.html` / `palette.css` — confirm the infographic reflects the final matrix wording after the above edits land.
