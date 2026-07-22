@@ -135,7 +135,6 @@ Ordered roughly by leverage. Several already exist in your plugin roadmap; this 
 | **`d365-project-setup` skill** | [C] Project setup | Codifies the clone → unpack → ground → wire-MCP checklist so it's identical every time. |
 | **`d365-gap-analysis` skill** | [1] Specification | Chains a Context Exporter pack + an Azure DevOps CLI query + Dataverse `describe` into a structured "new vs existing" report. |
 | **Plugin A — Component Snapshot & Drift Tracker** | [5] Validation, [6] Documentation | Already specced (MVP, no git in MVP). The review row needs it. |
-| **FetchXML Test Fixture Manager** | [4] Implementation, [5] Validation | Phase 1 done. The offline-test enabler for the coding agent. |
 | **Context Exporter CI refresh** | [6] Documentation | Headless run that commits regenerated packs — your "update grounding" future enhancement, now load-bearing. |
 
 ---
