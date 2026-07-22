@@ -40,7 +40,7 @@ Working list compiled from all files under `workflows/`. The per-file "Open poin
 
 **[2.3] Planning** (`3-coding-assistants/2.3-planning.md`)
 - [x] ~~The matrix mentions an "architecture skill" for ADR drafting~~ — resolved: no such skill is planned. Removed the "(architecture skill)" parenthetical from the matrix's `[2] Planning / Design` cell; the ADR prompt in `2.3-planning.md` stands on its own.
-- [ ] Estimation: kept in column 1's sprint planning ([3.1]) for now — should this column carry its own estimation-rationale prompt?
+- [x] ~~Estimation: kept in column 1's sprint planning ([3.1]) for now~~ — resolved: yes. Added a repo-grounded "Estimation rationale grounded in the repo" activity to `2.3-planning.md` (cites real touched components, plugin/flow complexity, cross-solution dependencies, and test-coverage gaps instead of column-1's category-only cost drivers), plus a matching review-checkpoint row. Updated the matrix's `[2] Planning / Design` cell, the `[2.3]` detail paragraph, and the column-3 README's guide table to mention it.
 
 **[3.3] Tasking** (`3-coding-assistants/3.3-tasking.md`)
 - [ ] All prompts here are new drafts — neither README covers tasking. Confirm your **branch-naming convention** so the scaffold prompt stops being a placeholder.
