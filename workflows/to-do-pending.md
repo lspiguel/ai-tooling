@@ -57,8 +57,8 @@ Working list compiled from all files under `workflows/`. The per-file "Open poin
 - [ ] Test-run gate: is "run the test suite" enforced in CI already, or is prompting the assistant to run them the current mechanism?
 
 **[6.3] Documentation** (`3-coding-assistants/6.3-documentation.md`)
-- [ ] Publishing mechanics: are docs pushed to the ADO wiki via the wiki's git repo (scriptable, fits this column) or edited in the web UI? Worth a short procedure section once confirmed.
-- [ ] Should the **Context Exporter CI refresh** get a scaffold pipeline YAML here now, or wait until the headless run exists?
+- [x] ~~Publishing mechanics: are docs pushed to the ADO wiki via the wiki's git repo, or edited in the web UI?~~ — resolved: via the wiki's git repo. Added a "Publish to the ADO wiki" procedure to `6.3-documentation.md` (clone `<project>.wiki`, edit/commit/push) and updated the prereq table row accordingly.
+- [x] ~~Should the Context Exporter CI refresh get a scaffold pipeline YAML here now, or wait until the headless run exists?~~ — resolved: wait. The "refresh the grounding" manual-procedure sections were removed from both `6.1-documentation.md` and `6.3-documentation.md` rather than scaffolding a YAML — no inline speculation on the CI refresh until it's actually built.
 
 ---
 
