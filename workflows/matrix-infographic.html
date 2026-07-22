@@ -284,7 +284,6 @@
       <div class="eyebrow">Dynamics 365 CE · Power Platform</div>
       <h1>Where AI fits in a delivery cycle</h1>
     </div>
-    <p>The same activity leverages AI differently depending on where the AI runs. Two lanes, six repeating activities, different grounding methods.</p>
   </div>
 
   <!-- ===== MATRIX ===== -->
@@ -293,8 +292,8 @@
     <div class="band-note">Read down for the flow of work. Read across to compare what each type/taxonomy of AI assistant can actually reach.</div>
 
     <div class="lane-key">
-      <div class="key"><span class="swatch one"></span><b>Taxonomy 1 — General-purpose assistants.</b>&nbsp;Claude · ChatGPT · M365 Copilot (Premium). Reasons about what you give it. Cannot see the repo or the environment.</div>
-      <div class="key"><span class="swatch three"></span><b>Taxonomy 3 — Coding assistants &amp; agents.</b>&nbsp;Copilot agent mode · coding agent · Cursor · Claude Code. Reads the repo, calls tools, opens PRs.</div>
+      <div class="key"><span class="swatch one"></span><b>Type 1 — General-purpose assistants.</b>&nbsp;Claude · ChatGPT · M365 Copilot (Premium). Reasons about what you give it. Cannot see the repo or the environment.</div>
+      <div class="key"><span class="swatch three"></span><b>Type 3 — Coding assistants &amp; agents.</b>&nbsp;Copilot agent mode · coding agent · Cursor · Claude Code. Reads the repo, calls tools, opens PRs.</div>
     </div>
 
     <!-- ===== BACKBONE — the layer every cell below sits on ===== -->
@@ -306,28 +305,28 @@
         <div class="chip">
           <h3>Instructions</h3>
           <p>Conventions and tooling to use. Templates for code, work items, deliverables.</p>
-          <span class="who one">Taxonomy 1 · Claude Projects · M365 Copilot Notebooks</span>
-          <span class="who three">Taxonomy 3 · Instruction &amp; Agent files · Skills</span>
+          <span class="who one">Type 1 · Claude Projects · M365 Copilot Notebooks</span>
+          <span class="who three">Type 3 · Instruction &amp; Agent files · Skills</span>
         </div>
         <div class="chip">
           <h3>Boards</h3>
           <p>ADO, Jira, and other tools and sites that record work items, effort, progress and overall work organization.</p>
-          <span class="who three">Taxonomy 3 · CLIs · MCPs</span>
+          <span class="who three">Type 3 · CLIs · MCPs</span>
         </div>
         <div class="chip">
           <h3>Context packs</h3>
           <p>Markdown snapshots of entities, security model, solutions, current extracted state of Dataverse.</p>
-          <span class="who one">Taxonomy 1 · D365 Context Exporter</span>
+          <span class="who one">Type 1 · D365 Context Exporter</span>
         </div>
         <div class="chip">
           <h3>Solutions unpacked &amp; Code Repositores.</h3>
           <p>Thorough solution state, source code.</p>
-          <span class="who three">Taxonomy 3 · ALM · pac solution unpack · git</span>
+          <span class="who three">Type 3 · ALM · pac solution unpack · git</span>
         </div>
         <div class="chip">
           <h3>Dataverse MCP</h3>
           <p>Live, governed tool access — describe, search, query.</p>
-          <span class="who three">Taxonomy 3 · directly used by coding assistants</span>
+          <span class="who three">Type 3 · directly used by coding assistants</span>
         </div>
       </div>
     </div>
@@ -343,8 +342,8 @@
       <div class="grid">
 
         <div class="corner"></div>
-        <div class="col-label one">Taxonomy 1<span>General-purpose assistants</span></div>
-        <div class="col-label three">Taxonomy 3<span>Coding assistants &amp; agents</span></div>
+        <div class="col-label one">Type 1<span>General-purpose assistants</span></div>
+        <div class="col-label three">Type 3<span>Coding assistants &amp; agents</span></div>
 
         <div class="phase-head">Set up once</div>
 
@@ -376,7 +375,7 @@
 
         <div class="row-label">Validation<br>/ Peer Review<span>5.</span></div>
         <div class="cell one"><b>Test scenarios</b>Test plans, UAT scripts, peer review on pull requests, cross-check against the ACs.</div>
-        <div class="cell three"><b>Review</b>Use Ask Mode with adversary personas for automated review. Check unit test coverage, peer review on pull requests, Test plans, UAT script. Config drift detection.<br><span class="ours">Plugin A</span></div>
+        <div class="cell three"><b>Review</b>Use Ask Mode with adversary personas for automated review. Check unit test coverage, peer review on pull requests, Test plans, UAT script.</div>
 
         <div class="row-label">Documentation<br>/ Information Sharing<span>6.</span></div>
         <div class="cell one"><b>User-driven docs</b>Runbooks, documentation &amp; release notes writing with AI assistance.<br>Re-export the context packs so grounding stays true.<br><span class="ours">Context Exporter</span></div>
@@ -401,7 +400,7 @@
   </div>
 
   <footer>
-    <span>Activity × AI tool taxonomy · v0.1</span>
+    <span>v1.0</span>
   </footer>
 
 </div>
