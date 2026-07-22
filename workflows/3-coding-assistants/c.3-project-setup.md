@@ -228,6 +228,6 @@ With the repo grounded, complete the [C.3] setup from the matrix:
 
 - **Drop the Context Exporter packs** into `context/` (produced per [C.1](../1-general-purpose-assistants/c.1-project-setup.md)) — the same `.context.md` snapshots, now sitting next to the code for the assistant to read.
 - **Register this environment's Dataverse MCP** so the assistant can `describe`/`search` live schema and read current rows, not just the point-in-time unpack. Remember: the admin must **allow-list the client per environment**, and tool calls from non-Copilot-Studio agents are **billable**.
-- **Register the ADO/GitHub MCP** so the spec/plan/task rows can read and write the backlog.
+- **Authenticate the Azure DevOps CLI** so the spec/plan/task rows can read and write the backlog: `az extension add --name azure-devops`, then `az devops configure --defaults organization=https://dev.azure.com/<org> project=<project>` so every `az boards` call defaults to this engagement without repeating the org/project flags.
 
 This whole sequence — init → unpack → ground → wire-MCP — is a strong candidate for a **`d365-project-setup` skill** so it runs identically on every engagement.

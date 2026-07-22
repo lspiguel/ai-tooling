@@ -36,7 +36,7 @@ Working list compiled from all files under `workflows/`. The per-file "Open poin
 
 **[1.3] Specification** (`3-coding-assistants/1.3-specification.md`)
 - [x] The gap-analysis, spec, and backlog prompts are new drafts built from the matrix cell; the two impact prompts come from the README. Does the gap-analysis flow match the planned **`d365-gap-analysis` skill** (build backlog) closely enough to become its seed?
-- [ ] Which ADO MCP do you target — Microsoft's `azure-devops-mcp`, or something else? Affects the exact query phrasing.
+- [x] ~~Which ADO MCP do you target~~ — resolved: no ADO MCP. Standardized on the **Azure DevOps CLI** (`az boards`, via the `azure-devops` extension) for all ADO work-item reads/writes across column 3, matching column 1's own `az boards` choice ([3.1-tasking.md](../1-general-purpose-assistants/3.1-tasking.md)). Updated: the matrix ([A.2] Boards, [B]/[C] setup rows, [1.3]/[3.3] cells, build-backlog table), `c.3-project-setup.md` §7 (auth steps: `az extension add --name azure-devops` + `az devops configure --defaults`), `b.3-initial-setup.md` §7 (note pointing at C.3 §7), `1.3-specification.md`, `2.3-planning.md`, `3.3-tasking.md` (including its title), and both READMEs. Dataverse MCP and Jira/GitHub-via-MCP are untouched — this only changes how ADO boards specifically are reached.
 
 **[2.3] Planning** (`3-coding-assistants/2.3-planning.md`)
 - [ ] The matrix mentions an **"architecture skill"** for ADR drafting — does this skill exist yet, or is the ADR prompt the placeholder for it?

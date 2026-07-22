@@ -152,7 +152,7 @@ dotnet tool install --global Microsoft.PowerApps.CLI.Tool
 
 ## 7. Azure CLI
 
-Cross-platform CLI to manage Azure resources.
+Cross-platform CLI to manage Azure resources. This is also the tooling for Azure DevOps boards in this playbook — `az boards` (via the `azure-devops` extension) is used instead of an ADO MCP server, so the CLI installed here does double duty. See [C.3 §7](./c.3-project-setup.md#7-wire-up-mcp-and-finish-grounding) for the one-time `az extension add` + `az devops configure` setup per engagement.
 
 ```PowerShell
 winget install --exact --id Microsoft.AzureCLI --silent --accept-package-agreements --accept-source-agreements
