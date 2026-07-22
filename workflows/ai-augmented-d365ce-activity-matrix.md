@@ -42,7 +42,7 @@ Markdown snapshots of entities, attributes, security model, and solutions — th
 
 ### [A.4] Solutions unpacked & code repositories — the grounding method for Column 3
 
-Thorough solution state and source code: ALM (or `pac solution unpack`) turns managed/unmanaged solutions into a diffable file tree inside a git repository that also holds source code and Documentation as Code. This is what makes column 3 *grounded* — the agent reads what actually exists (entities, forms, plugin steps, web resources) rather than guessing. It's also what makes drift detection (Plugin A) and import pre-flight (Plugin B) meaningful.
+Thorough solution state and source code: ALM (or `pac solution unpack`) turns managed/unmanaged solutions into a diffable file tree inside a git repository that also holds source code and Documentation as Code. This is what makes column 3 *grounded* — the agent reads what actually exists (entities, forms, plugin steps, web resources) rather than guessing.
 
 ### [A.5] Dataverse MCP server
 

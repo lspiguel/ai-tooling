@@ -87,9 +87,9 @@ Broken or inconsistent cross-references:
 Content / naming to verify:
 
 - [x] **PandaDoc → Pandoc** (`b.1` §8, `b.3` §8, both bootstrap appendices): corrected tool name, package id (`choco install pandoc`), description, and the "Telling your AI assistant" prompt lines in both files.
-- [ ] `b.1` and `b.3` share the identical title "Package Managers and Tools for Work Automation" — retitle to distinguish (e.g. "[B.1] Initial Setup — …" / "[B.3] Initial Setup — …") and to match how the READMEs and matrix refer to them.
+- [x] `b.1` and `b.3` shared the identical title "Package Managers and Tools for Work Automation" — retitled to `# [B.1] Initial Setup — user-driven tooling: package managers, CLI tools, and general tools for AI-augmented functional work` and `# [B.3] Initial Setup — agent-driven tooling: Visual Studio, package managers, CLI tools, and IDEs`, matching the phrasing already used in both READMEs' guide tables.
 - [x] `b.1`/`b.3` duplicate most sections (Chocolatey, VS Code, PAC CLI, Azure CLI, Pandoc, mmdc, Git, GitHub Desktop) — decide: intentional duplication (each column self-contained) or extract a shared base file. - INTENTIONAL
-- [ ] **"Plugin B" is referenced but never specced.** `ai-augmented-d365ce-activity-matrix.md` line 45 says grounding "makes drift detection (Plugin A) and import pre-flight (Plugin B) meaningful," but the build-backlog table only lists Plugin A — Plugin B has no row, no name, no notes anywhere in the repo. Either add it to the backlog table (if it's a real planned item, e.g. a solution-import pre-flight checker) or drop the parenthetical from line 45.
+- [x] **"Plugin B" is referenced but never specced.** `ai-augmented-d365ce-activity-matrix.md` line 45 says grounding "makes drift detection (Plugin A) and import pre-flight (Plugin B) meaningful," but the build-backlog table only lists Plugin A — Plugin B has no row, no name, no notes anywhere in the repo. Either add it to the backlog table (if it's a real planned item, e.g. a solution-import pre-flight checker) or drop the parenthetical from line 45.
 
 ---
 

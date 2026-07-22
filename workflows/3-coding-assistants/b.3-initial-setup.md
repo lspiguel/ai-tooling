@@ -1,4 +1,4 @@
-# Package Managers and Tools for Work Automation
+# [B.3] Initial Setup — agent-driven tooling: Visual Studio, package managers, CLI tools, and IDEs
 
 This guide lists the package managers and CLI tools used to set up a machine for AI-augmented development work. Each section includes both an **interactive** install (for reference) and an **unattended** install (for scripted/repeatable provisioning). Unless noted otherwise, unattended commands should be run from a PowerShell console opened **as Administrator**.
 

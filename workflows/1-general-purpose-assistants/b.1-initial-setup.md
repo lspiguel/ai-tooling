@@ -1,4 +1,4 @@
-# Package Managers and Tools for Work Automation
+# [B.1] Initial Setup — user-driven tooling: package managers, CLI tools, and general tools for AI-augmented functional work
 
 This guide lists the package managers and CLI tools used to set up a machine for AI-augmented development work. This profile targets general-purpose, functionally-oriented assistant work, where Python is used only occasionally — so tooling is installed via Chocolatey rather than pulling in the full Visual Studio IDE. Each section gives an **unattended** install suitable for scripted/repeatable provisioning. Unless noted otherwise, commands should be run from a PowerShell console opened **as Administrator**.
 
