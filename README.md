@@ -70,7 +70,6 @@ Categories 1 and 3 carry the developed workflows today; the rest are still in fl
 | [tooling/](tooling/) | Custom tooling, including the D365 Context Exporter |
 | [skills/](skills/) | Reusable skills and reference guides for AI assistants |
 | [scripts/](scripts/) | Utility scripts supporting AI-assisted tasks and automation |
-| [scaffolding/](scaffolding/) | Templates and starting layouts for new projects |
 
 ---
 
