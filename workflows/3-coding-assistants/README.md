@@ -6,48 +6,35 @@ AI tools integrated into a developer's working environment — either embedded i
 
 ---
 
-## Configuration & Customization
+## Workflow guides
 
-### Documenting Customizations
+Phase-specific prompts have been organized into per-activity guides following the [Activity × Tooling Matrix](../ai-augmented-d365ce-activity-matrix.md). This README keeps the prompts not yet mapped to a phase, plus the shared appendices at the end.
 
-**AI:** GitHub Copilot Chat
-**Context:** Base or specific solution folder open in VS Code
+### Setup (one-time)
 
-```
-Document customizations done on the [TableName] table, explaining purpose,
-relationships to other tables, and any notable business logic in forms or views.
-```
+| Guide | What it covers |
+|---|---|
+| [B.3 — Initial setup](./b.3-initial-setup.md) | Agent-driven tooling: Visual Studio, package managers, CLI tools, IDEs |
+| [C.3 — Project setup](./c.3-project-setup.md) | ALM and/or repository wiring: repo layout, solution export/unpack automation, Dataverse MCP + Azure DevOps CLI wiring |
 
-**Extended — Generate a full solution summary:**
-```
-Summarize all tables in this solution, their purpose, and which other tables
-they relate to. Format the output as a markdown table.
-```
+### The delivery loop
+
+| Guide | What it covers |
+|---|---|
+| [1.3 — Specification / Intent](./1.3-specification.md) | User stories & ACs focused on intent, Ask Mode exploration, grounded gap analysis, field-reference/impact search |
+| [2.3 — Planning / Design](./2.3-planning.md) | Plan Mode: detailed implementation plan, peer review of the plan, sequencing from solution structure, repo-grounded estimation rationale, risk register, ADRs |
+| [3.3 — Tasking](./3.3-tasking.md) | Expand the plan: checklists, unit test conditions, ADO tasks via the Azure DevOps CLI, branch scaffolding |
+| [4.3 — Implementation / Build](./4.3-implementation.md) | Agent Mode with human in the loop: plugins, web resources, PCF, Azure Functions, pipelines, queries, async coding-agent delegation |
+| [5.3 — Validation / Peer review](./5.3-validation-peer-review.md) | Ask Mode with adversary personas, unit-test coverage, config/security/flow review, drift detection, PR hygiene |
+| [6.3 — Documentation / Information sharing](./6.3-documentation.md) | Automated docs: technical docs from code, wiki updates, runbook review, instruction-file refresh |
 
 ---
+
+## Configuration & Customization
 
 ### Analyzing Cloud Flows
 
 **AI:** GitHub Copilot Chat
-**Context:** Processes solution folder
-
-**List flows triggered from a table:**
-```
-Get me a list of all flows that are triggered from [TableName].
-I need the list only, not code.
-```
-
-**Find flows with missing error handling:**
-```
-Identify cloud flows in this folder that do not have a "Configure run after"
-or scope-based error handling. List them with their trigger.
-```
-
-**Detect potential performance issues:**
-```
-Which flows in this folder iterate over collections using Apply to Each?
-List them and note if parallel branching is enabled.
-```
 
 **Optimization review:**
 **Context:** Open a specific cloud flow JSON file
@@ -69,45 +56,6 @@ Write a PowerShell script using the Dataverse Web API to list all security roles
 that have Read access to [TableName] but do not have Append or AppendTo access.
 ```
 
-**Identify over-privileged roles:**
-```
-Analyze the security role definitions in this folder.
-Flag any roles that have organization-level access on sensitive tables
-such as SystemUser, Team, or BusinessUnit.
-```
-
-**Explain a role:**
-```
-Explain what this security role allows a user to do in plain English,
-grouping privileges by functional area.
-```
-
----
-
-### Solution Dependency and Impact Analysis
-
-**AI:** GitHub Copilot Chat
-**Context:** Full solution repo
-
-**Find all references to a field:**
-```
-Find every place the field [table_fieldname] is used across this solution:
-forms, views, flows, JavaScript, plugins, and FetchXML queries.
-```
-
-**Assess impact before deleting a table or field:**
-```
-I'm planning to remove the field [table_fieldname].
-What components in this repository reference or depend on it?
-```
-
-**Validate naming conventions:**
-```
-Review the customizations in this solution folder.
-Flag any table, field, form, view, or flow names that do not follow
-the prefix convention "[prefix]_" or that use default system-generated names.
-```
-
 ---
 
 ### Power Pages Analysis
@@ -119,12 +67,6 @@ the prefix convention "[prefix]_" or that use default system-generated names.
 ```
 List all web pages in this portal solution and flag any that do not follow
 the naming convention "[ClientName] - [PageName]".
-```
-
-**Review Liquid templates for security issues:**
-```
-Review these Liquid template files and flag any places where user input
-is rendered without escaping, or where table permissions are bypassed.
 ```
 
 ---
@@ -141,46 +83,9 @@ What does this code do? Summarize by function, noting the purpose and
 any Dataverse-specific API calls made.
 ```
 
-**Add JSDoc comments without changing logic:**
-```
-Add a JSDoc comment header to each function explaining what it does,
-its parameters, and return value. Do not change any existing code.
-```
-
----
-
-### Code Quality
-
-**StyleCop-equivalent review for JS:**
-```
-What JS styling and quality rules from SonarQube or ESLint
-could be applied to this code? List each issue with the line reference.
-```
-
-**Find dead or redundant code:**
-**Context:** Open Web Resources folder
-```
-Is there any dead code, commented-out code, or duplicate functions
-across these files? List findings with file and line number.
-```
-
-**Modernize older code patterns:**
-```
-This code uses XMLHttpRequest and var declarations.
-Rewrite it using fetch, const/let, and async/await,
-without changing the business logic.
-```
-
 ---
 
 ### Generating New Event Handler Code
-
-**Generate a form event handler:**
-```
-Write a Dynamics 365 CE JavaScript form OnLoad function for the [TableName] table
-that hides the field [fieldname] when [otherfield] equals [value].
-Use form or global context (not Xrm.Page) and follow strict mode and namespace conventions.
-```
 
 **Generate a ribbon command function:**
 ```
@@ -198,13 +103,6 @@ using Xrm.Navigation.openAlertDialog confirming the user wants to proceed.
 **AI:** GitHub Copilot Chat
 **Context:** Open PCF index file
 
-**Decompose a monolithic control:**
-```
-Divide this code into components following React best practices.
-Identify logical UI sections and extract each into its own functional component
-with typed props.
-```
-
 **Migrate class components to hooks:**
 ```
 Refactor this React class component to a functional component using hooks.
@@ -214,16 +112,6 @@ Preserve all existing behavior.
 **Find dead code:**
 ```
 Is there any dead code, unused imports, or unused state variables in this file?
-```
-
----
-
-### Generating a New PCF from a Description
-
-```
-Create a PCF field control for Dynamics 365 CE that renders a read-only
-color-coded badge based on the value of a OptionSet field.
-Use React and TypeScript. Follow the standard PCF manifest and index structure.
 ```
 
 ---
@@ -241,61 +129,10 @@ with sample data for [fieldname].
 
 ## Plugin and Custom API Development
 
-### Generating Plugins from a Description
+### Unit Tests
 
 **AI:** GitHub Copilot (Visual Studio)
 **Context:** Open existing plugin solution with sample plugins
-
-**Generate from existing pattern:**
-```
-Add a plugin similar to AccountUpdatePostOpPlugin but that triggers on
-[TableName] Delete, Pre-Validation stage. It should query for active
-related [RelatedTable] records and throw an InvalidPluginExecutionException
-if any exist, preventing the deletion.
-```
-
-**Name and scaffold correctly:**
-```
-Rename the class to follow the convention [EntitySchemaName][Message][Stage]Plugin
-and add the registration comment block to the class summary.
-```
-
-**Move queries to the Queries layer:**
-```
-Move the RetrieveMultiple calls into a static class in the Queries namespace
-and folder. Each method should return an EntityCollection and accept an
-IOrganizationService parameter.
-```
-
----
-
-### StyleCop and Code Quality
-
-**Enforce StyleCop:**
-```
-Correct this code to conform to StyleCop style,
-add missing documentation comments.
-```
-
-**Review for best practices:**
-```
-Review this plugin class for the following: unnecessary catch blocks that
-rethrow without adding information, missing null checks,
-any hardcoded GUIDs or magic strings that should be constants,
-and any N+1 query patterns.
-```
-
----
-
-### Unit Tests
-
-**Generate a full test class:**
-```
-Create a unit test class for plugin [PluginClassName]
-inheriting from PluginTestHelperBase and following the style in [ExistingTestClass].
-Include tests for: successful execution, each validation failure path,
-and any branching logic.
-```
 
 **Fix mock setup to match query intent:**
 ```
@@ -314,13 +151,6 @@ for [QueryMethodName], returning [describe expected data].
 
 ### Debugging Assistance
 
-**Interpret a plugin trace log:**
-```
-Here is a plugin trace log. Identify the root cause of the failure,
-the method and line where it occurred, and suggest a fix.
-[paste trace log]
-```
-
 **Explain a Dataverse error code:**
 ```
 What does Dataverse error code [0x80040265] mean,
@@ -336,31 +166,11 @@ and what are the most common plugin scenarios that trigger it?
 **AI:** GitHub Copilot (Visual Studio)
 **Context:** New Azure Function project
 
-**Generate Echo and WhoAmI functions:**
-```
-Generate an Echo function and a WhoAmI function for a .NET 8 Isolated
-Azure Function project that connects to Dataverse.
-WhoAmI should use ServiceClient with credentials from environment variables:
-InstanceUri, ClientId, ClientSecret, TenantId.
-```
-
 **Generate a strongly-typed configuration class:**
 ```
 Create a strongly-typed configuration class that reads the following
 environment variables and validates that none are null on startup:
 InstanceUri, ClientId, ClientSecret, TenantId, Environment.
-```
-
----
-
-### Pipeline and Deployment
-
-**Generate an ADO YAML pipeline:**
-```
-Generate an Azure DevOps YAML pipeline to build and deploy
-a .NET 8 Isolated Azure Function to a specific deployment slot
-using a service connection. The pipeline should be manual-trigger only,
-restore NuGet packages, build in Release mode, and deploy using zipDeploy.
 ```
 
 ---
@@ -372,13 +182,6 @@ restore NuGet packages, build in Release mode, and deploy using zipDeploy.
 Add structured logging using ILogger to each function in this project.
 Log request start, key parameters (without secrets), execution time,
 and any exceptions with full inner exception detail.
-```
-
-**Add retry logic:**
-```
-Wrap the Dataverse ServiceClient calls in this function with a retry policy
-using Polly: 3 retries with exponential backoff starting at 2 seconds,
-retrying on HttpRequestException and ServiceException.
 ```
 
 ---
@@ -462,27 +265,11 @@ string or regex assertions on the serialized JSON.
 **AI:** GitHub Copilot Chat
 **Context:** FetchXML or OData description
 
-**Generate a FetchXML query:**
-```
-Write a FetchXML query that retrieves all active Accounts
-where the primary contact has an email on the domain "contoso.com",
-including account name, primary contact name, and email.
-Limit to 50 results.
-```
-
 **Convert FetchXML to QueryExpression:**
 ```
 Convert this FetchXML query into a QueryExpression
 using the Dynamics 365 SDK for .NET.
 Follow the practice of using ColumnSet with explicit attribute names only.
-```
-
-**Generate an OData Web API request:**
-```
-Write an OData query for the Dataverse Web API to retrieve
-all active opportunities with estimated revenue over 50,000
-and their owning user's full name.
-Format as a URL and a Postman-ready request.
 ```
 
 ---
@@ -491,14 +278,6 @@ Format as a URL and a Postman-ready request.
 
 **AI:** GitHub Copilot Chat
 **Context:** Full solution repo
-
-**Identify technical debt:**
-```
-Review this solution repository. Flag: deprecated APIs,
-hardcoded environment URLs, plugins running synchronously that could be async,
-flows using legacy connectors, and any components using unsupported patterns
-for the current Power Platform version.
-```
 
 **Identify unused components:**
 ```
@@ -519,7 +298,7 @@ that appear to have no references in forms, views, plugins, or other flows?
 ```
 Create a GitHub Actions workflow that triggers on pull requests targeting main.
 For each changed .cs file, call the Anthropic API to review the code
-against these rules: [paste rules from AGENTS.md or best-practices.md].
+against these rules: [paste rules from best-practices.md].
 Post the findings as a PR comment. Use a repository secret for the API key.
 ```
 
@@ -534,7 +313,7 @@ Post the findings as a PR comment. Use a repository secret for the API key.
 | **Constrain scope explicitly** | "Do not change any existing logic, only add comments" |
 | **Ask for issues, not fixes** | "List what could be improved, do not make changes yet" |
 | **Chain iteratively** | Start broad → refine by layer (business logic → queries → tests) |
-| **Reference conventions by name** | "Follow StyleCop / INVEST / Gherkin / the naming convention in AGENTS.md" |
+| **Reference conventions by name** | "Follow StyleCop / INVEST / Gherkin / the project's naming convention" |
 | **Separate concerns** | Generate class → move queries → generate tests → enforce style (separate prompts) |
 
 ---

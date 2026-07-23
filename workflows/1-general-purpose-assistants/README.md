@@ -6,110 +6,31 @@ Web and desktop chat AI for requirements analysis, documentation, planning, and 
 
 ---
 
-## Requirements and Work Item Quality
+## Workflow guides
 
-### Drafting and Evaluating User Stories
+The prompts formerly collected in this README have been organized into per-activity guides following the [Activity × Tooling Matrix](../ai-augmented-d365ce-activity-matrix.md). Start with the setup guides, then pick the guide for the phase you're in:
 
-**AI:** Claude / Copilot Chat
-**Context:** Requirement description or meeting notes
+### Setup (one-time)
 
-**Generate a user story:**
-```
-Write a user story for the following requirement: [describe requirement].
-Format it with: Title, Description (As a / I want / So that),
-Acceptance Criteria in Gherkin format (Given/When/Then),
-and Implementation Notes relevant to Dynamics 365 CE.
-```
+| Guide | What it covers |
+|---|---|
+| [B.1 — Initial setup](./b.1-initial-setup.md) | User-driven tooling: package managers, CLI tools, and general tools for AI-augmented functional work |
+| [C.1 — Project setup](./c.1-project-setup.md) | Engagement reference: XrmToolBox connections, Context Exporter packs, legal boundary notice, the grounded Project |
 
-**INVEST evaluation:**
-```
-Evaluate this user story against the INVEST criteria.
-Report only criteria that are NOT met, with a short reason for each
-and a final summary.
-[paste user story]
-```
+### The delivery loop
 
-**Break an epic into features and stories:**
-```
-Break this epic into features and user stories for a Dynamics 365 CE implementation.
-Maintain the hierarchy: epic → features → user stories.
-For each user story include acceptance criteria in Gherkin format.
-[paste epic description]
-```
+| Guide | What it covers |
+|---|---|
+| [1.1 — Specification / Intent](./1.1-specification.md) | User stories & ACs, epic → feature → story breakdown, INVEST evaluation, reconciling asks against the existing model, requirement mining |
+| [2.1 — Planning / Design](./2.1-planning.md) | Design collaboration sessions: architecture, sequencing, risk register |
+| [3.1 — Tasking](./3.1-tasking.md) | Sprint planning: effort estimation, task checklists with a clear Definition of Done, ADO import scripting |
+| [4.1 — Implementation / Build](./4.1-implementation.md) | General coding help: Power Fx / FetchXML / OData snippets, step-by-step configuration instructions, design rubber-ducking, data migration support, maker-portal copilots |
+| [5.1 — Validation / Peer review](./5.1-validation-peer-review.md) | Test plans and test cases from ACs, UAT scripts, design-doc review, peer review on pull requests, accessibility review |
+| [6.1 — Documentation / Information sharing](./6.1-documentation.md) | User-driven docs: runbooks, changelogs, release notes, user guides, training material, living schema packs |
 
 ---
 
-### Test Case Generation from Acceptance Criteria
+## Ground rules for every prompt
 
-```
-Convert these Gherkin acceptance criteria into manual test cases
-formatted for Azure DevOps Test Plans.
-For each scenario, include: Test Case title, preconditions,
-step-by-step actions, and expected result.
-[paste acceptance criteria]
-```
-
----
-
-### Impact Assessment Before a Change
-
-```
-I need to change the behavior of [process/field/table] in Dynamics 365 CE.
-Based on the following solution components, identify which user stories,
-flows, plugins, and forms may be affected and need retesting.
-[describe the change]
-```
-
----
-
-## ALM, Data Migration, and Accessibility
-
-### ALM and DevOps Assistance
-
-**Generate a solution comparison summary:**
-```
-Compare the solution manifest files from these two solution exports
-and list: components added, removed, or modified between versions.
-Format as a changelog.
-```
-
-**Draft a deployment runbook:**
-```
-Based on the following solution components, write a deployment runbook
-for deploying to UAT and then Production.
-Include pre-deployment checks, the deployment steps,
-post-deployment validation steps, and a rollback procedure.
-[list solution components]
-```
-
----
-
-### Data Migration Support
-
-**Generate a SSIS / Dataflow mapping:**
-```
-Given this source schema and target Dataverse table definition,
-generate a field mapping table showing: source column,
-target logical name, transformation needed (if any), and data type.
-[paste schemas]
-```
-
-**Write a data validation script:**
-```
-Write a PowerShell script that queries the Dataverse Web API
-and validates that all records migrated from the source have:
-- A non-null [required field]
-- A valid lookup to an existing [related table] record
-- No duplicate [unique field] values
-Output a summary report.
-```
-
----
-
-### Accessibility and UX Review for Power Pages
-
-```
-Review this Power Pages web template Liquid code for accessibility issues:
-missing alt text, poor heading hierarchy, form labels not associated with inputs,
-and interactive elements not keyboard accessible.
-```
+- **Data boundary:** client material goes only into an enterprise/professional-tier assistant covered by the engagement's data agreement — see [Considerations](../ai-augmented-d365ce-activity-matrix.md#considerations).
+- **Human-in-the-loop:** AI drafts; a person decides. Every output above is a draft for its human owner.

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AI-Augmented D365 CE Delivery — Activity Matrix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="palette.css">
+<style>
+  :root{
+    --ink:var(--content-strong);      /* warm near-black */
+    --ink-soft:var(--content-muted);
+    --paper:var(--surface-base);            /* page background */
+    --surface:var(--surface-raised);
+    --rule:var(--neutral);
+    --lane1:var(--primary-shaded);       /* general-purpose assistants */
+    --lane1-bg:var(--primary-softer);
+    --lane3:var(--secondary-shaded);       /* coding assistants & agents */
+    --lane3-bg:var(--secondary-softer);
+    --amber:var(--tertiary-shaded);
+    --amber-bg:var(--tertiary-softer);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    padding:28px 20px 44px;
+    display:flex;
+    justify-content:center;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .poster{
+    width:100%;
+    max-width:100%;
+    background:var(--surface);
+    border:1px solid var(--rule);
+    border-radius:4px;
+  }
+
+  /* ---------- header ---------- */
+  .head{
+    padding:30px 34px 24px;
+    border-bottom:2px solid var(--ink);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:32px;
+    flex-wrap:wrap;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:31px;
+    font-weight:700;
+    letter-spacing:-.02em;
+    line-height:1.15;
+  }
+  .head p{
+    font-size:14px;
+    color:var(--ink-soft);
+    max-width:420px;
+    line-height:1.55;
+  }
+
+  /* ---------- shared section chrome ---------- */
+  .band{padding:26px 34px;}
+  .band + .band{border-top:1px solid var(--rule);}
+  .band-title{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:4px;
+  }
+  .band-note{font-size:13px;color:var(--ink-soft);margin-bottom:18px;line-height:1.5;}
+
+  /* ---------- lane key ---------- */
+  .lane-key{gap:22px;flex-wrap:wrap;margin-bottom:18px;}
+  .key{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);}
+  .swatch{width:12px;height:12px;border-radius:2px;flex-shrink:0;}
+  .swatch.one{background:var(--lane1);}
+  .swatch.three{background:var(--lane3);}
+  .key b{color:var(--ink);font-weight:600;}
+
+  /* ---------- the grid ---------- */
+  .scroller{overflow-x:auto;overflow-y:hidden;padding-bottom:10px;}
+  .grid{
+    display:grid;
+    grid-template-columns:106px minmax(220px,1fr) minmax(220px,1fr) 34px;
+    gap:6px;
+    min-width:600px;
+  }
+  .phase-head{
+    grid-column:1 / 4;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--amber);
+    padding-bottom:7px;
+    border-bottom:2px solid var(--amber);
+    margin-bottom:6px;
+  }
+  .phase-head.loop{
+    color:var(--ink);
+    border-bottom:2px solid var(--ink);
+    margin-top:18px;
+  }
+  .corner{grid-column:1;}
+
+  .col-label{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:13.5px;font-weight:600;
+    padding:0 0 8px;
+    border-bottom:1px solid var(--rule);
+    line-height:1.25;
+  }
+  .col-label.one{grid-column:2;color:var(--lane1);}
+  .col-label.three{grid-column:3;color:var(--lane3);}
+  .col-label span{
+    display:block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9.5px;font-weight:600;letter-spacing:.08em;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    margin-top:3px;
+  }
+
+  .row-label{
+    grid-column:1;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:13px;font-weight:600;
+    display:flex;flex-direction:column;justify-content:center;
+    text-align:right;
+    padding-right:10px;
+    border-right:1px solid var(--rule);
+    line-height:1.25;
+  }
+  .row-label span{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9.5px;font-weight:600;letter-spacing:.08em;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    margin-top:3px;
+  }
+
+  .cell{
+    font-size:11.8px;
+    line-height:1.45;
+    padding:10px 11px;
+    border-radius:3px;
+    border-left:3px solid transparent;
+  }
+  .cell.one{grid-column:2;background:var(--lane1-bg);border-left-color:var(--lane1);}
+  .cell.three{grid-column:3;background:var(--lane3-bg);border-left-color:var(--lane3);}
+  .cell b{font-weight:600;display:block;margin-bottom:2px;}
+  .cell .ours{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;font-weight:600;
+    display:inline-block;margin-top:5px;
+    padding:2px 5px;border-radius:2px;
+    background:var(--ink);color:var(--surface);
+  }
+
+  /* ---------- return arc (runs down the loop rows and back up to [1]) ---------- */
+  .arc-wrap{
+    grid-column:4;
+    grid-row:6 / span 6;
+    position:relative;
+    color:var(--ink);
+  }
+  .arc-line{
+    position:absolute;
+    inset:9px 12px 9px 0;
+    border:1.5px dashed currentColor;
+    border-left:0;
+    border-radius:0 16px 16px 0;
+  }
+  .arc-head{
+    position:absolute;top:9px;left:0;
+    transform:translate(-2px,-50%);
+    width:0;height:0;
+    border-top:5px solid transparent;
+    border-bottom:5px solid transparent;
+    border-right:8px solid currentColor;
+  }
+  .arc-label{
+    position:absolute;top:50%;right:12px;
+    transform:translate(50%,-50%);
+    writing-mode:vertical-rl;
+    background:var(--surface);
+    padding:10px 0;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--ink);
+    white-space:nowrap;
+  }
+
+  /* ---------- backbone (inset panel, sits above the grid) ---------- */
+  .backbone{
+    background:var(--surface-softer);
+    border:1px solid var(--rule);
+    border-radius:3px;
+    padding:18px 20px;
+    margin-bottom:24px;
+  }
+  .chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
+  .chip{
+    background:var(--surface);
+    border:1px solid var(--rule);
+    border-top:3px solid var(--ink);
+    border-radius:3px;
+    padding:12px 13px;
+  }
+  .chip h3{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:13px;font-weight:600;margin-bottom:4px;
+  }
+  .chip p{font-size:11.5px;color:var(--ink-soft);line-height:1.45;}
+  .chip .who{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9.5px;font-weight:600;letter-spacing:.06em;
+    margin-top:7px;display:block;
+  }
+  .who.one{color:var(--lane1);}
+  .who.three{color:var(--lane3);}
+  .who.both{color:var(--ink-soft);}
+
+  /* ---------- boundary ---------- */
+  .boundary{
+    margin-top:20px;
+    border:1px dashed var(--amber);
+    background:var(--amber-bg);
+    border-radius:3px;
+    padding:14px 16px;
+    display:flex;gap:14px;align-items:center;
+  }
+  .boundary .mark{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;font-weight:600;letter-spacing:.1em;
+    color:var(--surface);background:var(--amber);
+    padding:3px 7px;border-radius:2px;flex-shrink:0;
+    text-transform:uppercase;
+  }
+  .boundary p{font-size:13px;line-height:1.55;color:var(--ink);font-weight:600;}
+
+  footer{
+    padding:16px 34px 20px;
+    border-top:1px solid var(--rule);
+    display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;letter-spacing:.06em;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+  }
+
+  @media (max-width:820px){
+    h1{font-size:24px;}
+    .band{padding:22px 18px;}
+    .head{padding:24px 18px 20px;}
+    footer{padding:14px 18px 18px;}
+  }
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <div class="head">
+    <div>
+      <div class="eyebrow">Dynamics 365 CE · Power Platform</div>
+      <h1>Where AI fits in a delivery cycle</h1>
+    </div>
+  </div>
+
+  <!-- ===== MATRIX ===== -->
+  <div class="band">
+    <div class="band-title">The matrix</div>
+    <div class="band-note">Read down for the flow of work. Read across to compare what each type/taxonomy of AI assistant can actually reach.</div>
+
+    <div class="lane-key">
+      <div class="key"><span class="swatch one"></span><b>Type 1 — General-purpose assistants.</b>&nbsp;Claude · ChatGPT · M365 Copilot (Premium). Reasons about what you give it. Cannot see the repo or the environment.</div>
+      <div class="key"><span class="swatch three"></span><b>Type 3 — Coding assistants &amp; agents.</b>&nbsp;Copilot agent mode · coding agent · Cursor · Claude Code. Reads the repo, calls tools, opens PRs.</div>
+    </div>
+
+    <!-- ===== BACKBONE — the layer every cell below sits on ===== -->
+    <div class="backbone">
+      <div class="band-title">A. The grounding layer</div>
+      <div class="band-note">Every cell below depends on these. They are what turns a plausible answer into a correct one.</div>
+
+      <div class="chips">
+        <div class="chip">
+          <h3>Instructions</h3>
+          <p>Conventions and tooling to use. Templates for code, work items, deliverables.</p>
+          <span class="who one">Type 1 · Claude Projects · M365 Copilot Notebooks</span>
+          <span class="who three">Type 3 · Instruction &amp; Agent files · Skills</span>
+        </div>
+        <div class="chip">
+          <h3>Boards</h3>
+          <p>ADO, Jira, and other tools and sites that record work items, effort, progress and overall work organization.</p>
+          <span class="who three">Type 3 · CLIs · MCPs</span>
+        </div>
+        <div class="chip">
+          <h3>Context packs</h3>
+          <p>Markdown snapshots of entities, security model, solutions, current extracted state of Dataverse.</p>
+          <span class="who one">Type 1 · D365 Context Exporter</span>
+        </div>
+        <div class="chip">
+          <h3>Solutions unpacked &amp; Code Repositores.</h3>
+          <p>Thorough solution state, source code.</p>
+          <span class="who three">Type 3 · ALM · pac solution unpack · git</span>
+        </div>
+        <div class="chip">
+          <h3>Dataverse MCP</h3>
+          <p>Live, governed tool access — describe, search, query.</p>
+          <span class="who three">Type 3 · directly used by coding assistants</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="lane-key">
+      <div class="boundary">
+        <span class="mark">Focus</span>
+        <p> Capturing intent, planning, architecture and most of all <b>verification</b> receive the main effort, not building since that is carried out by AI. </p>
+      </div>
+    </div>
+
+    <div class="scroller">
+      <div class="grid">
+
+        <div class="corner"></div>
+        <div class="col-label one">Type 1<span>General-purpose assistants</span></div>
+        <div class="col-label three">Type 3<span>Coding assistants &amp; agents</span></div>
+
+        <div class="phase-head">Set up once</div>
+
+        <div class="row-label">Initial setup<span>B. Per person</span></div>
+        <div class="cell one"><b>User-driven Tooling</b>General tools, XrmToolBox. Wikis and Shareppoint sites for conventions &amp; templates, prompt library.</div>
+        <div class="cell three"><b>Agent-driven Tooling</b>Coding tools, CLIs, IDEs, XrmToolBox.</div>
+
+        <div class="row-label">Project setup<span>C. Per client</span></div>
+        <div class="cell one"><b>Engagement reference</b>XrmToolBox connection setup, seed with context packs, SoW, architecture.<br><span class="ours">Context Exporter</span></div>
+        <div class="cell three"><b>ALM and/or Repository wiring</b>Clone, setup ALM or scripting for unpacking solutions to git, connect CLIs to Dataverse &amp; ADO, MCPs.</div>
+
+        <div class="phase-head loop">Repeats every increment</div>
+
+        <div class="row-label">Specification<br>/ Intent<br><span>1.</span></div>
+        <div class="cell one"><b>Write User Stories &amp; ACs</b>Epics → features → user stories. Draft from stakeholder notes, context helps assistants align to current solution state.</div>
+        <div class="cell three"><b>Write User Stories &amp; ACs</b>Epics → features → user stories. Concentrate on providing intent and acceptance criteria. Use Ask Mode to explore options.</div>
+
+        <div class="row-label">Planning<br>/ Design<span>2.</span></div>
+        <div class="cell one"><b>Design Collaboration Sessions</b>Architect &amp; design an implementation fulfilling requirements.</div>
+        <div class="cell three"><b>Plan Mode</b>Use Plan Mode to flesh out a detailed plan, then peer review and collaborate as needed.</div>
+
+        <div class="row-label">Tasking<br><span>3.</span></div>
+        <div class="cell one"><b>Sprint Planning</b>Estimate effort, assign tasks. Generate test plans.</div>
+        <div class="cell three"><b>Expand Plan</b>Task out &amp; prepare checklists, define unit test conditions.</div>
+
+        <div class="row-label">Implementation<br>/ Build<span>4.</span></div>
+        <div class="cell one"><b>General coding help</b>Prompt for code snippets, samples and step by step configuration instructions.</div>
+        <div class="cell three"><b>Agent Mode</b>Automated implementation with human in the loop, step by step configuration instructions where skills and tooling are unavailable.</div>
+
+        <div class="row-label">Validation<br>/ Peer Review<span>5.</span></div>
+        <div class="cell one"><b>Test scenarios</b>Test plans, UAT scripts, peer review on pull requests, cross-check against the ACs.</div>
+        <div class="cell three"><b>Review</b>Use Ask Mode with adversary personas for automated review. Check unit test coverage, peer review on pull requests, Test plans, UAT script.</div>
+
+        <div class="row-label">Documentation<br>/ Information Sharing<span>6.</span></div>
+        <div class="cell one"><b>User-driven docs</b>Runbooks, documentation &amp; release notes writing with AI assistance.<br>Re-export the context packs so grounding stays true.<br><span class="ours">Context Exporter</span></div>
+        <div class="cell three"><b>Automated docs</b>Automated documentation &amp; wiki updates. Runbook review.</div>
+
+        <!-- return arc: down the loop rows, back up into [1] -->
+        <div class="arc-wrap" aria-hidden="true">
+          <div class="arc-line"></div>
+          <div class="arc-head"></div>
+          <div class="arc-label">Next increment</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="lane-key">
+      <div class="boundary">
+        <span class="mark">Human In The Loop</span>
+        <p> Spec'ing, planning, tasking and reviews should be owned by team members; AI personas may be used to help catch issues, not for approvals.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>v1.0</span>
+  </footer>
+
+</div>
+</body>
+</html>
