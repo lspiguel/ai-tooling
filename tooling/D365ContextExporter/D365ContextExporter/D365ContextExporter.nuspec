@@ -39,8 +39,10 @@ nuget.exe pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExport
     <!-- Schema for IDE IntelliSense (installed alongside plugin)
     <file src="..\schema\context-exporter.schema.json" target="lib\net472\Plugins\schema" /> -->
 
-    <!-- Runtime dependencies (Scriban is now source-embedded into the plugin DLL) -->
-    <file src="bin\Release\net48\System.Text.Encodings.Web.dll" target="lib\net472\Plugins\D365ContextExporter" />
-    <file src="bin\Release\net48\System.Text.Json.dll" target="lib\net472\Plugins\D365ContextExporter" />
+    <!-- No loose runtime dependencies: Scriban is source-embedded into the plugin DLL
+         (with SCRIBAN_NO_SYSTEM_TEXT_JSON, so System.Text.Json is not required) and
+         Newtonsoft.Json is provided by XrmToolBox itself. Keeping all files in the
+         Plugins root lets the Tool Library update/uninstall the tool without hitting
+         locked-file errors on subfolder DLLs. -->
   </files>
 </package>

@@ -134,6 +134,16 @@ Templates use the [Scriban](https://github.com/scriban/scriban) template languag
 3. Use any of the built-in functions listed below.
 4. Add a new spec config in `config/` pointing to your new template.
 
+> **Do not use `object.from_json` or `object.to_json` in templates.** The plugin embeds
+> Scriban with its System.Text.Json support compiled out (`SCRIBAN_NO_SYSTEM_TEXT_JSON`),
+> so these two built-ins throw a runtime error if a template calls them. This is
+> deliberate: shipping a private `System.Text.Json.dll` alongside the plugin caused
+> XrmToolBox to lock the file, which broke updating and uninstalling the tool from the
+> Tool Library ("The process cannot access the file … because it is being used by another
+> process"). You should not need them anyway — query results are already parsed and
+> available as template variables, so there is no JSON left to deserialise by the time a
+> template runs.
+
 ### Built-in template functions
 
 The following functions are available in all templates:
