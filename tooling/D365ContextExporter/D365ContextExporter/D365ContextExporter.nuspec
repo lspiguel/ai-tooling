@@ -6,7 +6,7 @@ nuget.exe pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExport
 <package>
   <metadata>
     <id>Lspiguel.Xrm.D365ContextExporter</id>
-    <version>1.2026.7.1</version>
+    <version>1.2026.7.2</version>
     <title>D365 CE Context Exporter for XrmToolBox</title>
     <authors>Luciano Spiguel</authors>
     <owners>Luciano Spiguel</owners>
@@ -17,7 +17,33 @@ nuget.exe pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExport
     <description>
       XrmToolBox plugin that executes FetchXML and Web API queries against a Dataverse environment, serialises results to an intermediate JSON file, and uses an internal scripting post-processor to produce Markdown grounding files for non-agentic AI assistants.
     </description>
-    <releaseNotes>This version fixes some issues on the sample config, adds some new specs, upgrades Scriban to avoid a vulnerability.</releaseNotes>
+    <releaseNotes>
+      IMPORTANT: Tool Library could not update or uninstall this tool, failing with
+      "An error occured while copying files: The process cannot access the file
+      '...\Plugins\D365ContextExporter\System.Text.Json.dll' because it is being
+      used by another process."
+
+      FIX - one-time manual cleanup when upgrading from an older version.
+      Because the old files are locked and XrmToolBox never removes them, this
+      upgrade may fail with the same error one last time. To fix:
+      1. Close ALL XrmToolBox windows (check Task Manager for leftover
+         XrmToolBox.exe processes).
+      2. Open File Explorer and go to %AppData%\MscrmTools\XrmToolBox\Plugins
+      3. Delete the D365ContextExporter folder (it contains the old
+         System.Text.Json.dll and System.Text.Encodings.Web.dll).
+      4. If the upgrade previously failed halfway, also delete
+         D365ContextExporter.dll and D365ContextExporter.pdb from the Plugins
+         folder itself.
+      5. Start XrmToolBox and install/update the tool from the Tool Library.
+
+      CAUSE: previous versions shipped System.Text.Json.dll and
+      System.Text.Encodings.Web.dll as loose files in a Plugins subfolder.
+      XrmToolBox locks every DLL found in Plugins subfolders shortly after
+      start-up (even if the tool is never opened), so any later attempt by the
+      Tool Library to overwrite or delete those files fails. This version ships
+      no loose dependency DLLs at all, so updates and uninstalls work normally
+      from now on.
+    </releaseNotes>
     <copyright>Copyright 2026- Luciano Spiguel</copyright>
     <tags>XrmToolBox Documentation AI Markdown D365 Dataverse Grounding</tags>
     <dependencies>
@@ -39,8 +65,10 @@ nuget.exe pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExport
     <!-- Schema for IDE IntelliSense (installed alongside plugin)
     <file src="..\schema\context-exporter.schema.json" target="lib\net472\Plugins\schema" /> -->
 
-    <!-- Runtime dependencies (Scriban is now source-embedded into the plugin DLL) -->
-    <file src="bin\Release\net48\System.Text.Encodings.Web.dll" target="lib\net472\Plugins\D365ContextExporter" />
-    <file src="bin\Release\net48\System.Text.Json.dll" target="lib\net472\Plugins\D365ContextExporter" />
+    <!-- No loose runtime dependencies: Scriban is source-embedded into the plugin DLL
+         (with SCRIBAN_NO_SYSTEM_TEXT_JSON, so System.Text.Json is not required) and
+         Newtonsoft.Json is provided by XrmToolBox itself. Keeping all files in the
+         Plugins root lets the Tool Library update/uninstall the tool without hitting
+         locked-file errors on subfolder DLLs. -->
   </files>
 </package>
