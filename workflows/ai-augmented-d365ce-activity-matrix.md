@@ -12,7 +12,7 @@
 
 | Activity | [1] General-Purpose AI Assistants <br><sub>Claude.ai · ChatGPT · M365 Copilot (Premium) · Gemini</sub> | [3] Coding Assistants & Agentic Environments <br><sub>Copilot agent mode / coding agent · Cursor · Claude Code · VS + Copilot</sub> |
 |---|---|---|
-| **[A] Grounding layer** <br><sub>every cell below depends on these</sub> | **Instructions** — conventions, tooling and templates carried in Claude Projects / Custom GPTs / M365 Copilot Notebooks. **Context packs** — markdown snapshots of entities, security model, solutions: the current extracted state of Dataverse, uploaded to the assistant. | **Boards** — ADO, Jira and other work-item tools, reached via CLIs and MCPs. **Solutions unpacked & code repositories** — thorough solution state and source code (ALM, `pac solution unpack`, git). **Dataverse MCP** — live, governed tool access: describe, search, query. |
+| **[A] Grounding layer** <br><sub>every cell below depends on these</sub> | **Instructions** — conventions, tooling and templates carried in Claude Projects / Custom GPTs / M365 Copilot Notebooks. **Context packs** — markdown snapshots of entities, security model, solutions: the current extracted state of Dataverse, uploaded to the assistant. Both live in the personal **`<client>-Context/`** repository. [[A.1]](./1-general-purpose-assistants/a.1-grounding.md) | **Boards** — ADO, Jira and other work-item tools, reached via CLIs and MCPs. **Three repositories** — `<client>-Context/` (intent + packs), `<client>-d365/` (solutions unpacked & source code), `<client>-wiki/` (live documentation). **Dataverse MCP** — live, governed tool access: describe, search, query. [[A.3]](./3-coding-assistants/a.3-grounding.md) |
 | **[B] Initial one-time setup** <br><sub>per person / per team</sub> | **User-driven tooling.** General tools and XrmToolBox; wikis and SharePoint sites for conventions & templates; a personal prompt library. Stand up a reusable **"D365 CE house style" Project / Custom GPT** seeded with conventions (publisher prefix rules, StyleCop summary, user-story + AC templates, the tool taxonomy). Enable an AI Assistant. [[B.1]](./1-general-purpose-assistants/b.1-initial-setup.md) | **Agent-driven tooling.** Coding tools, CLIs, IDEs, XrmToolBox: VS Code + Power Platform Tools + Copilot/Cursor, **pac CLI**, XrmToolBox plugins (**D365 Context Exporter**, FetchXML Builder). Build a **template repo** carrying the canonical repo layout and automation scripts. Register Dataverse MCP; connect the **Azure DevOps CLI** (`az boards`) for ADO. Fix the solution-unpack git layout. [[B.3]](./3-coding-assistants/b.3-initial-setup.md) |
 | **[C] Project setup** <br><sub>per client / per engagement</sub> | **Engagement reference.** XrmToolBox connection setup; per-client **grounded Project** seeded with Context Exporter `.context.md` packs + SoW + architecture; pin client data-handling rules. Use an **AI Assistant scoped to the client tenant** for anything touching live data. [[C.1]](./1-general-purpose-assistants/c.1-project-setup.md) | **ALM and/or repository wiring.** Setup ALM solution if available, if not setup `pac solution export`/`pac solution unpack` script to automate solution registration into git; clone repos; drop Context Exporter packs into `/context/`; connect CLIs (Azure DevOps CLI for ADO) and enable this environment's **Dataverse MCP**. [[C.3]](./3-coding-assistants/c.3-project-setup.md) |
 | **[1] Specification / Intent** | **Write user stories & ACs.** Epics → features → user stories, drafted from stakeholder notes; the **AI Assistant** mines Teams/email/SharePoint for source material. Grounding context (Context Exporter packs) aligns the draft to the current solution state — catches "we already have a field for that." [[1.1]](./1-general-purpose-assistants/1.1-specification.md) | **Write user stories & ACs.** Same epic → feature → user story breakdown, concentrating on providing **intent and acceptance criteria**; use **Ask Mode** to explore options. Coding assistant + repo + Context Exporter + **Azure DevOps CLI** + **Dataverse MCP** (`describe`, `search`) → grounded gap analysis and a spec that names *real* entities/attributes/plugins. [[1.3]](./3-coding-assistants/1.3-specification.md) |
@@ -28,25 +28,30 @@
 
 Every cell in the matrix depends on these. They are what turns a plausible answer into a correct one. The methods differ per column — building or standardizing them once is most of the leverage.
 
-### [A.1] Instructions — Column 1
 
-Conventions and tooling to use; templates for code, work items, and deliverables. Carried in the assistant's persistent surface: **Claude Projects / Custom GPT instructions and M365 Copilot Notebooks**, seeded once per person ([B.1]) and per client ([C.1]). This is a per-user surface, not project-committed — it lives in the assistant's own project/notebook configuration, not in a client's repository.
-
-### [A.2] Boards
-
-ADO, Jira, and other tools and sites that record work items, effort, progress, and overall work organization. Column 3 reaches them through their MCP servers and CLIs (or the coding agent's native GitHub access) — this is what lets the spec/plan/task rows read and write the backlog instead of being a disconnected chat. This playbook standardizes on the **Azure DevOps CLI** (`az boards`, via the `azure-devops` extension) for ADO specifically, rather than an ADO MCP server — no server to register or allow-list, and it reuses the `az login` session already set up for Dataverse/Azure work. Other board tools (Jira, GitHub Issues) may still be reached through their own MCP where available.
-
-### [A.3] Context packs — the grounding method for Column 1
+### [A.1] Context packs — the grounding method for Column 1
 
 Markdown snapshots of entities, attributes, security model, and solutions — the current extracted state of Dataverse. The **D365 Context Exporter** solves the column-1 problem directly: general-purpose assistants can't browse your environment, so you hand them a structured `.context.md` snapshot. It is the right tool precisely when the person *doesn't* have agentic tooling or MCP access — which is most of the team on M365-Copilot-only licensing.
 
-### [A.4] Solutions unpacked & code repositories — the grounding method for Column 3
+The packs, the per-story folders and the engagement documents all live in one personal **`<client>-Context/`** repository, which is what you seed a Project from and attach to a prompt. Full guide: [[A.1] Grounding — the `<client>-Context/` repository](./1-general-purpose-assistants/a.1-grounding.md).
+
+### [A.3] Solutions unpacked & code repositories — the grounding method for Column 3
 
 Thorough solution state and source code: ALM (or `pac solution unpack`) turns managed/unmanaged solutions into a diffable file tree inside a git repository that also holds source code and Documentation as Code. This is what makes column 3 *grounded* — the agent reads what actually exists (entities, forms, plugin steps, web resources) rather than guessing.
 
-### [A.5] Dataverse MCP server
+Column 3 reads **three repositories**, cloned as siblings so one agent session can span them: `<client>-Context/` (intent, story folders, packs — the same repo as [A.1]), `<client>-d365/` (unpacked solutions, source code, docs-as-code), and `<client>-wiki/` (live documentation, backed by the ADO wiki's git repo). Full guide: [[A.3] Grounding — the three-repository organization](./3-coding-assistants/a.3-grounding.md).
 
-*Live, governed tool access* where data stays in the tenant — directly used by coding assistants, and best for anything needing current rows, not just schema. Complementary to [A.3]/[A.4], not competing — and the exporter remains the only option when the assistant can't reach the tenant at all.
+### [A.i] Instructions — Columns 1 and 3
+
+Conventions and tooling to use; templates for code, work items, and deliverables. Carried in the assistant's persistent surface: **Claude Projects / Custom GPT instructions and M365 Copilot Notebooks**, seeded once per person ([B.1]/[B.3]) and per client ([C.1]/[C.3]). This is a per-user surface, not project-committed — it lives in the assistant's own project/notebook configuration, not in a client's repository.
+
+### [A.ii] Boards — Column 3
+
+ADO, Jira, and other tools and sites that record work items, effort, progress, and overall work organization. Column 3 reaches them through their MCP servers and CLIs (or the coding agent's native GitHub access) — this is what lets the spec/plan/task rows read and write the backlog instead of being a disconnected chat. This playbook standardizes on the **Azure DevOps CLI** (`az boards`, via the `azure-devops` extension) for ADO specifically, rather than an ADO MCP server — no server to register or allow-list, and it reuses the `az login` session already set up for Dataverse/Azure work. Other board tools (Jira, GitHub Issues) may still be reached through their own MCP where available.
+
+### [A.iii] Dataverse MCP server — Column 3
+
+*Live, governed tool access* directly used by coding assistants, and best for anything needing current rows, not just schema. Complementary to [A.3].
 
 GA as of the Ignite-era release; reachable from Copilot Studio, GitHub Copilot (VS Code + CLI), Cursor, and Claude Code (via the `@microsoft/dataverse` local proxy or the remote `/api/mcp` endpoint with an Entra app). Exposes a defined tool surface — `describe`, `search` (metadata), `read_query`, `create_record`, `update_record`, file and prompt tools. Two caveats to put in the runbook: **admin must allow-list the client** per environment, and **tool calls from non-Copilot-Studio agents are billable** (covered if the user holds a D365 Premium or M365 Copilot license).
 

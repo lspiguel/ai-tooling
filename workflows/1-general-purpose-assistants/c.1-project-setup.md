@@ -1,5 +1,7 @@
 # [C.1] Project Setup — the engagement reference: Context Exporter grounding for a general-purpose assistant
 
+> **Matrix cell:** [[C.1]](../ai-augmented-d365ce-activity-matrix.md#c1-project-setup) · Column **[1] General-Purpose AI Assistants** · Grounding model: [A.1](./a.1-grounding.md) · Builds on [B.1](./b.1-initial-setup.md) · Column-3 counterpart: [C.3](../3-coding-assistants/c.3-project-setup.md)
+
 ---
 
 ## What you need in place
@@ -16,6 +18,8 @@ Do this once per client environment. If the engagement spans multiple environmen
 ---
 
 ## 1. Prepare the local, personal Context repository
+
+One repository per client, holding everything you would ever seed into a Project or attach to a prompt: the context packs, a folder per story, and the engagement documents. It is personal and local — see [A.1 — Grounding](./a.1-grounding.md) for what each folder is for and how it reaches the assistant.
 
 ```
 <client>-Context/
@@ -38,6 +42,8 @@ Do this once per client environment. If the engagement spans multiple environmen
 │   └── runbooks/
 └── ...
 ```
+
+> This is one of **three** repositories the engagement uses. The other two — `<client>-d365/` (unpacked solutions and source code) and `<client>-wiki/` (live documentation, backed by the ADO wiki's git repo) — are shared, team-owned, and read directly by column-3 coding assistants rather than uploaded. See [A.3](../3-coding-assistants/a.3-grounding.md) and [C.3](../3-coding-assistants/c.3-project-setup.md). In column 1 you draw on them by hand: copy the relevant page or extract into the story folder or `offline-access/` before attaching it.
 
 ---
 

@@ -23,13 +23,13 @@ This **context** is the grounding that an AI needs to provide answers and build 
 
 Project work moves through a **grounding layer**, two **one-time setups** (initial per-person/per-team, then per-client/per-engagement), and an iterative **delivery loop** of six activities. Each activity is executed through two tool surfaces — **general-purpose AI assistants** (Claude.ai, ChatGPT, M365 Copilot) and **coding assistants & agentic environments** (GitHub Copilot, Claude Code, Cursor) — because the surface, not the model, determines what the AI can see and act on.
 
-The grounding layer resides in **git repositories**: a context repository holding markdown snapshots of the Dataverse environment (entities, security model, solutions — produced with the [D365 Context Exporter](tooling/D365ContextExporter/README.md)), and for the coding-assistant surface also the unpacked solutions & source code and the wiki. General-purpose assistants receive these as uploaded context packs; coding assistants read the repositories directly, complemented by live skill, MCP and tool access.
+The grounding layer resides in **git repositories**: a `<client>-Context/` repository holding markdown snapshots of the Dataverse environment (entities, security model, solutions — produced with the [D365 Context Exporter](tooling/D365ContextExporter/README.md)) alongside per-story folders and engagement documents, and for the coding-assistant surface also `<client>-d365/` (unpacked solutions & source code) and `<client>-wiki/` (live documentation). General-purpose assistants receive these as uploaded context packs ([A.1](workflows/1-general-purpose-assistants/a.1-grounding.md)); coding assistants read the repositories directly ([A.3](workflows/3-coding-assistants/a.3-grounding.md)), complemented by live skill, MCP and tool access.
 
 The full playbook is the **[Activity × Tooling Matrix](workflows/ai-augmented-d365ce-activity-matrix.md)** (also as a [visual infographic](workflows/matrix-infographic.html)). Each cell links to a per-activity guide:
 
 | Activity | General-Purpose Assistants | Coding Assistants & Agents |
 |---|---|---|
-| **[A] Grounding Layer** | Context git repository + [D365 Context Exporter XrmToolBox](tooling/D365ContextExporter/README.md) | Context, Solutions/Code, Wiki git repositories |
+| **[A] Grounding Layer** | [A.1](workflows/1-general-purpose-assistants/a.1-grounding.md) — Context git repository + [D365 Context Exporter XrmToolBox](tooling/D365ContextExporter/README.md) | [A.3](workflows/3-coding-assistants/a.3-grounding.md) — Context, Solutions/Code, Wiki git repositories |
 | **[B] Initial one-time setup** | [B.1](workflows/1-general-purpose-assistants/b.1-initial-setup.md) | [B.3](workflows/3-coding-assistants/b.3-initial-setup.md) |
 | **[C] Project setup** | [C.1](workflows/1-general-purpose-assistants/c.1-project-setup.md) | [C.3](workflows/3-coding-assistants/c.3-project-setup.md) |
 | **[1] Specification / Intent** | [1.1](workflows/1-general-purpose-assistants/1.1-specification.md) | [1.3](workflows/3-coding-assistants/1.3-specification.md) |

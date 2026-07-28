@@ -8,12 +8,13 @@ AI tools integrated into a developer's working environment — either embedded i
 
 ## Workflow guides
 
-Phase-specific prompts have been organized into per-activity guides following the [Activity × Tooling Matrix](../ai-augmented-d365ce-activity-matrix.md). This README keeps the prompts not yet mapped to a phase, plus the shared appendices at the end.
+Phase-specific prompts have been organized into per-activity guides following the [Activity × Tooling Matrix](../ai-augmented-d365ce-activity-matrix.md). Start with [A.3] for the repository organization every other guide assumes. This README keeps the prompts not yet mapped to a phase, plus the shared appendices at the end.
 
-### Setup (one-time)
+### Grounding and setup
 
 | Guide | What it covers |
 |---|---|
+| [A.3 — Grounding](./a.3-grounding.md) | The three-repository organization: `<client>-Context/` (intent + packs), `<client>-d365/` (unpacked solutions + code), `<client>-wiki/` (live documentation) |
 | [B.3 — Initial setup](./b.3-initial-setup.md) | Agent-driven tooling: Visual Studio, package managers, CLI tools, IDEs |
 | [C.3 — Project setup](./c.3-project-setup.md) | ALM and/or repository wiring: repo layout, solution export/unpack automation, Dataverse MCP + Azure DevOps CLI wiring |
 
