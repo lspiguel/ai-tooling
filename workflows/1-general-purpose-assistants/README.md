@@ -8,12 +8,13 @@ Web and desktop chat AI for requirements analysis, documentation, planning, and 
 
 ## Workflow guides
 
-The prompts formerly collected in this README have been organized into per-activity guides following the [Activity × Tooling Matrix](../ai-augmented-d365ce-activity-matrix.md). Start with the setup guides, then pick the guide for the phase you're in:
+The prompts formerly collected in this README have been organized into per-activity guides following the [Activity × Tooling Matrix](../ai-augmented-d365ce-activity-matrix.md). Start with [A.1] to understand what grounds this column, then the setup guides, then pick the guide for the phase you're in:
 
-### Setup (one-time)
+### Grounding and setup
 
 | Guide | What it covers |
 |---|---|
+| [A.1 — Grounding](./a.1-grounding.md) | The `<client>-Context/` repository: context packs, per-story folders, engagement documents, and how they reach a Claude Project / M365 Copilot Notebook |
 | [B.1 — Initial setup](./b.1-initial-setup.md) | User-driven tooling: package managers, CLI tools, and general tools for AI-augmented functional work |
 | [C.1 — Project setup](./c.1-project-setup.md) | Engagement reference: XrmToolBox connections, Context Exporter packs, legal boundary notice, the grounded Project |
 
