@@ -1,5 +1,5 @@
 {
-  "$schema": "../schema/context-exporter.schema.json",
+  "$schema": "./context-exporter.schema.json",
   "spec": "SecurityModel",
   "version": "1.0.0",
   "legal": "LEGAL.md",
@@ -10,15 +10,8 @@
   "python": {
     "interpreter": "auto"
   },
-  "transformation": "security-model.j2",
+  "transformation": "security-model.sbn",
   "queries": [
-    {
-      "id": "entity-attributes",
-      "type": "webapi",
-      "path": "EntityDefinitions?$select=LogicalName,DisplayName,PrimaryIdAttribute,PrimaryNameAttribute,OwnershipType,IsCustomEntity&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,IsCustomAttribute,RequiredLevel)",
-      "resultKey": "entityAttributes",
-      "maxRecords": 500
-    },
     {
       "id": "security-roles",
       "type": "fetchxml",

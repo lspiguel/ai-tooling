@@ -1,12 +1,12 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 
-using D365ContextExporter.Models;
+using Lspiguel.Xrm.D365ContextExporter.Models;
 
 using NUnit.Framework;
 
-namespace D365ContextExporter.Tests.ModelsTests
+namespace Lspiguel.Xrm.D365ContextExporter.Tests.ModelsTests
 {
     [TestFixture]
     public class ExportJobTests

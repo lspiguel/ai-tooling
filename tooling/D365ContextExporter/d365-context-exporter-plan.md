@@ -93,7 +93,9 @@ Three options were considered for running Python inside a .NET 4.8 host:
 
 - **IronPython** — pure managed implementation, but its ecosystem lags real CPython and Jinja2 runs best on CPython. It would also tie users to whatever IronPython version we ship.
 - **Python.NET (pythonnet)** — embeds CPython in-process. Works, but tightly couples the plugin to a specific Python binary at load time, and any `pip install` mismatch crashes the XrmToolBox process.
-- **Subprocess `python.exe`** — the plugin launches Python as a child process, passing JSON by file and reading stdout/stderr. Decouples the two runtimes, survives Python environment changes, and means any user-authored Python script can be swapped in. **Chosen.**
+- **Subprocess `python.exe`** — the plugin launches Python as a child process, passing JSON by file and reading stdout/stderr. Decouples the two runtimes, survives Python environment changes, and means any user-authored Python script can be swapped in. **Chosen for Phases 1–4.**
+
+> **Phase 5 revision.** This decision was revisited once the full feature set was stable. An IronPython-based embedding was first attempted but abandoned — Jinja2 3.1.x uses `async def` constructs not supported by IronPython 3.4. The final solution replaces the Python post-processor entirely with .NET-native equivalents: **Scriban** for template rendering and a ported **`TemplateFilters.cs`** for custom filters. `transform.py`, `filters.py`, and all Python infrastructure are deleted. Templates are ported from Jinja2 to Scriban syntax (pipe filter syntax is identical; control-flow tags change from `{% %}` to `{{ }}`).
 
 ## Executing Environment
 
@@ -105,8 +107,7 @@ Required once per machine:
 - .NET Framework 4.8 runtime (ships with current Windows; required by XrmToolBox 1.2025.x+).
 - XrmToolBox latest stable release, installed from `xrmtoolbox.com`.
 - Visual Studio 2022 (Community is fine) with the .NET desktop development workload — **only required for plugin developers**, not for end users of the plugin.
-- Python 3.11 or later (64-bit), installed from `python.org` and added to `PATH`. A `py` launcher is acceptable; the plugin will prefer `py -3` when available.
-- A Python virtual environment at a well-known path (for example `%LOCALAPPDATA%\D365ContextExporter\venv`) with the following packages pinned via `requirements.txt`: `jinja2`, `pyyaml`, `python-dateutil`.
+- ~~Python 3.11 or later (64-bit)~~ — **removed in Phase 5.** Templates are rendered in-process via Scriban; no external Python installation is required for end users.
 
 Authenticated connection to Dataverse is inherited from XrmToolBox's Connection Manager — the plugin does not manage credentials itself. This aligns with XrmToolBox convention (`PluginControlBase.Service` gives you a ready-to-use `IOrganizationService`).
 
@@ -189,11 +190,11 @@ Following the standard folder/namespace pattern, with the plugin name `D365Conte
 
 ### Python side — post-processor
 
-Python is used as a **post-processor only**. A single universal `transform.py` orchestrator handles all templates.
+Python was used as a **post-processor only** in Phases 1–4. From Phase 5, this role is taken over by .NET-native code.
 
-- **`transform.py`** — the single entry point. Receives CLI args: `--input intermediate.json --template <path.j2> --out <runDir> --spec <SpecName>`. Loads `intermediate.json`, renders the Jinja2 template against it (plus custom filters from `filters.py`), and writes `output.md`. ~100 lines.
-- **`filters.py`** — custom Jinja2 filters reusable across all templates (`schemaname_to_title`, `markdown_table`, `group_by`, `csv_list`, `optionset_values`, etc.).
-- **`requirements.txt`** — pinned dependencies (`Jinja2`, `PyYAML`, `python-dateutil`, `markupsafe`).
+- ~~**`transform.py`**~~ — **deleted in Phase 5.** Orchestration logic absorbed into `TemplateRenderer.cs`.
+- ~~**`filters.py`**~~ — **deleted in Phase 5.** All 19 filter functions ported to `TemplateFilters.cs`.
+- ~~**`requirements.txt`**~~ — **deleted in Phase 5.** No Python packages are required.
 
 ### Queries
 
@@ -248,21 +249,16 @@ The following artifacts will be built. Each row maps to a concrete deliverable.
 - `Microsoft.PowerPlatform.Dataverse.Client` (latest stable) — the current supported Dataverse client. Use `ServiceClient` rather than the legacy `CrmServiceClient`.
 - `Newtonsoft.Json` — already a transitive dependency; use it for config loading and intermediate JSON authoring to avoid dragging in `System.Text.Json` at 4.8.
 - `StyleCop.Analyzers` 1.1.118+ — required for C# style enforcement.
+- `Scriban` 5.12.x — .NET template engine; replaces Jinja2 from Phase 5. Added in Phase 5.
 - `Moq` and `Moq.Contrib.HttpClient` — test project only.
 
-### Python — pip packages (pinned in `requirements.txt`)
+### Python — pip packages
 
-- `Jinja2` (latest 3.x).
-- `tiktoken` — OpenAI BPE tokenizer; used by `transform.py` to count tokens in `output.md` using the `o200k_base` (gpt-4o) encoding and write a `token_count.txt` sidecar. Falls back to a character-based estimate (`len // 4`) if not installed.
-- `PyYAML` — lets users optionally author configs or template fragments in YAML.
-- `python-dateutil` — forgiving date parsing inside templates.
-- `markupsafe` — pulled in transitively by Jinja2; listed for clarity.
-
-`tiktoken` installs a C extension wheel; prebuilt wheels are available for all standard Windows/Python combinations so `pip install` still works out-of-the-box.
+> **Removed in Phase 5.** Templates are rendered in-process by Scriban. `transform.py`, `filters.py`, and `requirements.txt` are deleted. ~~`Jinja2`~~, ~~`tiktoken`~~, ~~`markupsafe`~~ are no longer used.
 
 ### External tools (not libraries, but required)
 
-- **Python 3.11+** on `PATH` (or discoverable via the `py` launcher).
+- **Python 3.11+** — **removed as an end-user requirement in Phase 5.** No Python installation needed.
 - **XrmToolBox** 1.2025.10.x or later.
 - **Visual Studio 2022** (developers only).
 
@@ -315,8 +311,8 @@ Each run produces exactly one `output.md` file (rendered by the transformation s
 5. A timestamped run folder `runs/<timestamp>/` is created.
 6. For each `QueryDefinition`, the appropriate runner (`FetchXmlQueryRunner`, `WebApiQueryRunner`, `MetadataQueryRunner`) executes against Dataverse. Each result is written to `runs/<timestamp>/output.<queryId>.fetch.json`.
 7. `IntermediateJsonBuilder` merges all per-query results plus `_meta` into `runs/<timestamp>/intermediate.json`.
-8. `PythonInvoker` launches `python transform.py --input intermediate.json --template config/transformations/<name>.j2 --out runs/<timestamp>/ --spec <SpecName>`. Stdout streams into the plugin's log panel; a non-zero exit code is surfaced as an error.
-9. `transform.py` renders the Jinja2 template against the intermediate JSON (with custom filters from `filters.py`) and writes `runs/<timestamp>/output.md`.
+8. `TemplateRenderer.Render()` (Phase 5+; previously `PythonInvoker` launching a Python subprocess) deserialises `intermediate.json` into a Scriban `ScriptObject`, registers the 19 custom filters from `TemplateFilters`, and renders the Scriban template in-process. Output is written to `runs/<timestamp>/output.md`.
+9. *(Step merged into step 8 from Phase 5. Previously: `transform.py` rendered the Jinja2 template and wrote `output.md`.)*
 10. The plugin copies `output.md` to `output/<SpecName>.context.md`, overwriting any previous version.
 11. `OutputPreviewControl` shows the generated files and offers **Open folder** / **Open in VS Code** / **Copy path** actions. A prominent note indicates that `output/<SpecName>.context.md` is the file to upload to the AI assistant.
 
@@ -405,7 +401,7 @@ The `python/` and `schema/` folders (inside the C# project) are packed into the 
 
 ## Implementation Phases
 
-Work is broken into four phases, each independently deliverable.
+Work is broken into five phases, each independently deliverable.
 
 ### Phase 1 — Skeleton and wiring (sprint 1)
 
@@ -458,6 +454,28 @@ Work is broken into four phases, each independently deliverable.
 - JSON schema for configuration with `$schema` URL hint so VS Code gives IntelliSense.
 - **Exit criteria:** plugin installable from XrmToolBox Tool Library by anyone with the required Python prerequisites.
 
+### Phase 5 — .NET-native rendering via Scriban (late correction, sprint 5)
+
+> **Note.** An IronPython-based embedding was originally planned for this phase. That approach was abandoned when Jinja2 3.1.x was found to use `async def` constructs not supported by IronPython 3.4's language compatibility layer. This phase replaces the Python post-processor with .NET-native equivalents instead.
+
+- Replace `PythonInvoker` with a new `TemplateRenderer` class that renders templates in-process using **Scriban**, a .NET template engine with syntax closely derived from Liquid/Jinja2.
+- Port all 19 custom filter functions from `filters.py` into a new `TemplateFilters.cs` class. Filters are registered as named delegates on Scriban's `ScriptObject` and invoked via the same pipe syntax (`{{ value | filter_name }}`).
+- Absorb the `transform.py` orchestration logic (load JSON, build context, render, write `output.md`) directly into `TemplateRenderer.Render()`. `intermediate.json` is deserialized into a Scriban `ScriptObject` via a recursive `JToken` converter.
+- Remove token counting (`tiktoken`) entirely. No `token_count.txt` sidecar is written and no token-count blockquote appears in output files.
+- Delete `transform.py`, `filters.py`, `requirements.txt`, `PythonInvoker.cs`, `PythonBootstrapHelper.cs`, and `ProcessRunner.cs`. No Python files of any kind remain in the project.
+- Port the six `.j2` template files from Jinja2 syntax to Scriban syntax (control-flow tags change from `{% %}` to `{{ }}`; pipe filter syntax is identical). Files keep the `.j2` extension so spec configs require no changes.
+- Add `Scriban` NuGet package; add `Scriban.dll` to the nuspec. No Python runtime or IronPython packages are shipped.
+- **Exit criteria:** plugin installs and runs with no Python on the user's machine; all templates and filters produce equivalent output to the Jinja2 originals; no token-count blockquote appears in any output file.
+
+### Phase 6 — Scriban source embedding + first-run welcome popup (sprint 6)
+
+> See [`d365-context-exporter-phase6.md`](d365-context-exporter-phase6.md) for the full implementation plan.
+
+- Compile Scriban source directly into the plugin DLL using `PackageScribanIncludeSource=true` and `IncludeAssets="Build"` on the package reference. `Scriban.dll` is eliminated from the output; the `AssemblyResolve` handler is kept intact for the remaining runtime dependencies (`System.Text.Json`, `System.Text.Encodings.Web`). Three polyfill packages required for .NET Framework 4.8 are added (`Microsoft.CSharp`, `System.Threading.Tasks.Extensions`, `PolySharp`).
+- Add a `WelcomeShown` boolean user setting. On the plugin control's first `Load` event (before any directory prompts), if the flag is false, flip it, save, and show a modal `WelcomeForm` dialog containing the Quick Start section of the README rendered as HTML via the built-in `WebBrowser` control. The HTML is stored as an embedded assembly resource (`Resources/WelcomeQuickStart.html`).
+- Remove `Scriban.dll` from the nuspec and from the `Directory.Build.targets` private-deps copy list.
+- **Exit criteria:** `Scriban.dll` is absent from the build output and the nupkg; the welcome dialog appears exactly once on first plugin load; all existing tests pass.
+
 ## Testing Strategy
 
 Following the project's testing conventions (Moq-based, no Fakes frameworks):
@@ -473,14 +491,14 @@ Following the project's testing conventions (Moq-based, no Fakes frameworks):
 
 - Built as a signed NuGet package following the XrmToolBox Tool Library convention.
 - The `.nuspec` tags must include `XrmToolBox` to appear in the Tool Library.
-- Because the plugin bundles Python helpers and a schema directory, the nuspec explicitly includes `python/**` and `schema/**` as `content` files. These are copied alongside the assembly when XrmToolBox extracts the plugin package. The `config/` sample directory lives at the solution root and is not shipped in the nupkg — users author their own configs locally.
+- From Phase 5, the nuspec ships the plugin DLL, PDB, `Scriban.dll`, and the `schema\` directory under `Plugins\`. No Python files are included. Sample configs, templates, and query files are embedded as assembly resources and deployed by `FirstRunHelper` on first run — they are not loose files in the nupkg.
 - Assembly version, file version, and NuGet version are kept in sync via the ADO `Assembly Info` task so the plugin passes the Tool Library validation criteria.
 - ADO pipeline (`/Pipeline/d365contextexporter-build.yml`) modeled on the standard Azure Function build template but targeting pack rather than deploy.
 
 ## Risks and Mitigations
 
-- **Python not installed on the user's machine.** Mitigation: the plugin's first run detects missing Python, shows a dialog with a direct link to `python.org`, and refuses to proceed rather than failing obscurely. An optional install-helper button can invoke `winget install Python.Python.3.11` on systems where `winget` is available.
-- **Jinja2 templates are Turing-complete and can loop forever.** Mitigation: the subprocess call is wrapped with a default 5-minute timeout, configurable per job. Process is forcibly killed on timeout and the user sees a clear message.
+- ~~**Python not installed on the user's machine.**~~ **Resolved in Phase 5.** No Python installation is required; Scriban renders templates in-process.
+- **Templates can loop forever.** Mitigation (Phase 5): Scriban's `TemplateContext` supports `LoopLimit` (default 100,000 iterations) which terminates runaway loops and throws a `ScribanException`. Set an explicit `context.LoopLimit` appropriate for large Dataverse orgs.
 - **Large Dataverse orgs can produce enormous intermediate JSON files.** Mitigation: the intermediate is streamed to disk (not held fully in memory) by using `Newtonsoft.Json`'s `JsonTextWriter` directly. Per-query row limits can be set in the config (`maxRecords`).
 - **AI tools consuming the Markdown may have upload size limits.** Mitigation: templates are designed to be split by topic (five initial templates rather than one giant file). The config can target multiple small outputs instead of one big one.
 

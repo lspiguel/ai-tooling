@@ -3,7 +3,7 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter.Helpers
+namespace Lspiguel.Xrm.D365ContextExporter.Helpers
 {
     using System;
     using System.IO;
@@ -23,35 +23,38 @@ namespace D365ContextExporter.Helpers
         {
             // Queries
             ("SampleConfig.queries.app-modules.fetch.xml",            @"config\queries\app-modules.fetch.xml"),
+            ("SampleConfig.queries.bpf-stages.fetch.xml",             @"config\queries\bpf-stages.fetch.xml"),
+            ("SampleConfig.queries.business-process-flows.fetch.xml", @"config\queries\business-process-flows.fetch.xml"),
+            ("SampleConfig.queries.cloud-flows.fetch.xml",            @"config\queries\cloud-flows.fetch.xml"),
             ("SampleConfig.queries.custom-api-responses.fetch.xml",   @"config\queries\custom-api-responses.fetch.xml"),
             ("SampleConfig.queries.custom-apis.fetch.xml",            @"config\queries\custom-apis.fetch.xml"),
             ("SampleConfig.queries.env-vars.fetch.xml",               @"config\queries\env-vars.fetch.xml"),
             ("SampleConfig.queries.plugin-assemblies.fetch.xml",      @"config\queries\plugin-assemblies.fetch.xml"),
             ("SampleConfig.queries.sdk-steps.fetch.xml",              @"config\queries\sdk-steps.fetch.xml"),
             ("SampleConfig.queries.security-roles.fetch.xml",         @"config\queries\security-roles.fetch.xml"),
-            ("SampleConfig.queries.solutions-and-entities.fetch.xml", @"config\queries\solutions-and-entities.fetch.xml"),
-            ("SampleConfig.queries.solutions-components.fetch.xml",   @"config\queries\solutions-components.fetch.xml"),
             ("SampleConfig.queries.solutions-detail.fetch.xml",       @"config\queries\solutions-detail.fetch.xml"),
-            ("SampleConfig.queries.solutions.fetch.xml",              @"config\queries\solutions.fetch.xml"),
             ("SampleConfig.queries.workflows.fetch.xml",              @"config\queries\workflows.fetch.xml"),
 
-            // Transformations — templates
-            ("SampleConfig.transformations.entity-dictionary.j2",    @"config\transformations\entity-dictionary.j2"),
-            ("SampleConfig.transformations.forms-and-views.j2",      @"config\transformations\forms-and-views.j2"),
-            ("SampleConfig.transformations.optionsets.j2",           @"config\transformations\optionsets.j2"),
-            ("SampleConfig.transformations.security-model.j2",       @"config\transformations\security-model.j2"),
-            ("SampleConfig.transformations.solution-inventory.j2",   @"config\transformations\solution-inventory.j2"),
-            ("SampleConfig.transformations.solutions-reference.j2",  @"config\transformations\solutions-reference.j2"),
-
-            // Transformations — Python
-            ("SampleConfig.transformations.transform.py",            @"config\transformations\transform.py"),
-            ("SampleConfig.transformations.filters.py",              @"config\transformations\filters.py"),
-            ("SampleConfig.transformations.requirements.txt",        @"config\transformations\requirements.txt"),
+            // Transformations — Scriban templates
+            ("SampleConfig.transformations.entity-dictionary.sbn",    @"config\transformations\entity-dictionary.sbn"),
+            ("SampleConfig.transformations.forms-and-views.sbn",      @"config\transformations\forms-and-views.sbn"),
+            ("SampleConfig.transformations.optionsets.sbn",           @"config\transformations\optionsets.sbn"),
+            ("SampleConfig.transformations.power-automate-flows.sbn", @"config\transformations\power-automate-flows.sbn"),
+            ("SampleConfig.transformations.security-model.sbn",       @"config\transformations\security-model.sbn"),
+            ("SampleConfig.transformations.solution-inventory.sbn",   @"config\transformations\solution-inventory.sbn"),
+            ("SampleConfig.transformations.solutions-reference.sbn",  @"config\transformations\solutions-reference.sbn"),
 
             // Spec configs
-            ("SampleConfig.EntityDictionary.context-exporter-config.json",  @"config\EntityDictionary.context-exporter-config.json"),
-            ("SampleConfig.SecurityModel.context-exporter-config.json",     @"config\SecurityModel.context-exporter-config.json"),
+            ("SampleConfig.EntityDictionary.context-exporter-config.json",   @"config\EntityDictionary.context-exporter-config.json"),
+            ("SampleConfig.FormsAndViews.context-exporter-config.json",      @"config\FormsAndViews.context-exporter-config.json"),
+            ("SampleConfig.Optionsets.context-exporter-config.json",         @"config\Optionsets.context-exporter-config.json"),
+            ("SampleConfig.PowerAutomateFlows.context-exporter-config.json", @"config\PowerAutomateFlows.context-exporter-config.json"),
+            ("SampleConfig.SecurityModel.context-exporter-config.json",      @"config\SecurityModel.context-exporter-config.json"),
+            ("SampleConfig.SolutionInventory.context-exporter-config.json",  @"config\SolutionInventory.context-exporter-config.json"),
             ("SampleConfig.SolutionsReference.context-exporter-config.json", @"config\SolutionsReference.context-exporter-config.json"),
+
+            // JSON Schema — deployed beside the spec configs so their relative "./context-exporter.schema.json" reference resolves for IDE IntelliSense.
+            ("SampleConfig.context-exporter.schema.json",                    @"config\context-exporter.schema.json"),
         };
 
         // LEGAL.md handled separately (never overwritten on upgrade, and org-name substitution applied on first deploy).
@@ -76,7 +79,7 @@ namespace D365ContextExporter.Helpers
             var result = MessageBox.Show(
                 owner,
                 $"The selected folder does not contain any spec configurations.\n\n" +
-                $"Would you like to deploy the reference configuration (sample specs, FetchXML queries, Jinja2 templates, and Python scripts) to:\n\n{baseDir}",
+                $"Would you like to deploy the reference configuration (sample specs, FetchXML queries, and Scriban templates) to:\n\n{baseDir}",
                 "First-Time Setup",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
@@ -108,7 +111,7 @@ namespace D365ContextExporter.Helpers
                     continue;
                 }
 
-                var resourceName = "D365ContextExporter." + resourceSuffix;
+                var resourceName = "Lspiguel.Xrm.D365ContextExporter." + resourceSuffix;
                 WriteResource(resourceName, destPath, log, overwrite ? "[Setup] Updated" : "[Setup] Deployed");
             }
 
@@ -117,7 +120,7 @@ namespace D365ContextExporter.Helpers
             if (!File.Exists(legalDest))
             {
                 var orgName = PromptOrgName(owner);
-                var legalResource = "D365ContextExporter." + LegalResourceSuffix;
+                var legalResource = "Lspiguel.Xrm.D365ContextExporter." + LegalResourceSuffix;
                 var template = ReadResource(legalResource);
                 var content = ApplyOrgName(template, orgName);
                 Directory.CreateDirectory(Path.GetDirectoryName(legalDest)!);
@@ -157,7 +160,7 @@ namespace D365ContextExporter.Helpers
             var result = MessageBox.Show(
                 owner,
                 $"The plugin has been updated from {stored} to {current}.\n\n" +
-                "Would you like to update the reference configuration files (queries, templates, Python scripts, and sample specs)? " +
+                "Would you like to update the reference configuration files (queries, templates, and sample specs)? " +
                 "Your LEGAL.md and any custom files will not be modified.",
                 "Plugin Updated",
                 MessageBoxButtons.YesNo,

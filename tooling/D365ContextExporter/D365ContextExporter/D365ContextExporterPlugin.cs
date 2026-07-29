@@ -3,10 +3,9 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter
+namespace Lspiguel.Xrm.D365ContextExporter
 {
     using System.ComponentModel.Composition;
-
     using XrmToolBox.Extensibility;
     using XrmToolBox.Extensibility.Interfaces;
 
@@ -21,6 +20,11 @@ namespace D365ContextExporter
     [ExportMetadata("SecondaryFontColor", "Gray")]
     public sealed class D365ContextExporterPlugin : PluginBase
     {
+        // All dependencies are either source-embedded (Scriban) or provided by XrmToolBox
+        // itself (Newtonsoft.Json), so no private lib subfolder or AssemblyResolve handler
+        // is needed. Loose DLLs in a Plugins subfolder get locked by XrmToolBox's assembly
+        // scan and break Tool Library updates/uninstalls.
+
         /// <inheritdoc/>
         public override IXrmToolBoxPluginControl GetControl() => new ContextExporterPluginControl();
     }

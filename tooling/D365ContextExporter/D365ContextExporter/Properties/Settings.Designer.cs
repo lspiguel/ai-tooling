@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace D365ContextExporter.Properties {
+namespace Lspiguel.Xrm.D365ContextExporter.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
@@ -32,6 +32,18 @@ namespace D365ContextExporter.Properties {
             }
             set {
                 this["BaseDirectory"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool WelcomeShown {
+            get {
+                return ((bool)(this["WelcomeShown"]));
+            }
+            set {
+                this["WelcomeShown"] = value;
             }
         }
     }

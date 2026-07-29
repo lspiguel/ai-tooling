@@ -8,6 +8,7 @@
 /tooling/D365ContextExporter/runs
 /scaffolding
 /tooling/D365ContextExporter/output
+ai-tooling.code-workspace
 
 # AI tooling configuration
 .claude/

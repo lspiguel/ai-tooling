@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f3f2ef; font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; }
+
+  .card {
+    width: 660px;
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e0e0e0;
+  }
+
+  .header {
+    background: #0a66c2;
+    padding: 28px 32px 22px;
+    color: white;
+  }
+  .header-tag {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+  .header p {
+    font-size: 13px;
+    opacity: 0.85;
+    line-height: 1.5;
+  }
+
+  .problem-solution {
+    display: flex;
+    border-bottom: 1px solid #eee;
+  }
+  .problem, .solution {
+    flex: 1;
+    padding: 16px 20px;
+  }
+  .problem {
+    background: #fff8f8;
+    border-right: 1px solid #eee;
+  }
+  .solution {
+    background: #f0f7ff;
+  }
+  .ps-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .problem .ps-label { color: #c0392b; }
+  .solution .ps-label { color: #0a66c2; }
+  .ps-text {
+    font-size: 13px;
+    color: #333;
+    line-height: 1.5;
+  }
+
+  .flow-section {
+    padding: 20px 28px 16px;
+    border-bottom: 1px solid #eee;
+  }
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 14px;
+  }
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .flow-step {
+    flex: 1;
+    text-align: center;
+  }
+  .step-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #e8f0fe;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 7px;
+    font-size: 20px;
+  }
+  .step-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.3;
+  }
+  .step-sub {
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+    line-height: 1.3;
+  }
+  .flow-arrow {
+    color: #0a66c2;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 0 2px;
+    margin-bottom: 18px;
+    flex-shrink: 0;
+  }
+
+  .specs-section {
+    padding: 16px 28px 20px;
+    background: #fafafa;
+  }
+  .specs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .spec-chip {
+    background: white;
+    border: 1px solid #dde3f0;
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .spec-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: #0a66c2;
+    margin-bottom: 2px;
+  }
+  .spec-desc {
+    font-size: 10px;
+    color: #666;
+    line-height: 1.4;
+  }
+
+  .tag-row {
+    padding: 12px 28px 14px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    border-top: 1px solid #eee;
+  }
+  .tag {
+    font-size: 11px;
+    color: #0a66c2;
+    background: #e8f0fe;
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <div class="header">
+    <div class="header-tag">XrmToolBox Plugin · Open Source</div>
+    <h1>D365 CE Context Exporter</h1>
+    <p>Give your AI assistant a complete picture of your Dataverse environment — in one click.</p>
+  </div>
+
+  <div class="problem-solution">
+    <div class="problem">
+      <div class="ps-label">The Problem</div>
+      <div class="ps-text">AI tools like Copilot, Claude, and ChatGPT don't know your D365 data model. Every session you explain entities, fields, roles, and flows from scratch.</div>
+    </div>
+    <div class="solution">
+      <div class="ps-label">The Solution</div>
+      <div class="ps-text">Export your environment's metadata as structured Markdown. Upload once. Your AI assistant becomes instantly context-aware.</div>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <div class="section-title">How it works</div>
+    <div class="flow">
+      <div class="flow-step">
+        <div class="step-icon">🔌</div>
+        <div class="step-label">Connect</div>
+        <div class="step-sub">XrmToolBox org connection</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-step">
+        <div class="step-icon">📋</div>
+        <div class="step-label">Pick a Spec</div>
+        <div class="step-sub">Choose what to export</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-step">
+        <div class="step-icon">⚡</div>
+        <div class="step-label">Run</div>
+        <div class="step-sub">Queries + template render</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-step">
+        <div class="step-icon">📄</div>
+        <div class="step-label">Get .md file</div>
+        <div class="step-sub">Structured grounding context</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-step">
+        <div class="step-icon">🤖</div>
+        <div class="step-label">Upload to AI</div>
+        <div class="step-sub">Claude · Copilot · ChatGPT</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="specs-section">
+    <div class="section-title">6 built-in specs, fully customisable</div>
+    <div class="specs-grid">
+      <div class="spec-chip">
+        <div class="spec-name">Entity Dictionary</div>
+        <div class="spec-desc">All entities and their attributes</div>
+      </div>
+      <div class="spec-chip">
+        <div class="spec-name">Security Model</div>
+        <div class="spec-desc">Roles and privilege depths</div>
+      </div>
+      <div class="spec-chip">
+        <div class="spec-name">Forms &amp; Views</div>
+        <div class="spec-desc">Entity forms, views, columns</div>
+      </div>
+      <div class="spec-chip">
+        <div class="spec-name">Option Sets</div>
+        <div class="spec-desc">Global option set catalogue</div>
+      </div>
+      <div class="spec-chip">
+        <div class="spec-name">Solutions Reference</div>
+        <div class="spec-desc">Solution hierarchy &amp; components</div>
+      </div>
+      <div class="spec-chip">
+        <div class="spec-name">Solution Inventory</div>
+        <div class="spec-desc">Plugins, flows, env vars, APIs</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tag-row">
+    <span class="tag">#Dynamics365</span>
+    <span class="tag">#Dataverse</span>
+    <span class="tag">#XrmToolBox</span>
+    <span class="tag">#AIAssistants</span>
+    <span class="tag">#PowerPlatform</span>
+    <span class="tag">#OpenSource</span>
+  </div>
+
+</div>
+</body>
+</html>

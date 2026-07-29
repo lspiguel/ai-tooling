@@ -3,7 +3,7 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 // </copyright>
 
-namespace D365ContextExporter.Models
+namespace Lspiguel.Xrm.D365ContextExporter.Models
 {
     using System;
     using System.Collections.Generic;
@@ -30,7 +30,7 @@ namespace D365ContextExporter.Models
         [JsonProperty("queries")]
         public List<QueryDefinition> Queries { get; set; } = new List<QueryDefinition>();
 
-        /// <summary>Gets or sets the Python runtime settings.</summary>
+        /// <summary>Gets or sets the Python runtime settings. Ignored from Phase 5 onward; the plugin renders templates in-process via Scriban. Retained for JSON deserialization compatibility with existing config files.</summary>
         [JsonProperty("python")]
         public PythonSettings Python { get; set; } = new PythonSettings();
 

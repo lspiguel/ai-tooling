@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 
-using D365ContextExporter.Models;
-using D365ContextExporter.Queries;
+using Lspiguel.Xrm.D365ContextExporter.Models;
+using Lspiguel.Xrm.D365ContextExporter.Queries;
 
 using Moq;
 using Moq.Contrib.HttpClient;
@@ -14,7 +14,7 @@ using Newtonsoft.Json.Linq;
 
 using NUnit.Framework;
 
-namespace D365ContextExporter.Tests.QueriesTests
+namespace Lspiguel.Xrm.D365ContextExporter.Tests.QueriesTests
 {
     /// <summary>
     /// Integration-style tests that mock HTTP interactions with Moq.Contrib.HttpClient using

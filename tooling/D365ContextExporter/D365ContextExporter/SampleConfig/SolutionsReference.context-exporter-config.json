@@ -1,5 +1,5 @@
 {
-  "$schema": "../schema/context-exporter.schema.json",
+  "$schema": "./context-exporter.schema.json",
   "spec": "SolutionsReference",
   "version": "1.0.0",
   "legal": "LEGAL.md",
@@ -10,7 +10,7 @@
   "python": {
     "interpreter": "auto"
   },
-  "transformation": "solutions-reference.j2",
+  "transformation": "solutions-reference.sbn",
   "queries": [
     {
       "id": "solutions",
@@ -21,9 +21,23 @@
     {
       "id": "entities",
       "type": "webapi",
-      "path": "EntityDefinitions?$select=LogicalName,DisplayName,Description,IsCustomEntity,IsActivity,PrimaryIdAttribute,PrimaryNameAttribute&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,RequiredLevel,IsCustomAttribute)",
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName,Description,IsActivity,PrimaryIdAttribute,PrimaryNameAttribute,IsCustomEntity,IsManaged,IsCustomizable&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,RequiredLevel,IsCustomAttribute)",
       "resultKey": "entities",
       "maxRecords": 500
+    },
+    {
+      "id": "system-forms",
+      "type": "webapi",
+      "path": "systemforms?$select=name,type,objecttypecode",
+      "resultKey": "forms",
+      "maxRecords": 5000
+    },
+    {
+      "id": "saved-queries",
+      "type": "webapi",
+      "path": "savedqueries?$select=name,querytype,returnedtypecode",
+      "resultKey": "views",
+      "maxRecords": 5000
     },
     {
       "id": "global-optionsets",
@@ -60,6 +74,18 @@
       "type": "fetchxml",
       "source": "workflows.fetch.xml",
       "resultKey": "workflows"
+    },
+    {
+      "id": "business-process-flows",
+      "type": "fetchxml",
+      "source": "business-process-flows.fetch.xml",
+      "resultKey": "businessProcessFlows"
+    },
+    {
+      "id": "bpf-stages",
+      "type": "fetchxml",
+      "source": "bpf-stages.fetch.xml",
+      "resultKey": "bpfStages"
     },
     {
       "id": "app-modules",
