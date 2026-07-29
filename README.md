@@ -70,6 +70,8 @@ Categories 1 and 3 carry the developed workflows today; the rest are still in fl
 | [tooling/](tooling/) | Custom tooling, including the D365 Context Exporter |
 | [skills/](skills/) | Reusable skills and reference guides for AI assistants |
 | [scripts/](scripts/) | Utility scripts supporting AI-assisted tasks and automation |
+| [INSTRUCTIONS.md](INSTRUCTIONS.md) | Conventions, hard rules, and working agreements for AI tools contributing to this repository |
+| [CLAUDE.md](CLAUDE.md) · [AGENTS.md](AGENTS.md) · [.github/copilot-instructions.md](.github/copilot-instructions.md) | Per-tool entry points, each pointing at [INSTRUCTIONS.md](INSTRUCTIONS.md) as the single source of truth |
 
 ---
 
