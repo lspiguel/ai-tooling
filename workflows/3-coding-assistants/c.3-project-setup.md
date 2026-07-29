@@ -1,6 +1,6 @@
 # [C.3] Project Setup — ALM and/or repository wiring: git repo initialization and solution export automation
 
-> **Matrix cell:** [[C.3]](../ai-augmented-d365ce-activity-matrix.md#c3-project-setup) · Column **[3] Coding Assistants & Agentic Environments** · Grounding model: [A.3](./a.3-grounding.md) · Builds on [B.3](./b.3-initial-setup.md) · Column-1 counterpart: [C.1](../1-general-purpose-assistants/c.1-project-setup.md)
+> **Matrix cell:** [[C.3]](../ai-augmented-d365ce-activity-matrix.md#c3-project-setup) · Column **[3] Coding Assistants & Agentic Environments** · Grounding model: [A.3](./a.3-grounding.md) · Builds on [B.3](./b.3-initial-setup.md)
 
 > **Prefer ALM if it exists.** If the engagement already has a Power Platform Pipelines / Azure DevOps "export & unpack" ALM process, use it — this local script is the fallback for when there is no pipeline yet, or for a developer's own working copy. Either way the *folder layout* below is what the assistant reads.
 
@@ -22,14 +22,14 @@ This guide stands up the **three repositories** described in [A.3 — Grounding]
 
 ## 1. Prepare the local, personal Context repository
 
-Your own working copy of the engagement's intent and environment state — context packs, per-story folders, and the engagement documents. It stays personal and local; it does not merge into the shared repos below. Produced per [C.1](../1-general-purpose-assistants/c.1-project-setup.md), explained in [A.1](../1-general-purpose-assistants/a.1-grounding.md).
+Your own working copy of the engagement's intent and environment state — context packs, per-story folders, and the engagement documents. It stays personal and local; it does not merge into the shared repos below.
 
 ```
 <client>-Context/
 ├── .gitignore
 ├── context-exporter/        D365 Context Exporter folder
 │   ├── config/              Configuration files
-│   ├── output/              Context packs to be supplied to the General AI Assistants
+│   ├── output/              Context Exporter .context.md packs
 │   └── runs/                Ignored by .gitignore
 ├── XXX-story-1
 │   ├── XXX-story-1.md       Replicated user stories content in markdown
@@ -67,7 +67,7 @@ Fixed top-level layout so the assistant — and every teammate — always finds 
 │       ├── src/                    unpacked component tree
 │       └── <SolutionName>.zip      exported managed/unmanaged zips (git-ignored)
 ├── webresources/                   WEB RESOURCES (JS, HTML, CSS) — editable source
-├── context/                        Context Exporter .context.md packs (see C.1)
+├── context/                        Context Exporter .context.md packs (committed copy)
 ├── docs/                           ADRs, runbooks, architecture (docs-as-code)
 ├── scripts/                        Automation, incl. the export script below
 ├── .gitignore
@@ -260,7 +260,7 @@ Review the unpacked tree under `solutions/<Name>/src/` — you should see the en
 
 With the repo grounded, complete the [C.3] setup from the matrix:
 
-- **Drop the Context Exporter packs** into `context/` (produced per [C.1](../1-general-purpose-assistants/c.1-project-setup.md)) — the same `.context.md` snapshots, now sitting next to the code for the assistant to read.
+- **Drop the Context Exporter packs** into `context/` — the same `.context.md` snapshots, now sitting next to the code for the assistant to read.
 - **Make all three repositories visible to the assistant at once** — a multi-root workspace (`<client>.code-workspace`) in VS Code/Cursor, or additional working directories in Claude Code — so a single prompt can span the story, the unpacked solution and the wiki pages it affects ([A.3](./a.3-grounding.md)).
 - **Register this environment's Dataverse MCP** so the assistant can `describe`/`search` live schema and read current rows, not just the point-in-time unpack. Remember: the admin must **allow-list the client per environment**, and tool calls from non-Copilot-Studio agents are **billable**.
 - **Authenticate the Azure DevOps CLI** so the spec/plan/task rows can read and write the backlog: `az extension add --name azure-devops`, then `az devops configure --defaults organization=https://dev.azure.com/<org> project=<project>` so every `az boards` call defaults to this engagement without repeating the org/project flags.

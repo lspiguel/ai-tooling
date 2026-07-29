@@ -1,6 +1,6 @@
 # [C.1] Project Setup — the engagement reference: Context Exporter grounding for a general-purpose assistant
 
-> **Matrix cell:** [[C.1]](../ai-augmented-d365ce-activity-matrix.md#c1-project-setup) · Column **[1] General-Purpose AI Assistants** · Grounding model: [A.1](./a.1-grounding.md) · Builds on [B.1](./b.1-initial-setup.md) · Column-3 counterpart: [C.3](../3-coding-assistants/c.3-project-setup.md)
+> **Matrix cell:** [[C.1]](../ai-augmented-d365ce-activity-matrix.md#c1-project-setup) · Column **[1] General-Purpose AI Assistants** · Grounding model: [A.1](./a.1-grounding.md) · Builds on [B.1](./b.1-initial-setup.md)
 
 ---
 
@@ -8,7 +8,7 @@
 
 | Requirement | Notes |
 |---|---|
-| XrmToolBox 1.2025.x or later | Installed as part of the machine baseline — `choco install xrmtoolbox -y` (see [B.1](./b.1-initial-setup.md) / [B.3](../3-coding-assistants/b.3-initial-setup.md)). |
+| XrmToolBox 1.2025.x or later | Installed as part of the machine baseline — `choco install xrmtoolbox -y` (see [B.1](./b.1-initial-setup.md)). |
 | .NET Framework 4.8 | Required by the plugin; present on current Windows. |
 | A connection to the **client's** Dataverse environment | System Customizer or System Administrator security role, or at minimum read access to entity metadata, solutions, security roles, and processes. |
 | An enterprise/professional-tier AI assistant under the engagement's data agreement | The destination for the packs. Confirm the DPA / zero-retention terms *before* uploading anything. |
@@ -43,7 +43,7 @@ One repository per client, holding everything you would ever seed into a Project
 └── ...
 ```
 
-> This is one of **three** repositories the engagement uses. The other two — `<client>-d365/` (unpacked solutions and source code) and `<client>-wiki/` (live documentation, backed by the ADO wiki's git repo) — are shared, team-owned, and read directly by column-3 coding assistants rather than uploaded. See [A.3](../3-coding-assistants/a.3-grounding.md) and [C.3](../3-coding-assistants/c.3-project-setup.md). In column 1 you draw on them by hand: copy the relevant page or extract into the story folder or `offline-access/` before attaching it.
+> If the engagement also maintains a shared solutions/code repo or a published wiki, this repository does not merge with them — draw on them by hand instead: copy the relevant page or extract into the story folder or `offline-access/` before attaching it.
 
 ---
 
