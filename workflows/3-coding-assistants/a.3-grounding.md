@@ -4,7 +4,7 @@
 
 ## The problem this solves
 
-A coding assistant grounds itself by **reading**. Unlike column 1, you don't hand it context — you point it at repositories and it goes and looks. That changes the design question from *"what do I upload?"* to *"what must exist on disk, and where?"*
+A coding assistant grounds itself by **reading**. You point it at repositories and it goes and looks. That changes the design question from *"what do I upload?"* to *"what must exist on disk, and where?"*
 
 Three questions recur throughout the delivery loop, and they have different answers, different owners and different audiences:
 
