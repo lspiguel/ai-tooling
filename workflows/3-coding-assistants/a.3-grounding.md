@@ -1,10 +1,10 @@
 # [A.3] Grounding — the three-repository organization: context, project, and wiki
 
-> **Matrix cell:** [[A.3]](../ai-augmented-d365ce-activity-matrix.md#a3-solutions-unpacked--code-repositories--the-grounding-method-for-column-3) · Column **[3] Coding Assistants & Agentic Environments** · Stood up per client in [C.3](./c.3-project-setup.md) · Column-1 counterpart: [A.1](../1-general-purpose-assistants/a.1-grounding.md)
+> **Matrix cell:** [[A.3]](../ai-augmented-d365ce-activity-matrix.md#a3-solutions-unpacked--code-repositories--the-grounding-method-for-column-3) · Column **[3] Coding Assistants & Agentic Environments** · Stood up per client in [C.3](./c.3-project-setup.md)
 
 ## The problem this solves
 
-A coding assistant grounds itself by **reading**. Unlike column 1, you don't hand it context — you point it at repositories and it goes and looks. That changes the design question from *"what do I upload?"* to *"what must exist on disk, and where?"*
+A coding assistant grounds itself by **reading**. You point it at repositories and it goes and looks. The design question is *"what must exist on disk, and where?"*
 
 Three questions recur throughout the delivery loop, and they have different answers, different owners and different audiences:
 
@@ -32,14 +32,14 @@ Collapsing them into one repository is the tempting shortcut and it fails in a p
 
 ## 1. `<client>-Context/` — intent and environment state
 
-The same repository column 1 uses ([A.1](../1-general-purpose-assistants/a.1-grounding.md)), reused here for a different reason: a coding assistant can *read it off disk* instead of you attaching files to a prompt.
+This repository holds the context packs, story folders, and engagement documents — but here, a coding assistant reads it **off disk** instead of you attaching files to a prompt.
 
 ```
 <client>-Context/
 ├── .gitignore
 ├── context-exporter/        D365 Context Exporter folder
 │   ├── config/              Configuration files
-│   ├── output/              Context packs to be supplied to the General AI Assistants
+│   ├── output/              Context Exporter .context.md packs
 │   ├── LEGAL.md             Boundary notice prepended to every pack
 │   └── runs/                Ignored by .gitignore
 ├── XXX-story-1
@@ -63,7 +63,7 @@ What the coding assistant gets from it that the project repo can't give:
 - **`offline-access/` carries the constraints** — SoW scope, architecture decisions, naming and publisher-prefix conventions, deployment checklists. These are the boundaries the agent would otherwise invent.
 - **The packs remain useful even with MCP available.** They are the cheap, offline, diffable read; the [Dataverse MCP](../ai-augmented-d365ce-activity-matrix.md#aiii-dataverse-mcp-server--column-3) is the live, billable, allow-listed one. Use the pack to orient, MCP to confirm.
 
-This repository stays **personal** even in column 3. It holds your working notes and mirrored story text; don't merge it into the team repo.
+This repository stays **personal**. It holds your working notes and mirrored story text; don't merge it into the team repo.
 
 ---
 
@@ -82,7 +82,7 @@ The engagement's shared repository, with a fixed top-level layout so the assista
 │       ├── src/                    unpacked component tree
 │       └── <SolutionName>.zip      exported managed/unmanaged zips (git-ignored)
 ├── webresources/                   WEB RESOURCES (JS, HTML, CSS) — editable source
-├── context/                        Context Exporter .context.md packs (see A.1 / C.1)
+├── context/                        Context Exporter .context.md packs (committed copy)
 ├── docs/                           ADRs, runbooks, architecture (docs-as-code)
 ├── scripts/                        Automation, incl. the solution export script
 ├── .gitignore
@@ -167,7 +167,7 @@ The payoff is a single prompt that spans all three: *"Read the story in `<client
 - **Secrets live in none of them.** Connection strings, client secrets and `.env` files stay out of all three; the `.gitignore` in [C.3](./c.3-project-setup.md#4-the-gitignore) excludes them explicitly.
 - **The context repo does not become a dumping ground for client data.** Schema and metadata are a lower-stakes extract than live rows or PII — see [Considerations](../ai-augmented-d365ce-activity-matrix.md#considerations) — and the `LEGAL.md` notice travels with every pack.
 - **Personal working material does not migrate into the shared repos.** Story mirrors, drafts and notes stay in `<client>-Context/`; what graduates into `<client>-d365/docs/` or the wiki does so deliberately, reviewed.
-- **Each repo refreshes on its own trigger** — the packs when the model moves ([6.1]), the solution tree on every export/unpack ([C.3 §5](./c.3-project-setup.md#5-the-solution-exportunpack-script)), the wiki when behaviour changes ([6.3]).
+- **Each repo refreshes on its own trigger** — the packs when the model moves (a re-export), the solution tree on every export/unpack ([C.3 §5](./c.3-project-setup.md#5-the-solution-exportunpack-script)), the wiki when behaviour changes ([6.3]).
 
 ---
 

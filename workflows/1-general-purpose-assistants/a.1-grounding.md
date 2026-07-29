@@ -1,6 +1,6 @@
 # [A.1] Grounding — the `<client>-Context/` repository: context packs, story folders, and engagement documents
 
-> **Matrix cell:** [[A.1]](../ai-augmented-d365ce-activity-matrix.md#a1-context-packs--the-grounding-method-for-column-1) · Column **[1] General-Purpose AI Assistants** · Stood up per client in [C.1](./c.1-project-setup.md) · Column-3 counterpart: [A.3](../3-coding-assistants/a.3-grounding.md)
+> **Matrix cell:** [[A.1]](../ai-augmented-d365ce-activity-matrix.md#a1-context-packs--the-grounding-method-for-column-1) · Column **[1] General-Purpose AI Assistants** · Stood up per client in [C.1](./c.1-project-setup.md)
 
 ## The problem this solves
 
@@ -10,7 +10,7 @@ That material needs somewhere to live. Spread across Downloads, Teams chats and 
 
 `<client>-Context/` is that place — **one local git repository per client**, holding everything you would ever seed into a Claude Project / Custom GPT / M365 Copilot Notebook or attach to a single prompt.
 
-It is **personal and local**: your working copy of the engagement's context, not a team deliverable and not the client's repository. The team-shared solutions/code repo and the published wiki are column 3's concern — see [A.3](../3-coding-assistants/a.3-grounding.md).
+It is **personal and local**: your working copy of the engagement's context, not a team deliverable and not the client's repository.
 
 ---
 
@@ -67,7 +67,7 @@ Everything in the repo arrives at the assistant through one of two doors, and pu
 
 ## Per-story folders: the assistant's missing memory
 
-Column-1 assistants have no repository and no work-item access, so a story folder is doing the job that a branch and an ADO work item do in column 3. Each folder is a self-contained bundle you can drag into a fresh conversation and be immediately grounded:
+A general-purpose assistant has no repository and no work-item access, so the story folder is its memory: a self-contained bundle you can drag into a fresh conversation and be immediately grounded:
 
 ```
 1234-account-merge-rules/
