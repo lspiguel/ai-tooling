@@ -50,6 +50,8 @@ This repository is a **playbook plus the tooling that supports it**, for AI-augm
 
 The repository's own thesis applies to work inside it: **ground first, then write.** Read the neighbouring files before adding one.
 
+**Pages marked preliminary are not guidance.** A page whose opening blockquote reads **Preliminary** is a draft in progress. Do not cite one as established repository guidance, and do not extend one without asking; its scope is still being decided.
+
 **Where the work is.** Columns 1 and 3 carry the developed workflows. Taxonomies 2, 4, 5 and 6 — including the maker portals and Copilot Studio — are deliberately staged in the matrix's [Not covered](/workflows/ai-augmented-d365ce-activity-matrix.md#not-covered-taxonomies-other-than-1-and-3) section, not overlooked. Proposing work there is a structural change; see the last of the [Working agreements](#working-agreements).
 
 ---
