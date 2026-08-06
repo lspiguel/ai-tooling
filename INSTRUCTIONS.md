@@ -167,7 +167,9 @@ dotnet test    tooling/D365ContextExporter/D365ContextExporter.Tests/D365Context
 
 ## Skills
 
-[skills/](/skills/) holds reusable reference guides for AI assistants — condensed, decision-oriented documents (see [Power Automate Cloud Flow Deployment Options](/skills/Power-Automate-Cloud-Flow-Deployment-Options.md)). Lead with the decision table, then the detail. A skill answers "which option do I reach for and why", not "here is everything about the topic".
+[skills/](/skills/) holds reusable skills for AI assistants. A skill is a folder named for the skill, holding a `SKILL.md` with `name` and `description` frontmatter, plus optional `references/` and `scripts/` — see [d365ce-planning](/skills/d365ce-planning/SKILL.md) and [power-automate-flow-editing](/skills/power-automate-flow-editing/SKILL.md).
+
+`SKILL.md` carries the decision and the procedure — lead with the decision table, then the steps, and close with the guardrails a human must check. Depth goes in `references/`, loaded only when the step needs it. A skill answers "which option do I reach for, and how do I carry it out safely", not "here is everything about the topic".
 
 ---
 
