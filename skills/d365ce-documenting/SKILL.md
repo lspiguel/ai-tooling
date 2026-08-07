@@ -1,13 +1,29 @@
 ---
 name: d365ce-documenting
-description: Documents delivered Microsoft Dynamics 365 Customer Engagement and Dataverse work as complementary views of one system, from work items, implementation plans, the source repository and the generated solution extract. Defaults to a functional and technical design pair, collapsing to a combined design document for small changes or expanding to richer model sets when the architecture warrants it. Covers researching what was actually built rather than what was planned, updating existing pages when work modifies documented behaviour, keeping each view to one audience, cross-referencing the work items documented, publishing through a git-backed markdown wiki, and maintaining indexes and tables of contents. Use when documenting a delivered work item, story, task or feature into a wiki, or when asked to write functional and technical documentation for something already built.
+description: Documents delivered Microsoft Dynamics 365 Customer Engagement and Dataverse work as complementary views of one system, built from the specification, the source repository, the generated solution extract, the delivery history in git, and an implementation plan where one exists. Defaults to a functional and technical design pair, collapsing to a combined design document for small changes or expanding to richer model sets when the architecture warrants it. Covers researching what was actually built rather than what was specified or planned, updating existing pages when work modifies documented behaviour, keeping each view to one audience, cross-referencing the work items documented, publishing through a git-backed markdown wiki, and maintaining indexes and tables of contents. Use when documenting a delivered work item, story, task or feature into a wiki, or when asked to write functional and technical documentation for something already built.
 ---
 
 # Documenting Delivered D365CE Work
 
-A plan describes intent. A wiki page describes a system somebody has to operate, extend, or debug six months from now. The failure mode of this work is writing an elegant summary of the implementation plan: it reads well, it is wrong in three places, and nobody notices until someone relies on it.
+A specification describes what was asked for. A wiki page describes a system somebody has to operate, extend, or debug six months from now. The failure mode of this work is writing an elegant summary of the specification, or of the plan: it reads well, it is wrong in three places, and nobody notices until someone relies on it.
 
 The target is a wiki site edited in markdown and reachable via git. Products differ in page naming, ordering and link syntax — see [references/wiki-mechanics.md](references/wiki-mechanics.md) before creating any file.
+
+---
+
+## Inputs
+
+The specification and the delivered artefacts are always available. An implementation plan may not exist, and the skill does not depend on one.
+
+| Source | Authoritative for | Not authoritative for |
+|---|---|---|
+| **Specification** — work item description, acceptance criteria, attached analysis | Why the feature exists, the business vocabulary, the actors, the intended outcomes. The framing of the functional view | Whether any of it was delivered as written |
+| **Implementation plan**, where one exists | Which files, tables and components are in scope, and the reasoning behind design decisions — an index into the code | Behaviour: plans are approved before the divergences happen |
+| **Source repository** | The logic of everything authored and committed — plugin code, web resources, PCF controls, tests | Anything changed directly in the environment |
+| **Solution extract** | Schema, column source types, registrations, forms and views with ids, option sets, automations, solution membership | Components registered in the environment but never added to a solution |
+| **Delivery history** — commits, pull requests and branches carrying the work item id | What actually changed, when, and in which order. The index into the code when no plan exists | Environment-side change, which arrives as bulk pipeline commits attributed to no work item |
+
+Start from the specification for framing and the artefacts for truth. Use the plan and the delivery history to locate: both narrow the search, neither settles what the code does.
 
 ---
 
@@ -29,11 +45,14 @@ Default to the pair when nothing argues otherwise. The rest of this skill is wri
 
 ## Ground rules
 
-### 1. Document what is built, not what was planned
+### 1. Intent is not behaviour
 
-The plan is an index into the code, not a source of truth. Read it to learn which files, tables and components are in scope, then verify every load-bearing statement against the actual artefact. Built code diverges from approved designs constantly, and the divergences are rarely announced — a namespace root differing by capitalisation, a command filtering on one status where the plan said all returned records, a command acting on the whole parent record because it was wired to the primary control rather than the selected items. Each changes what a reader would do.
+Specifications and plans state what was asked for. Only the artefact states what runs. Verify every load-bearing statement against the artefact, however confidently the specification asserts it. Built code diverges from approved designs constantly, and the divergences are rarely announced — a namespace root differing by capitalisation, a command filtering on one status where the design said all returned records, a command acting on the whole parent record because it was wired to the primary control rather than the selected items. Each changes what a reader would do.
 
-When source and plan disagree, **document the source, and report the divergence in your summary**. Do not silently pick one, and do not correct the code to match the plan.
+**Document what runs, and report the divergence in your summary.** Never silently pick one, and never correct the code to match the document. The two kinds of divergence carry different weight and are worth separating when you report them:
+
+- **Artefact against specification** — a delivery finding. Acceptance criteria may not have been met, or may have been renegotiated without the work item being updated. The business may not know.
+- **Artefact against plan** — a design finding. The approach changed during implementation, which is normal, but anyone reading the plan later will be misled.
 
 ### 2. One audience per view, no bleed
 
@@ -48,7 +67,7 @@ If a rule is enforced by a plugin, the functional page describes the rule and th
 
 ### 3. Verify behavioural claims yourself
 
-Research can be delegated and run in parallel across the four axes below, where the tool supports delegation; serially otherwise. Delegated research is reliable on inventory and unreliable on nuance. Anything you are about to state as a behavioural rule, a status value, or an enabled/disabled state gets verified by opening the file yourself. Two researchers disagreeing about the same component is a signal to go look, not to pick one.
+Delegated research is reliable on inventory and unreliable on nuance. Anything you are about to state as a behavioural rule, a status value, or an enabled/disabled state gets verified by opening the file yourself. Two researchers disagreeing about the same component is a signal to go look, not to pick one.
 
 ### 4. Match the wiki before writing a word of it
 
@@ -60,7 +79,13 @@ The unpacked solution extract is produced by an export pipeline; it is a researc
 
 ---
 
-## Research the four axes
+## Locate the delivered surface, then research it
+
+**Establish what to read before reading it.** A plan names the components in scope. Without one, the delivery history does the same job: find the commits, pull requests and branches carrying the work item id, and read their diffs as an inventory of what changed. Where both exist, the history is the check on the plan — a component the plan named but no commit touched was not delivered, and a file changed by no plan is a divergence to investigate.
+
+Two limits on the history, both consequences of how D365CE work reaches a repository. It covers **authored source only** — plugin code, web resources, PCF, tests. Environment-side change — registrations, form and view XML, schema, solution membership — arrives through the extract pipeline as bulk commits attributed to no work item, so it has to be found in the extract itself. And a commit shows a change at one point in time: later commits may have superseded it, so **read the current file to state behaviour**, and use the diff only to know which file to open.
+
+Then research the four axes, in parallel where the tool supports delegation and serially otherwise:
 
 - **Server-side** — plugins, custom APIs, business logic and query classes, unit tests. Collect the registration documentation verbatim, what each class actually does, and which shared classes it calls.
 - **Client-side** — web resources, namespaces, every public function with its signature, which form event or command it is wired to, Web API calls quoted, and every control, tab, section and grid name referenced.
@@ -114,8 +139,9 @@ Defects and gaps found in passing — a component registered but never solutione
 
 Before presenting the pages:
 
-- [ ] Every behavioural claim was verified against the artefact, not the plan
-- [ ] Divergences between plan and built code are documented as built, and reported to the user
+- [ ] Every behavioural claim was verified against the artefact, not the specification or the plan
+- [ ] The delivered surface was located from the plan or the delivery history, and environment-side change was sought in the extract rather than in commits
+- [ ] Divergences are documented as built and reported, separated into delivery findings (against the specification) and design findings (against the plan)
 - [ ] The functional page contains no schema names, file paths, option set integers, or class names
 - [ ] The technical page quotes actual identifiers, ids and values
 - [ ] Option set collisions and column source types are stated
