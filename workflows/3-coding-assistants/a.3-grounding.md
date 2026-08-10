@@ -52,6 +52,7 @@ This repository holds the story folders, working notes, context packs and engage
 └── offline-access/
     ├── sow/                 Scope
     ├── deployment/          Standard checklists
+    ├── instructions/        Instructions
     └── guides/
 ```
 
