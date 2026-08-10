@@ -219,7 +219,7 @@ Two kinds of skill behave very differently, and the difference decides whether a
 | Source | What it holds | Notes |
 |---|---|---|
 | [microsoft/Dataverse-skills](https://github.com/microsoft/Dataverse-skills) | Eight Dataverse skills — connect, query, data, metadata, solution, admin, security, and a routing overview | MIT. Distributed as a **plugin**, not loose skills — see the caution below |
-| [`/skills/`](/skills/) in this repository | The playbook's own reference guides, e.g. [Power Automate Cloud Flow Deployment Options](/skills/Power-Automate-Cloud-Flow-Deployment-Options.md) | Knowledge skills; tooling required are the installed by this guide |
+| [`/skills/`](/skills/) in this repository | The playbook's own reference guides, e.g. [Power Automate Flow Editing](/skills/power-automate-flow-editing/SKILL.md) | Knowledge skills; tooling required are the installed by this guide |
 
 **Caution on copying skills out of a plugin.** The Dataverse skills are not standalone. One skill routes to the others, another registers an MCP server and installs CLIs, and the code examples import a shared authentication module from elsewhere in the plugin tree. Copy the eight `SKILL.md` files on their own and you get the guidance without the wiring — the agent will reference tooling that was never set up. Install that one through its own plugin mechanism, or accept it as reading material rather than a working skill.
 
