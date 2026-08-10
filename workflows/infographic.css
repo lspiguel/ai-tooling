@@ -22,9 +22,9 @@
 
   /* Three accent lanes. The matrix uses 1 and 2 for its two columns and 3 for
      phase headings; the repository poster uses one per repository. */
-  --accent-1:var(--primary-shaded);        /* Type 1 assistants · <client>-Context */
+  --accent-1:var(--primary-shaded);        /* Taxonomy 1 assistants · <client>-Context */
   --accent-1-bg:var(--primary-softer);
-  --accent-2:var(--secondary-shaded);      /* Type 3 assistants · <client>-d365   */
+  --accent-2:var(--secondary-shaded);      /* Taxonomy 3 assistants · <client>-d365   */
   --accent-2-bg:var(--secondary-softer);
   --accent-3:var(--tertiary-shaded);       /* phase heads · <client>-wiki         */
   --accent-3-bg:var(--tertiary-softer);
