@@ -2,7 +2,7 @@
 
 This guide lists the package managers and CLI tools used to set up a machine for AI-augmented development work. Each section includes both an **interactive** install (for reference) and an **unattended** install (for scripted/repeatable provisioning). Unless noted otherwise, unattended commands should be run from a PowerShell console opened **as Administrator**.
 
-> After installing any of these, remember to tell your AI assistant that you have them available — see section 12 for a ready-to-use prompt.
+> After installing any of these, remember to tell your AI assistant that you have them available — see section 13 for a ready-to-use prompt.
 
 ## Contents
 
@@ -17,8 +17,9 @@ This guide lists the package managers and CLI tools used to set up a machine for
 9. [mmdc (Mermaid CLI)](#9-mmdc-mermaid-cli)
 10. [Git](#10-git)
 11. [GitHub Desktop](#11-github-desktop)
-12. [Telling your AI assistant](#12-telling-your-ai-assistant)
-13. [Appendix: Combined unattended bootstrap script](#appendix-combined-unattended-bootstrap-script)
+12. [Agent skills](#12-agent-skills)
+13. [Telling your AI assistant](#13-telling-your-ai-assistant)
+14. [Appendix: Combined unattended bootstrap script](#appendix-combined-unattended-bootstrap-script)
 
 ---
 
@@ -200,7 +201,51 @@ winget install --id GitHub.GitHubDesktop -e --silent --accept-package-agreements
 
 ---
 
-## 12. Telling your AI assistant
+## 12. Agent skills
+
+A **skill** is a folder containing a `SKILL.md` — instructions an agent loads when a task matches its description, so that domain guidance you would otherwise paste into every session is available on demand. The file format is broadly shared across agents. The *installation* mechanism is not: each agent has its own plugin and marketplace system, most of them still in preview, and they disagree on directory layout, update behaviour and where a marketplace may be hosted.
+
+This playbook therefore installs skills **manually** — keep one copy of each skill and link or copy it into whichever agent directory needs it. The guidance stays usable whichever assistant you are working in today, and nothing changes underneath you between sessions.
+
+Two kinds of skill behave very differently, and the difference decides whether a skill is worth installing at all:
+
+| Kind | What it contains | Usable without local tooling |
+|---|---|---|
+| **Knowledge skill** | Conventions, decision guides, house style, "which option do I reach for and why" | Yes — it is instruction text and nothing more |
+| **Tool-wrapping skill** | How to drive a CLI, SDK or MCP server to act on a live environment | No — without the tools it wraps, it documents commands that cannot run |
+
+### 12.1 Some recommended skills
+
+| Source | What it holds | Notes |
+|---|---|---|
+| [microsoft/Dataverse-skills](https://github.com/microsoft/Dataverse-skills) | Eight Dataverse skills — connect, query, data, metadata, solution, admin, security, and a routing overview | MIT. Distributed as a **plugin**, not loose skills — see the caution below |
+| [`/skills/`](/skills/) in this repository | The playbook's own reference guides, e.g. [Power Automate Flow Editing](/skills/power-automate-flow-editing/SKILL.md) | Knowledge skills; tooling required are the installed by this guide |
+
+**Caution on copying skills out of a plugin.** The Dataverse skills are not standalone. One skill routes to the others, another registers an MCP server and installs CLIs, and the code examples import a shared authentication module from elsewhere in the plugin tree. Copy the eight `SKILL.md` files on their own and you get the guidance without the wiring — the agent will reference tooling that was never set up. Install that one through its own plugin mechanism, or accept it as reading material rather than a working skill.
+
+### 12.2 Installing skills
+
+Please refer to each skill's instructions for install. [Skills](/skills/) on this repository can be copied directly to an agent skill folder.
+
+### 12.3 Check the source before you install
+
+Treat a skill as a dependency, not as documentation. It is instruction text an agent will follow while holding your credentials and your permissions, so it warrants the scrutiny any other dependency gets: take it from a named, identifiable publisher; pin a tag or a commit rather than tracking a moving branch; read the whole `SKILL.md` together with any `references/` files and any scripts it ships before first use; and diff it against the version you already trust before accepting an update. Read specifically for what the skill *assumes it may do* — install CLI tools, register MCP servers, run shell commands, reach the network, or write to a live environment — because those assumptions are rarely stated in the summary and are the entire risk surface. Installing manually helps here: nothing updates behind you, so the version you reviewed is the version that runs. A skill that fails this reading is not a skill to fix; it is a skill to leave uninstalled.
+
+Skills also change what an agent does with content it reads back from an environment. That risk is separate and is covered in [Prompt injection](/docs/security.md).
+
+### 12.4 Before you rely on a skill
+
+| Check | Why |
+|---|---|
+| Publisher identified, and the repository is the one you think it is | Name similarity between skill repositories is common |
+| Reference pinned to a tag or commit | A moving branch changes the instructions your agent follows, silently |
+| `SKILL.md`, `references/` and any scripts read end to end | The risk is in the body, not the summary |
+| Tooling the skill assumes is present, and permissions it assumes it holds | Determines what it can do on a live environment |
+| Tool-wrapping skills only installed with their wiring intact | Otherwise the guidance references tools that were never set up |
+
+---
+
+## 13. Telling your AI assistant
 
 Even once these tools are installed, an AI coding assistant won't know they're available unless you tell it — it may otherwise default to walking you through manual installs or asking permission before using a CLI tool it doesn't know it has. Give it this context once, using whatever persistent **user-level** instructions or memory mechanism it supports (a global/personal config, not a project-committed file — this is machine-specific, not project-specific):
 
@@ -218,6 +263,8 @@ The following developer tools are installed and available on this machine's comm
 - Mermaid CLI (`mmdc`) — renders Mermaid diagrams to PNG/SVG/PDF.
 - Git (`git`).
 - GitHub Desktop — GUI client for Git and GitHub.
+
+Reviewed skills are installed in this agent's skills directory. Load a skill when the task matches its description.
 
 When a task would benefit from one of these tools, use it, offer to describe usage steps, or prepare a command line for the user to execute.
 ```

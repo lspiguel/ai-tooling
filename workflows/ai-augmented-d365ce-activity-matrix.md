@@ -37,9 +37,9 @@ The packs, the per-story folders and the engagement documents all live in one pe
 
 ### [A.3] Solutions unpacked & code repositories — the grounding method for Column 3
 
-Thorough solution state and source code: ALM (or `pac solution unpack`) turns managed/unmanaged solutions into a diffable file tree inside a git repository that also holds source code and Documentation as Code. This is what makes column 3 *grounded* — the agent reads what actually exists (entities, forms, plugin steps, web resources) rather than guessing.
+Thorough solution state and source code: ALM (or `pac solution unpack`) turns managed/unmanaged solutions into a diffable file tree inside a git repository that also holds the source code. This is what makes column 3 *grounded* — the agent reads what actually exists (entities, forms, plugin steps, web resources) rather than guessing.
 
-Column 3 reads **three repositories**, cloned as siblings so one agent session can span them: `<client>-Context/` (intent, story folders, packs — the same repo as [A.1]), `<client>-d365/` (unpacked solutions, source code, docs-as-code), and `<client>-wiki/` (live documentation, backed by the ADO wiki's git repo). Full guide: [[A.3] Grounding — the three-repository organization](./3-coding-assistants/a.3-grounding.md).
+Column 3 reads **three repositories**, cloned as siblings so one agentic session can span them: `<client>-Context/` (intent, story folders, plans, packs — the same repo as [A.1]), `<client>-d365/` (unpacked solutions and source code), and `<client>-wiki/` (live documentation, including ADRs, backed by the ADO wiki's git repo). Full guide: [[A.3] Grounding — the three-repository organization](./3-coding-assistants/a.3-grounding.md).
 
 ### [A.i] Instructions — Columns 1 and 3
 

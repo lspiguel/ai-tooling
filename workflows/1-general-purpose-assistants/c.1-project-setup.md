@@ -28,19 +28,18 @@ One repository per client, holding everything you would ever seed into a Project
 │   ├── config/              Configuration files
 │   ├── output/              Context packs to be supplied to the General AI Assistants
 │   └── runs/                Ignored by .gitignore
-├── XXX-story-1
-│   ├── XXX-story-1.md       Replicated user stories content in markdown
-│   ├── ...
-│   └── ...
-├── YYY-story-2
-├── ZZZ-story-3
-├── offline-access/
-│   ├── deployment/
-│   ├── guides/
-│   ├── sow/
-│   ├── ...
-│   └── runbooks/
-└── ...
+├── XXX-story-1/
+│   ├── XXX-story-1.md       The story, mirrored from the work item
+│   ├── XXX-notes.md         Personal notes, raw stakeholder input
+│   ├── XXX-plan.md          Plan and tasks
+│   ├── additional/          Related files: spreadsheets, CSV inputs/outputs
+│   └── screenshots/         Form/view captures, error dialogs
+├── YYY-story-2/
+├── ZZZ-story-3/
+└── offline-access/
+    ├── sow/                 Scope
+    ├── deployment/          Standard checklists
+    └── guides/
 ```
 
 > If the engagement also maintains a shared solutions/code repo or a published wiki, this repository does not merge with them — draw on them by hand instead: copy the relevant page or extract into the story folder or `offline-access/` before attaching it.

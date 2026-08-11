@@ -2,6 +2,8 @@
 
 This document describes Microsoft-based options for deploying and updating Power Automate Cloud Flows (modern flows) in Dynamics 365 / Dataverse. It covers two main approaches: **solution-based deployment** and **direct flow update** without solution import.
 
+> **Scope note.** This is the options reference for the [Power Automate flow editing skill](../SKILL.md). The skill itself uses **only Part 1, via the Power Platform CLI** — export, unpack, edit, pack, import. Part 2 (direct `clientdata` update) is recorded here for completeness and is deliberately **not** used by the skill: it bypasses solution import validation and connection reference binding, and its changes are overwritten by the next solution import.
+
 ---
 
 ## Part 1: Solution-Based Deployment
@@ -52,7 +54,7 @@ pac solution import --path "C:\Out\Processes.zip" --activate-plugins --publish-c
 | `--async` | Import asynchronously |
 | `--force-overwrite` | Force overwrite of unmanaged customizations |
 | `--skip-lower-version` | Skip import if same or higher version exists |
-| `--stage-and-upgrade-up` | Import and upgrade the solution |
+| `--stage-and-upgrade` | Import and upgrade the solution (alias `-up`) |
 | `--settings-file` | JSON file for connection references and environment variables |
 
 **Reference**

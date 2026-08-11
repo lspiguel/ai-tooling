@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Grounding — The Three-Repository Organization</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="palette.css">
+<link rel="stylesheet" href="infographic.css">
+</head>
+<body>
+<div class="poster">
+
+  <div class="head">
+    <div>
+      <div class="eyebrow">Dynamics 365 CE · <a href="3-coding-assistants/a.3-grounding.md" title="[A.3] Solutions unpacked &amp; code repositories — the grounding method">[A.3] Grounding</a> · <a href="../docs/ai-tool-taxonomy.md" title="Taxonomy 3 — Coding assistants &amp; agentic environments">Taxonomy 3 — Coding assistants &amp; agents</a></div>
+      <h1>Three repositories, one agentic session</h1>
+    </div>
+    <p>A coding assistant grounds itself by <b>reading</b>.</p>
+  </div>
+
+  <!-- ===== THE THREE QUESTIONS ===== -->
+  <div class="band">
+    <div class="band-title">Why different repositories</div>
+    <div class="band-note">Some context components recur throughout the delivery loop. They have <b>different dynamics, different owners and behave differently</b> — so they get different repositories.</div>
+
+    <div class="questions">
+      <div class="q">
+        <span class="num">01</span>
+        <p>What did the client ask for?</p>
+        <span class="to ctx">&lt;client&gt;-Context/</span>
+      </div>
+      <div class="q">
+        <span class="num">02</span>
+        <p>What is actually built?</p>
+        <span class="to prj">&lt;client&gt;-d365/</span>
+      </div>
+      <div class="q">
+        <span class="num">03</span>
+        <p>What does everyone need to know about it?</p>
+        <span class="to wiki">&lt;client&gt;-wiki/</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== THE THREE REPOSITORIES ===== -->
+  <div class="band">
+    <div class="band-title">The three repositories at a glance</div>
+    <div class="band-note">One repository per row, in order. Read left to right for its contract; compare the same column across rows to see what actually differs between them.</div>
+
+    <div class="repos">
+
+      <!-- 1. CONTEXT -->
+      <div class="repo ctx">
+        <dl class="attrs">
+          <div class="attr"><dt>Audience</dt><dd>You (and your assistant)</dd></div>
+          <div class="attr"><dt>Ownership</dt><dd>Personal, local</dd></div>
+          <div class="attr"><dt>Lifecycle</dt><dd>Added to and refreshed when work moves</dd></div>
+          <div class="attr"><dt>The assistant</dt><dd>Reads for intent, specification, current environment state, may help write</dd></div>
+        </dl>
+        <div class="repo-box">
+        <div class="repo-head">
+          <div class="role">01 · Intent &amp; delivery direction</div>
+          <h2>&lt;client&gt;-Context/</h2>
+          <p>Personal context: <b>story folders</b>, notes, exported packs, engagement documents — read <b>off disk</b> instead of attached to a prompt.</p>
+        </div>
+        <div class="tree">
+<pre>&lt;client&gt;-Context/
+├── .gitignore
+├── context-exporter/  <i>D365 Context Exporter</i>
+│   ├── config/        <i>Configuration files</i>
+│   ├── output/        <i>.context.md packs</i>
+│   ├── LEGAL.md       <i>Boundary notice</i>
+│   └── runs/          <i>Git-ignored</i>
+├── XXX-story-1/
+│   ├── XXX-story-1.md <i>Story, mirrored</i>
+│   ├── additional/    <i>Files related to a story, like Excel, CSV inputs/outputs, etc</i>
+│   ├── XXX-notes.md   <i>Personal notes</i>
+│   └── XXX-plan.md    <i>Plan, tasks</i>
+├── YYY-story-2/
+├── ZZZ-story-3/
+└── offline-access/
+    ├── sow/           <i>Scope</i>
+    ├── deployment/    <i>Standard checklists</i>
+    ├── instructions/  <i>Instructions</i>
+    └── guides/</pre>
+        </div>
+        </div><!-- /repo-box -->
+        <div class="feeds"><span class="feeds-label">Related to activities</span><a class="tag" href="3-coding-assistants/1.3-specification.md" title="[1.3] Specification / Intent">1.3</a> <a class="tag" href="3-coding-assistants/2.3-planning.md" title="[2.3] Planning / Design">2.3</a> <a class="tag" href="3-coding-assistants/3.3-tasking.md" title="[3.3] Tasking">3.3</a> <a class="tag" href="3-coding-assistants/4.3-implementation.md" title="[4.3] Implementation / Build">4.3</a> <a class="tag" href="3-coding-assistants/5.3-validation-peer-review.md" title="[5.3] Validation / Peer review">5.3</a> <a class="tag" href="3-coding-assistants/6.3-documentation.md" title="[6.3] Documentation / Information sharing">6.3</a></div>
+        <div class="future"><div class="future-box">Personal repository</div></div>
+      </div>
+
+      <!-- 2. PROJECT -->
+      <div class="repo prj">
+        <dl class="attrs">
+          <div class="attr"><dt>Audience</dt><dd>The delivery team</dd></div>
+          <div class="attr"><dt>Ownership</dt><dd>Team, shared, PR-reviewed</dd></div>
+          <div class="attr"><dt>Lifecycle</dt><dd>Every commit of every story</dd></div>
+          <div class="attr"><dt>The assistant</dt><dd>Reads <b>and writes</b> — this is where it builds</dd></div>
+        </dl>
+        <div class="repo-box">
+        <div class="repo-head">
+          <div class="role">02 · The project repository</div>
+          <h2>&lt;client&gt;-d365/</h2>
+          <p>Unpacked solutions and source code. This is the tree that makes <a href="../docs/ai-tool-taxonomy.md" title="Taxonomy 3 — Coding assistants &amp; agentic environments">Taxonomy 3</a> <b>grounded</b> rather than plausible.</p>
+        </div>
+        <div class="tree">
+<pre>&lt;client&gt;-d365/
+├── src/               <i>PRO-CODE</i>
+│   ├── Plugins/       <i>Plugins &amp; Custom APIs</i>
+│   ├── PCF/           <i>PCF controls</i>
+│   └── Functions/     <i>Azure Functions</i>
+├── solutions/         <i>pac solution unpack</i>
+│   └── &lt;SolutionName&gt;/
+│       ├── src/       <i>Component tree</i>
+│       └── *.zip      <i>Git-ignored</i>
+├── webresources/      <i>JS · HTML · CSS</i>
+├── context/           <i>Committed packs</i>
+├── scripts/           <i>Export automation</i>
+├── .gitignore
+└── README.md</pre>
+        </div>
+        </div><!-- /repo-box -->
+        <div class="feeds"><span class="feeds-label">Related to activities</span><a class="tag" href="3-coding-assistants/1.3-specification.md" title="[1.3] Specification / Intent">1.3</a> <a class="tag" href="3-coding-assistants/2.3-planning.md" title="[2.3] Planning / Design">2.3</a> <a class="tag" href="3-coding-assistants/4.3-implementation.md" title="[4.3] Implementation / Build">4.3</a> <a class="tag" href="3-coding-assistants/5.3-validation-peer-review.md" title="[5.3] Validation / Peer review">5.3</a> <a class="tag" href="3-coding-assistants/6.3-documentation.md" title="[6.3] Documentation / Information sharing">6.3</a></div>
+        <div class="future"><div class="future-arrow"><span>Shared source and solution repository</span></div></div>
+      </div>
+
+      <!-- 3. WIKI -->
+      <div class="repo wiki">
+        <dl class="attrs">
+          <div class="attr"><dt>Audience</dt><dd>Everyone — including people outside the delivery team</dd></div>
+          <div class="attr"><dt>Ownership</dt><dd>Team, shared; the wiki&rsquo;s own review flow</dd></div>
+          <div class="attr"><dt>Lifecycle</dt><dd>Updated when increments have passed QA</dd></div>
+          <div class="attr"><dt>The assistant</dt><dd>Writes drafts; a human edits, validates and publishes</dd></div>
+        </dl>
+        <div class="repo-box">
+        <div class="repo-head">
+          <div class="role">03 · Live documentation</div>
+          <h2>&lt;client&gt;-wiki/</h2>
+          <p>An ADO wiki is backed by a git repo — which makes documentation a surface the assistant can <b>read and write</b>, not a browser-only one.</p>
+        </div>
+        <div class="tree">
+<pre>&lt;client&gt;-wiki/         <i>Clone of &lt;project&gt;.wiki</i>
+├── .order             <i>Wiki tree order</i>
+├── .attachments/      <i>Images &amp; files</i>
+├── Home.md
+├── Architecture/      <i>Integrations, ADRs</i>
+├── Functional/        <i>Processes, user guides</i>
+├── Technical/         <i>Generated from repo</i>
+├── Runbooks/          <i>Ops &amp; deployment</i>
+└── Release-Notes/     <i>What shipped</i>
+
+<i>A push here is a publication —</i>
+<i>ADO renders it directly.</i></pre>
+        </div>
+        </div><!-- /repo-box -->
+        <div class="feeds"><span class="feeds-label">Related to activities</span><a class="tag" href="3-coding-assistants/1.3-specification.md" title="[1.3] Specification / Intent">1.3</a> <a class="tag" href="3-coding-assistants/2.3-planning.md" title="[2.3] Planning / Design">2.3</a> <a class="tag" href="3-coding-assistants/6.3-documentation.md" title="[6.3] Documentation / Information sharing">6.3</a></div>
+        <div class="future"><div class="future-arrow"><span>Shared wiki repository</span></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== ON DISK ===== -->
+  <div class="band">
+    <div class="band-title">Laying them out on disk</div>
+    <div class="band-note">Clone all three as <b>siblings under one parent folder</b>, then make all three visible to the assistant at once.</div>
+
+    <div class="disk">
+      <div class="tree">
+<pre>&lt;client&gt;/
+├── &lt;client&gt;-Context/   <i>Intent + plans</i>
+├── &lt;client&gt;-d365/      <i>Solutions + code</i>
+└── &lt;client&gt;-wiki/      <i>Live documentation</i></pre>
+      </div>
+
+      <div class="siblings">
+        <div class="sib">
+          <h3>VS Code / Cursor</h3>
+          <p>A multi-root workspace (<code>&lt;client&gt;.code-workspace</code>) with the three folders as roots.</p>
+        </div>
+        <div class="sib">
+          <h3>Claude Code</h3>
+          <p>Add the other two as additional working directories, so it reads them without leaving the project repo.</p>
+        </div>
+        <div class="sib">
+          <h3>Either way</h3>
+          <p>Open the <b>parent</b> folder if the tooling supports it, so relative paths between the repos stay stable in prompts and scripts.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="payoff">
+      <div class="band-title">One prompt can span all three</div>
+      <q>Read the story in <span class="c1">&lt;client&gt;-Context/1234-*</span>, check it against the solutions in <span class="c2">&lt;client&gt;-d365/solutions/</span> and the source code, and tell me which wiki pages under <span class="c3">Functional/</span> will need updating.</q>
+      <p class="after">The assistant works across repositories, reading what it needs.</p>
+    </div>
+  </div>
+
+  <!-- ===== ROUTING ===== -->
+  <div class="band">
+    <div class="band-title">Which repository answers which question</div>
+    <div class="band-note">When the agent needs to know something, this is where it looks — and how.</div>
+
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr><th>Question</th><th>Repository</th><th>Read via</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>What was asked for, and why?</td>
+            <td class="where ctx">&lt;client&gt;-Context/ <span class="plain">(story folder)</span></td>
+            <td class="how">File read</td>
+          </tr>
+          <tr>
+            <td>What are the conventions, scope and constraints?</td>
+            <td class="where ctx">&lt;client&gt;-Context/ <span class="plain">(instructions, guides on offline-access folder)</td>
+            <td class="how">File read</td>
+          </tr>
+          <tr>
+            <td>What does the environment&rsquo;s model look like?</td>
+            <td class="where ctx">&lt;client&gt;-Context/context-exporter/output/<br><span class="alt">or &lt;client&gt;-d365/solutions/</span></td>
+            <td class="how">File read</td>
+          </tr>
+          <tr>
+            <td>…and what does it look like <i>right now</i>?</td>
+            <td class="where live">The environment itself</td>
+            <td class="how">Dataverse MCP</td>
+          </tr>
+          <tr>
+            <td>What is actually built and configured?</td>
+            <td class="where prj">&lt;client&gt;-d365/solutions/ · src/ · webresources/</td>
+            <td class="how">File read, <code>git diff</code></td>
+          </tr>
+          <tr>
+            <td>Why was it built that way?</td>
+            <td class="where wiki">&lt;client&gt;-wiki/Architecture/ <span class="plain">(ADRs)</span></td>
+            <td class="how">File read</td>
+          </tr>
+          <tr>
+            <td>What is the state of the work?</td>
+            <td class="where live">The board</td>
+            <td class="how">Azure DevOps CLI (<code>az boards</code>)</td>
+          </tr>
+          <tr>
+            <td>What do people need to know about it?</td>
+            <td class="where wiki">&lt;client&gt;-wiki/</td>
+            <td class="how">File read, then commit + push</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== BOUNDARIES ===== -->
+  <div class="band">
+    <div class="band-title">Boundaries between them</div>
+    <div class="band-note">Placement decisions and hygiene rules, all of them expensive to change later.</div>
+
+    <div class="rules">
+      <div class="rule-card">
+        <h3>The zips stay out of git</h3>
+        <p>The unpacked <code>solutions/&lt;Name&gt;/src/</code> tree is the reviewable source of truth; the <code>.zip</code> is a rebuildable artifact.</p>
+      </div>
+      <div class="rule-card">
+        <h3>Web resources flow one way</h3>
+        <p>Authored in <code>webresources/</code> and deployed <i>into</i> the solution. Considered as source code.</p>
+      </div>
+      <div class="rule-card">
+        <h3>Each repo has its own trigger</h3>
+        <p>Packs refresh on a re-export, the solution tree on every export/unpack, the wiki when <i>behaviour</i> changes.</p>
+      </div>
+    </div>
+
+    <div class="boundary">
+      <span class="mark">Personal material</span>
+      <p>Story mirrors, drafts and notes stay in <code>&lt;client&gt;-Context/</code>. What graduates into <code>&lt;client&gt;-wiki/</code> does so deliberately, reviewed.</p>
+    </div>
+  </div>
+
+  <footer>
+    <span>v1.0</span>
+    <span><a href="3-coding-assistants/a.3-grounding.md" title="[A.3] Solutions unpacked &amp; code repositories — the grounding method">[A.3] Grounding</a> · Stood up per client in <a href="3-coding-assistants/c.3-project-setup.md" title="[C.3] Project Setup">[C.3]</a></span>
+  </footer>
+
+</div>
+</body>
+</html>

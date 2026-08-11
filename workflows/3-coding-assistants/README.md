@@ -14,7 +14,7 @@ Phase-specific prompts have been organized into per-activity guides following th
 
 | Guide | What it covers |
 |---|---|
-| [A.3 — Grounding](./a.3-grounding.md) | The three-repository organization: `<client>-Context/` (intent + packs), `<client>-d365/` (unpacked solutions + code), `<client>-wiki/` (live documentation) |
+| [A.3 — Grounding](./a.3-grounding.md) | The three-repository organization: `<client>-Context/` (intent + plans), `<client>-d365/` (unpacked solutions + code), `<client>-wiki/` (live documentation) |
 | [B.3 — Initial setup](./b.3-initial-setup.md) | Agent-driven tooling: Visual Studio, package managers, CLI tools, IDEs |
 | [C.3 — Project setup](./c.3-project-setup.md) | ALM and/or repository wiring: repo layout, solution export/unpack automation, Dataverse MCP + Azure DevOps CLI wiring |
 

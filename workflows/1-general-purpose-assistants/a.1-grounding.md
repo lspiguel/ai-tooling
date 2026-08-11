@@ -24,27 +24,26 @@ It is **personal and local**: your working copy of the engagement's context, not
 │   ├── output/              Context packs to be supplied to the General AI Assistants
 │   ├── LEGAL.md             Boundary notice prepended to every pack
 │   └── runs/                Ignored by .gitignore
-├── XXX-story-1
-│   ├── XXX-story-1.md       Replicated user stories content in markdown
-│   ├── ...
-│   └── ...
-├── YYY-story-2
-├── ZZZ-story-3
-├── offline-access/
-│   ├── deployment/
-│   ├── guides/
-│   ├── sow/
-│   ├── ...
-│   └── runbooks/
-└── ...
+├── XXX-story-1/
+│   ├── XXX-story-1.md       The story, mirrored from the work item
+│   ├── XXX-notes.md         Personal notes, raw stakeholder input
+│   ├── XXX-plan.md          Plan and tasks
+│   ├── additional/          Related files: spreadsheets, CSV inputs/outputs
+│   └── screenshots/         Form/view captures, error dialogs
+├── YYY-story-2/
+├── ZZZ-story-3/
+└── offline-access/
+    ├── sow/                 Scope
+    ├── deployment/          Standard checklists
+    └── guides/
 ```
 
 | Folder | What it is | Where it comes from | How it reaches the assistant |
 |---|---|---|---|
 | `context-exporter/output/` | The `.context.md` packs — EntityDictionary, SolutionInventory, SecurityModel, FormsAndViews, Optionsets, SolutionsReference | [D365 Context Exporter](../../tooling/D365ContextExporter/README.md) run against the client environment | **Project knowledge** — uploaded once per refresh |
 | `context-exporter/config/` | The specs, FetchXML and Scriban templates that produced those packs | Deployed by the plugin; edited per client | Not uploaded — it's the recipe, not the result |
-| `<ID>-story-*/` | One folder per work item: the story markdown, plus notes, screenshots, extracts, and the drafts the assistant produced | You, mirroring ADO/Jira | **Attached per conversation** — only the story you're working on |
-| `offline-access/` | The engagement documents the packs don't cover: SoW, architecture and design docs, deployment checklists, runbooks, guides, naming and publisher-prefix conventions | The engagement's SharePoint/Teams, copied down as markdown or PDF | **Project knowledge** — the stable ones; attached ad hoc for the rest |
+| `<ID>-story-*/` | One folder per work item: the story markdown, plus notes, the plan, screenshots, extracts, and the drafts the assistant produced | You, mirroring ADO/Jira | **Attached per conversation** — only the story you're working on |
+| `offline-access/` | The engagement documents the packs don't cover: SoW, architecture and design docs, deployment checklists, guides, naming and publisher-prefix conventions | The engagement's SharePoint/Teams, copied down as markdown or PDF | **Project knowledge** — the stable ones; attached ad hoc for the rest |
 
 The reason this is a *git* repository and not a folder: the packs are point-in-time snapshots, and the commit history is what tells you how much the model moved between exports. `git diff` on a regenerated `EntityDictionary.context.md` is a free change report on the client's environment.
 
@@ -71,11 +70,13 @@ A general-purpose assistant has no repository and no work-item access, so the st
 
 ```
 1234-account-merge-rules/
-├── 1234-account-merge-rules.md      The story: title, intent, ACs — mirrored from ADO/Jira
-├── notes-workshop-2026-07-14.md     Raw stakeholder input the story was drafted from
-├── screenshots/                     Form/view captures, error dialogs
+├── 1234-account-merge-rules.md      The story: title, intent, ACs — mirrored from the work item
+├── 1234-notes.md                    Raw stakeholder input the story was drafted from
+├── 1234-plan.md                     Plan and tasks
 ├── design-options.md                [2.1] output, once a human has reviewed it
-└── test-scenarios.md                [5.1] output
+├── test-scenarios.md                [5.1] output
+├── additional/                      Related files: spreadsheets, CSV inputs/outputs
+└── screenshots/                     Form/view captures, error dialogs
 ```
 
 Conventions worth holding to:

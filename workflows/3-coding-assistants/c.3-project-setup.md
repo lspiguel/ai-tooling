@@ -4,7 +4,7 @@
 
 > **Prefer ALM if it exists.** If the engagement already has a Power Platform Pipelines / Azure DevOps "export & unpack" ALM process, use it — this local script is the fallback for when there is no pipeline yet, or for a developer's own working copy. Either way the *folder layout* below is what the assistant reads.
 
-This guide stands up the **three repositories** described in [A.3 — Grounding](./a.3-grounding.md): `<client>-Context/` (§1), `<client>-d365/` (§2–§6), and `<client>-wiki/` (§2). Clone them as siblings under a single `<client>/` parent so one agent session can read across all three.
+This guide stands up the **three repositories** described in [A.3 — Grounding](./a.3-grounding.md): `<client>-Context/` (§1), `<client>-d365/` (§2–§6), and `<client>-wiki/` (§2). Clone them as siblings under a single `<client>/` parent so one agentic session can read across all three.
 
 ---
 
@@ -31,19 +31,18 @@ Your own working copy of the engagement's intent and environment state — conte
 │   ├── config/              Configuration files
 │   ├── output/              Context Exporter .context.md packs
 │   └── runs/                Ignored by .gitignore
-├── XXX-story-1
-│   ├── XXX-story-1.md       Replicated user stories content in markdown
-│   ├── ...
-│   └── ...
-├── YYY-story-2
-├── ZZZ-story-3
-├── offline-access/
-│   ├── deployment/
-│   ├── guides/
-│   ├── sow/
-│   ├── ...
-│   └── runbooks/
-└── ...
+├── XXX-story-1/
+│   ├── XXX-story-1.md       The story, mirrored from the work item
+│   ├── XXX-notes.md         Personal notes, raw stakeholder input
+│   ├── XXX-plan.md          Plan and tasks
+│   ├── additional/          Related files: spreadsheets, CSV inputs/outputs
+│   └── screenshots/         Form/view captures, error dialogs
+├── YYY-story-2/
+├── ZZZ-story-3/
+└── offline-access/
+    ├── sow/                 Scope
+    ├── deployment/          Standard checklists
+    └── guides/
 ```
 
 ---
@@ -68,7 +67,6 @@ Fixed top-level layout so the assistant — and every teammate — always finds 
 │       └── <SolutionName>.zip      exported managed/unmanaged zips (git-ignored)
 ├── webresources/                   WEB RESOURCES (JS, HTML, CSS) — editable source
 ├── context/                        Context Exporter .context.md packs (committed copy)
-├── docs/                           ADRs, runbooks, architecture (docs-as-code)
 ├── scripts/                        Automation, incl. the export script below
 ├── .gitignore
 └── README.md
@@ -76,7 +74,7 @@ Fixed top-level layout so the assistant — and every teammate — always finds 
 
 Rationale for the split: **`src/`** is code that compiles, **`solutions/`** is Dataverse configuration unpacked to a diffable tree, **`webresources/`** is hand-authored client-script kept editable (not just the base64 blob inside the solution). Keeping these separate is what makes drift detection and grounded gap analysis meaningful later.
 
-> Decide whether `webresources/` is authored here and deployed *into* the solution, or unpacked *out of* it, and stick to one direction — mixing the two causes merge pain.
+> `webresources/` flows one way: authored here and deployed *into* the solution. Treat it as source code rather than something unpacked back out of the solution — mixing the two directions causes merge pain.
 
 ### 2.2 `<client>-wiki/` — live documentation
 
@@ -87,7 +85,7 @@ The engagement's published documentation. Azure DevOps wikis are backed by a git
 ├── .order                          Page order for the wiki tree
 ├── .attachments/                   Images and files referenced by pages
 ├── Home.md
-├── Architecture/                   Solution architecture, integrations, ADR summaries
+├── Architecture/                   Solution architecture, integrations, ADRs
 ├── Functional/                     Module and process documentation, user guides
 ├── Technical/                      Component docs generated from the repo ([6.3])
 ├── Runbooks/                       Operational and deployment procedures
@@ -100,7 +98,7 @@ Clone it next to the project repo:
 git clone https://dev.azure.com/<org>/<project>/_git/<project>.wiki <client>-wiki
 ```
 
-Keep it separate from `<client>-d365/docs/` deliberately. `docs/` holds artifacts reviewed *with the code* — ADRs, developer runbooks, architecture notes for the build. The wiki holds what the wider engagement reads: functional consultants, testers, support, the client. Different audience, different review gate, different update trigger. [6.3](./6.3-documentation.md) is where content is generated from the repo and published here.
+Written documentation lives here, not in the project repo — including the ADRs, which sit under `Architecture/`. The wiki holds what the wider engagement reads: functional consultants, testers, support, the client. Different audience, different review gate, different update trigger from the code it describes. [6.3](./6.3-documentation.md) is where content is generated from the repo and published here.
 
 ---
 
@@ -121,7 +119,6 @@ $folders = @(
     "solutions",
     "webresources",
     "context",
-    "docs",
     "scripts"
 )
 foreach ($f in $folders) {

@@ -50,6 +50,8 @@ This repository is a **playbook plus the tooling that supports it**, for AI-augm
 
 The repository's own thesis applies to work inside it: **ground first, then write.** Read the neighbouring files before adding one.
 
+**Pages marked preliminary are not guidance.** A page whose opening blockquote reads **Preliminary** is a draft in progress. Do not cite one as established repository guidance, and do not extend one without asking; its scope is still being decided.
+
 **Where the work is.** Columns 1 and 3 carry the developed workflows. Taxonomies 2, 4, 5 and 6 — including the maker portals and Copilot Studio — are deliberately staged in the matrix's [Not covered](/workflows/ai-augmented-d365ce-activity-matrix.md#not-covered-taxonomies-other-than-1-and-3) section, not overlooked. Proposing work there is a structural change; see the last of the [Working agreements](#working-agreements).
 
 ---
@@ -167,7 +169,9 @@ dotnet test    tooling/D365ContextExporter/D365ContextExporter.Tests/D365Context
 
 ## Skills
 
-[skills/](/skills/) holds reusable reference guides for AI assistants — condensed, decision-oriented documents (see [Power Automate Cloud Flow Deployment Options](/skills/Power-Automate-Cloud-Flow-Deployment-Options.md)). Lead with the decision table, then the detail. A skill answers "which option do I reach for and why", not "here is everything about the topic".
+[skills/](/skills/) holds reusable skills for AI assistants. A skill is a folder named for the skill, holding a `SKILL.md` with `name` and `description` frontmatter, plus optional `references/` and `scripts/` — see [d365ce-planning](/skills/d365ce-planning/SKILL.md) and [power-automate-flow-editing](/skills/power-automate-flow-editing/SKILL.md).
+
+`SKILL.md` carries the decision and the procedure — lead with the decision table, then the steps, and close with the guardrails a human must check. Depth goes in `references/`, loaded only when the step needs it. A skill answers "which option do I reach for, and how do I carry it out safely", not "here is everything about the topic".
 
 ---
 
