@@ -48,23 +48,24 @@
   <!-- ===== THE THREE REPOSITORIES ===== -->
   <div class="band">
     <div class="band-title">The three repositories at a glance</div>
-    <div class="band-note">Read down a column for one repository&rsquo;s contract. Read across a row to see what actually differs between them.</div>
+    <div class="band-note">One repository per row, in order. Read left to right for its contract; compare the same column across rows to see what actually differs between them.</div>
 
     <div class="repos">
 
       <!-- 1. CONTEXT -->
       <div class="repo ctx">
-        <div class="repo-head">
-          <div class="role">01 · Intent &amp; delivery direction</div>
-          <h2>&lt;client&gt;-Context/</h2>
-          <p>Personal context: <b>story folders</b>, notes, exported packs, engagement documents — read <b>off disk</b> instead of attached to a prompt.</p>
-        </div>
         <dl class="attrs">
           <div class="attr"><dt>Audience</dt><dd>You (and your assistant)</dd></div>
           <div class="attr"><dt>Ownership</dt><dd>Personal, local</dd></div>
           <div class="attr"><dt>Lifecycle</dt><dd>Added to and refreshed when work moves</dd></div>
           <div class="attr"><dt>The assistant</dt><dd>Reads for intent, specification, current environment state, may help write</dd></div>
         </dl>
+        <div class="repo-box">
+        <div class="repo-head">
+          <div class="role">01 · Intent &amp; delivery direction</div>
+          <h2>&lt;client&gt;-Context/</h2>
+          <p>Personal context: <b>story folders</b>, notes, exported packs, engagement documents — read <b>off disk</b> instead of attached to a prompt.</p>
+        </div>
         <div class="tree">
 <pre>&lt;client&gt;-Context/
 ├── .gitignore
@@ -86,22 +87,25 @@
     ├── instructions/  <i>Instructions</i>
     └── guides/</pre>
         </div>
-        <div class="feeds">Related to activities <span class="tag">1.3</span> <span class="tag">2.3</span> <span class="tag">3.3</span> <span class="tag">4.3</span> <span class="tag">5.3</span> <span class="tag">6.3</span></div>
+        </div><!-- /repo-box -->
+        <div class="feeds"><span class="feeds-label">Related to activities</span><span class="tag">1.3</span> <span class="tag">2.3</span> <span class="tag">3.3</span> <span class="tag">4.3</span> <span class="tag">5.3</span> <span class="tag">6.3</span></div>
+        <div class="future"><div class="future-box">Personal repository</div></div>
       </div>
 
       <!-- 2. PROJECT -->
       <div class="repo prj">
-        <div class="repo-head">
-          <div class="role">02 · The project repository</div>
-          <h2>&lt;client&gt;-d365/</h2>
-          <p>Unpacked solutions and source code. This is the tree that makes Taxonomy 3 <b>grounded</b> rather than plausible.</p>
-        </div>
         <dl class="attrs">
           <div class="attr"><dt>Audience</dt><dd>The delivery team</dd></div>
           <div class="attr"><dt>Ownership</dt><dd>Team, shared, PR-reviewed</dd></div>
           <div class="attr"><dt>Lifecycle</dt><dd>Every commit of every story</dd></div>
           <div class="attr"><dt>The assistant</dt><dd>Reads <b>and writes</b> — this is where it builds</dd></div>
         </dl>
+        <div class="repo-box">
+        <div class="repo-head">
+          <div class="role">02 · The project repository</div>
+          <h2>&lt;client&gt;-d365/</h2>
+          <p>Unpacked solutions and source code. This is the tree that makes Taxonomy 3 <b>grounded</b> rather than plausible.</p>
+        </div>
         <div class="tree">
 <pre>&lt;client&gt;-d365/
 ├── src/               <i>PRO-CODE</i>
@@ -118,22 +122,25 @@
 ├── .gitignore
 └── README.md</pre>
         </div>
-        <div class="feeds">Related to activities <span class="tag">1.3</span> <span class="tag">2.3</span> <span class="tag">4.3</span> <span class="tag">5.3</span> <span class="tag">6.3</span></div>
+        </div><!-- /repo-box -->
+        <div class="feeds"><span class="feeds-label">Related to activities</span><span class="tag">1.3</span> <span class="tag">2.3</span> <span class="tag">4.3</span> <span class="tag">5.3</span> <span class="tag">6.3</span></div>
+        <div class="future"><div class="future-arrow"><span>Shared source and solution repository</span></div></div>
       </div>
 
       <!-- 3. WIKI -->
       <div class="repo wiki">
-        <div class="repo-head">
-          <div class="role">03 · Live documentation</div>
-          <h2>&lt;client&gt;-wiki/</h2>
-          <p>An ADO wiki is backed by a git repo — which makes documentation a surface the assistant can <b>read and write</b>, not a browser-only one.</p>
-        </div>
         <dl class="attrs">
           <div class="attr"><dt>Audience</dt><dd>Everyone — including people outside the delivery team</dd></div>
           <div class="attr"><dt>Ownership</dt><dd>Team, shared; the wiki&rsquo;s own review flow</dd></div>
           <div class="attr"><dt>Lifecycle</dt><dd>Updated when increments have passed QA</dd></div>
           <div class="attr"><dt>The assistant</dt><dd>Writes drafts; a human edits, validates and publishes</dd></div>
         </dl>
+        <div class="repo-box">
+        <div class="repo-head">
+          <div class="role">03 · Live documentation</div>
+          <h2>&lt;client&gt;-wiki/</h2>
+          <p>An ADO wiki is backed by a git repo — which makes documentation a surface the assistant can <b>read and write</b>, not a browser-only one.</p>
+        </div>
         <div class="tree">
 <pre>&lt;client&gt;-wiki/         <i>Clone of &lt;project&gt;.wiki</i>
 ├── .order             <i>Wiki tree order</i>
@@ -148,7 +155,9 @@
 <i>A push here is a publication —</i>
 <i>ADO renders it directly.</i></pre>
         </div>
-        <div class="feeds">Related to activities <span class="tag">1.3</span> <span class="tag">2.3</span> <span class="tag">6.3</span></div>
+        </div><!-- /repo-box -->
+        <div class="feeds"><span class="feeds-label">Related to activities</span><span class="tag">1.3</span> <span class="tag">2.3</span> <span class="tag">6.3</span></div>
+        <div class="future"><div class="future-arrow"><span>Shared wiki repository</span></div></div>
       </div>
 
     </div>
