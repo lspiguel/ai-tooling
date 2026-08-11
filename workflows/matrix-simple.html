@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Where AI fits in a delivery cycle — social card</title>
+<link rel="stylesheet" href="palette.css">
+<style>
+  /* Simplified, single-image version of matrix-infographic.html, sized for a
+     social post. Colour comes from palette.css; everything else lives here so
+     the file renders and screenshots standalone. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--surface-base);
+    font-family: 'Segoe UI', system-ui, Arial, sans-serif;
+    color: var(--content-strong);
+    padding: 24px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .card {
+    width: 660px;
+    background: var(--surface-raised);
+    border: 1px solid var(--neutral);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  /* ---------- header ---------- */
+  .header {
+    background: var(--primary-shaded);
+    color: var(--surface-raised);
+    padding: 26px 30px 22px;
+  }
+  .header-tag {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    opacity: .75; margin-bottom: 8px;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; line-height: 1.3; margin-bottom: 6px; }
+  .header p { font-size: 13px; line-height: 1.5; opacity: .88; }
+
+  /* ---------- the two lanes ---------- */
+  .lanes { display: flex; border-bottom: 1px solid var(--neutral); }
+  .lane { flex: 1; padding: 16px 20px; }
+  .lane.one { background: var(--primary-softer); border-right: 1px solid var(--neutral); }
+  .lane.three { background: var(--secondary-softer); }
+  .lane-label {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .lane.one .lane-label { color: var(--primary-shaded); }
+  .lane.three .lane-label { color: var(--secondary-shaded); }
+  .lane-tools { font-size: 11px; color: var(--content-muted); margin-bottom: 6px; }
+  .lane-text { font-size: 12.5px; line-height: 1.45; }
+
+  /* ---------- section chrome ---------- */
+  .section { padding: 18px 30px 16px; border-bottom: 1px solid var(--neutral); }
+  .section-title {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+    color: var(--content-muted);
+    margin-bottom: 4px;
+  }
+  .section-note { font-size: 12px; color: var(--content-muted); line-height: 1.45; margin-bottom: 12px; }
+
+  /* ---------- grounding chips ---------- */
+  .grounding { background: var(--surface-softer); }
+  /* four chips, two per row — four across is too narrow for the longer names */
+  .chips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .chip {
+    position: relative;
+    background: var(--surface-raised);
+    border: 1px solid var(--neutral);
+    border-left: 3px solid var(--neutral);
+    border-radius: 6px;
+    padding: 9px 11px;
+  }
+  .chip-name { font-size: 11.5px; font-weight: 700; margin-bottom: 2px; }
+  .chip-desc { font-size: 10.5px; color: var(--content-muted); line-height: 1.4; }
+
+  /* which taxonomy reaches each grounding component — same colours as the lanes
+     and the loop below. A component both can reach is split diagonally. */
+  .chip.one   { background: var(--primary-softer);   border-left-color: var(--primary-shaded); }
+  .chip.three { background: var(--secondary-softer); border-left-color: var(--secondary-shaded); }
+  .chip.one   .chip-name { color: var(--primary-shaded); }
+  .chip.three .chip-name { color: var(--secondary-shaded); }
+  .chip.both {
+    /* `to bottom right` puts the hard stop exactly on the corner-to-corner
+       diagonal, whatever the chip's aspect ratio */
+    background: linear-gradient(to bottom right, var(--primary-softer) 49.6%, var(--secondary-softer) 50.4%);
+    border-left-color: transparent;
+  }
+  .chip.both .chip-name { color: var(--primary-shaded); }
+  .chip.both::before {          /* the left rule, split the same way */
+    content: "";
+    position: absolute;
+    top: -1px; bottom: -1px; left: -3px; width: 3px;
+    background: linear-gradient(to bottom, var(--primary-shaded), var(--secondary-shaded));
+  }
+
+  /* ---------- the loop ---------- */
+  /* Every cell is pinned to its column so the arc can claim column 4 without
+     pulling the rest of the grid along with it. */
+  .loop { display: grid; grid-template-columns: 92px 1fr 1fr 34px; gap: 6px; }
+  .corner { grid-column: 1; }
+  .loop-head {
+    font-size: 9.5px; font-weight: 700;
+    letter-spacing: .9px; text-transform: uppercase;
+    padding: 0 0 6px 13px;   /* clears the cells' 3px rule + 10px padding */
+    border-bottom: 1px solid var(--neutral);
+  }
+  .loop-head.one { grid-column: 2; color: var(--primary-shaded); }
+  .loop-head.three { grid-column: 3; color: var(--secondary-shaded); }
+  .phase {
+    grid-column: 1;
+    font-size: 11.5px; font-weight: 700; line-height: 1.25;
+    text-align: right; padding: 8px 9px 8px 0;
+    border-right: 1px solid var(--neutral);
+  }
+  .phase span { display: block; font-size: 9.5px; font-weight: 600; color: var(--content-muted); margin-top: 2px; }
+  .act {
+    font-size: 11.5px; line-height: 1.4;
+    padding: 8px 10px;
+    border-left: 3px solid transparent;
+    border-radius: 3px;
+  }
+  .act.one { grid-column: 2; background: var(--primary-softer); border-left-color: var(--primary-shaded); }
+  .act.three { grid-column: 3; background: var(--secondary-softer); border-left-color: var(--secondary-shaded); }
+  /* return arc — runs down the loop rows and back up into [1] */
+  .arc-wrap {
+    grid-column: 4;
+    grid-row: 2 / span 6;
+    position: relative;
+    color: var(--content-strong);
+  }
+  .arc-line {
+    position: absolute;
+    inset: 9px 12px 9px 0;
+    border: 1.5px dashed currentColor;
+    border-left: 0;
+    border-radius: 0 16px 16px 0;
+  }
+  .arc-head {
+    position: absolute; top: 9px; left: 0;
+    transform: translate(-2px, -50%);
+    width: 0; height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-right: 8px solid currentColor;
+  }
+  .arc-label {
+    position: absolute; top: 50%; right: 12px;
+    transform: translate(50%, -50%);
+    writing-mode: vertical-rl;
+    background: var(--surface-raised);   /* punches a gap in the dashed line */
+    padding: 10px 0;
+    font-size: 9.5px; font-weight: 700;
+    letter-spacing: .8px; text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* ---------- callout ---------- */
+  .callout {
+    margin: 0 30px 16px;
+    display: flex; gap: 12px; align-items: center;
+    background: var(--tertiary-softer);
+    border: 1px dashed var(--tertiary-shaded);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .callout .mark {
+    flex-shrink: 0;
+    font-size: 9.5px; font-weight: 700;
+    letter-spacing: .9px; text-transform: uppercase;
+    color: var(--surface-raised);
+    background: var(--tertiary-shaded);
+    border-radius: 3px;
+    padding: 3px 7px;
+  }
+  .callout p { font-size: 12.5px; line-height: 1.45; font-weight: 600; }
+  .section + .callout { margin-top: 16px; }
+
+  /* ---------- tags ---------- */
+  .tag-row {
+    padding: 12px 30px 14px;
+    display: flex; gap: 6px; flex-wrap: wrap;
+    border-top: 1px solid var(--neutral);
+  }
+  .tag {
+    font-size: 11px; font-weight: 500;
+    color: var(--primary-shaded);
+    background: var(--primary-softer);
+    border-radius: 20px;
+    padding: 3px 10px;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <div class="header">
+    <div class="header-tag">Dynamics 365 CE · Power Platform</div>
+    <h1>Where AI fits in a delivery cycle</h1>
+  </div>
+
+  <div class="lanes">
+    <div class="lane one">
+      <div class="lane-label">General-purpose assistants</div>
+      <div class="lane-tools">Claude · ChatGPT · M365 Copilot</div>
+      <div class="lane-text">Reasons about whatever you give it. Cannot see the repository or the environment.</div>
+    </div>
+    <div class="lane three">
+      <div class="lane-label">Coding assistants &amp; agents</div>
+      <div class="lane-tools">Copilot agent mode · Cursor · Claude Code</div>
+      <div class="lane-text">Reads the repository, calls tools.</div>
+    </div>
+  </div>
+
+  <div class="section grounding">
+    <div class="section-title">First, the grounding layer</div>
+    <div class="section-note">Everything below depends on these. They are what turns a plausible answer into a correct one. Notebooks, projects for general purpose assistants. Git repositories for coding assistants.</div>
+    <div class="chips">
+      <div class="chip one">
+        <div class="chip-name">Context packs</div>
+        <div class="chip-desc">Entities, security model and solution state as Markdown</div>
+      </div>
+      <div class="chip three">
+        <div class="chip-name">Repos &amp; unpacked solutions</div>
+        <div class="chip-desc">Configuration and source code, in git</div>
+      </div>
+      <div class="chip both">
+        <div class="chip-name">Instructions</div>
+        <div class="chip-desc">Conventions, templates, agent files, skills</div>
+      </div>
+      <div class="chip three">
+        <div class="chip-name">Boards</div>
+        <div class="chip-desc">Work items, effort, progress</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Then the loop, every increment</div>
+    <div class="section-note">Read down for the flow of work. Read across to compare what each kind of assistant can actually reach.</div>
+
+    <div class="loop">
+      <div class="corner"></div>
+      <div class="loop-head one">General-purpose</div>
+      <div class="loop-head three">Coding assistants</div>
+
+      <div class="phase">Specification<span>1 · Intent</span></div>
+      <div class="act one">Draft epics, stories and acceptance criteria from stakeholder notes</div>
+      <div class="act three">Ask Mode to explore options against the real solution</div>
+
+      <div class="phase">Planning<span>2 · Design</span></div>
+      <div class="act one">Design collaboration sessions; architect the implementation</div>
+      <div class="act three">Plan Mode to a detailed plan, then peer review it</div>
+
+      <div class="phase">Tasking<span>3 · Agentic/Manual</span></div>
+      <div class="act one">Sprint planning, estimates, test plans</div>
+      <div class="act three">Expand the plan into tasks, checklists, test conditions</div>
+
+      <div class="phase">Implementation<span>4 · Build</span></div>
+      <div class="act one">Snippets, samples, step-by-step configuration instructions</div>
+      <div class="act three">Agent Mode builds it, with a human in the loop</div>
+
+      <div class="phase">Validation<span>5 · Review</span></div>
+      <div class="act one">Test plans, UAT scripts, review against the acceptance criteria</div>
+      <div class="act three">Adversary personas, coverage checks, pull request review</div>
+
+      <div class="phase">Documentation<span>6 · Sharing</span></div>
+      <div class="act one">Runbooks and release notes; re-export the context packs</div>
+      <div class="act three">Automated documentation and wiki updates</div>
+
+      <div class="arc-wrap" aria-hidden="true">
+        <div class="arc-line"></div>
+        <div class="arc-head"></div>
+        <div class="arc-label">Next increment</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tag-row">
+    <span class="tag">#Dynamics365</span>
+    <span class="tag">#PowerPlatform</span>
+    <span class="tag">#Dataverse</span>
+    <span class="tag">#AIAssistants</span>
+    <span class="tag">#DeliveryPractice</span>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Three repositories, one agentic session — social card</title>
+<link rel="stylesheet" href="palette.css">
+<style>
+  /* Simplified, single-image version of repo-organization-infographic.html,
+     sized for a social post. Colour comes from palette.css; everything else
+     lives here so the file renders and screenshots standalone. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--surface-base);
+    font-family: 'Segoe UI', system-ui, Arial, sans-serif;
+    color: var(--content-strong);
+    padding: 24px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .card {
+    width: 660px;
+    background: var(--surface-raised);
+    border: 1px solid var(--neutral);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  /* ---------- header ---------- */
+  .header {
+    background: var(--primary-shaded);
+    color: var(--surface-raised);
+    padding: 26px 30px 22px;
+  }
+  .header-tag {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    opacity: .75; margin-bottom: 8px;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; line-height: 1.3; margin-bottom: 6px; }
+  .header p { font-size: 13px; line-height: 1.5; opacity: .88; }
+
+  /* ---------- section chrome ---------- */
+  .section { padding: 18px 30px 16px; border-bottom: 1px solid var(--neutral); }
+  .section-title {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+    color: var(--content-muted);
+    margin-bottom: 4px;
+  }
+  .section-note { font-size: 12px; color: var(--content-muted); line-height: 1.45; margin-bottom: 12px; }
+
+  /* ---------- the three questions ---------- */
+  .questions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .q {
+    background: var(--surface-softer);
+    border: 1px solid var(--neutral);
+    border-radius: 6px;
+    padding: 11px 12px;
+    display: flex; flex-direction: column; gap: 7px;
+  }
+  .q .num { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--content-muted); }
+  .q p { font-size: 12px; font-weight: 600; line-height: 1.35; }
+  .q .to {
+    font-family: Consolas, 'Cascadia Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    margin-top: auto; padding-top: 7px;
+    border-top: 1px solid var(--neutral);
+  }
+  .to::before { content: "→ "; }
+  .to.ctx  { color: var(--primary-shaded); }
+  .to.prj  { color: var(--secondary-shaded); }
+  .to.wiki { color: var(--tertiary-shaded); }
+
+  /* ---------- the three repositories ---------- */
+  .repos { display: flex; flex-direction: column; gap: 8px; }
+  .repo {
+    border: 1px solid var(--neutral);
+    border-left: 4px solid;
+    border-radius: 6px;
+    padding: 11px 13px;
+    display: grid;
+    grid-template-columns: 1fr 172px;
+    column-gap: 14px;
+    align-items: center;
+  }
+  .repo.ctx  { border-left-color: var(--primary-shaded);   background: var(--primary-softer); }
+  .repo.prj  { border-left-color: var(--secondary-shaded); background: var(--secondary-softer); }
+  .repo.wiki { border-left-color: var(--tertiary-shaded);  background: var(--tertiary-softer); }
+  .repo .role { font-size: 9.5px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; margin-bottom: 4px; }
+  .repo h2 { font-family: Consolas, 'Cascadia Mono', monospace; font-size: 14px; font-weight: 700; margin-bottom: 5px; }
+  .repo.ctx  .role, .repo.ctx  h2 { color: var(--primary-shaded); }
+  .repo.prj  .role, .repo.prj  h2 { color: var(--secondary-shaded); }
+  .repo.wiki .role, .repo.wiki h2 { color: var(--tertiary-shaded); }
+  .repo p { font-size: 11.5px; line-height: 1.45; }
+  .facts { display: flex; flex-direction: column; gap: 6px; }
+  .fact { display: flex; flex-direction: column; gap: 1px; }
+  .fact dt { font-size: 8.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--content-muted); }
+  .fact dd { font-size: 11px; line-height: 1.35; font-weight: 600; }
+
+  /* ---------- on disk ---------- */
+  .disk { display: grid; grid-template-columns: 300px 1fr; gap: 14px; align-items: start; }
+  .tree {
+    background: var(--surface-softer);
+    border: 1px solid var(--neutral);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .tree pre { font-family: Consolas, 'Cascadia Mono', monospace; font-size: 10.5px; line-height: 1.65; white-space: pre; }
+  .tree i { color: var(--content-muted); font-style: normal; }
+  .hows { display: flex; flex-direction: column; gap: 8px; }
+  .how {
+    background: var(--surface-softer);
+    border: 1px solid var(--neutral);
+    border-left: 3px solid var(--content-strong);
+    border-radius: 6px;
+    padding: 9px 11px;
+  }
+  .how h3 { font-size: 11.5px; font-weight: 700; margin-bottom: 2px; }
+  .how p { font-size: 10.5px; color: var(--content-muted); line-height: 1.4; }
+
+  /* ---------- payoff ---------- */
+  .payoff { padding: 16px 30px 18px; }
+  .payoff q {
+    display: block;
+    font-family: Consolas, 'Cascadia Mono', monospace;
+    font-size: 11.5px; line-height: 1.65;
+  }
+  .payoff .c1 { color: var(--primary-shaded);   font-weight: 700; }
+  .payoff .c2 { color: var(--secondary-shaded); font-weight: 700; }
+  .payoff .c3 { color: var(--tertiary-shaded);  font-weight: 700; }
+  .payoff .after { font-size: 12px; color: var(--content-muted); line-height: 1.5; margin-top: 8px; }
+
+  /* ---------- tags ---------- */
+  .tag-row {
+    padding: 12px 30px 14px;
+    display: flex; gap: 6px; flex-wrap: wrap;
+    border-top: 1px solid var(--neutral);
+  }
+  .tag {
+    font-size: 11px; font-weight: 500;
+    color: var(--primary-shaded);
+    background: var(--primary-softer);
+    border-radius: 20px;
+    padding: 3px 10px;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <div class="header">
+    <div class="header-tag">Dynamics 365 CE · Grounding · Coding assistants &amp; agents</div>
+    <h1>Three repositories, one agentic session</h1>
+    <p>A coding assistant grounds itself by reading. Three repository folders — different owners, different rhythms, different rules.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Why more than one</div>
+    <div class="section-note">All three change constantly — but not together, and not for the same reasons.</div>
+    <div class="questions">
+      <div class="q">
+        <span class="num">01</span>
+        <p>What did the client ask for?</p>
+        <span class="to ctx">&lt;project name&gt;-Context/</span>
+      </div>
+      <div class="q">
+        <span class="num">02</span>
+        <p>What is actually built?</p>
+        <span class="to prj">&lt;project name&gt;-d365/</span>
+      </div>
+      <div class="q">
+        <span class="num">03</span>
+        <p>What does everyone need to know about it?</p>
+        <span class="to wiki">&lt;project name&gt;-wiki/</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">The three at a glance</div>
+    <div class="repos">
+
+      <div class="repo ctx">
+        <div>
+          <div class="role">01 · Intent &amp; delivery direction</div>
+          <h2>&lt;project name&gt;-Context/</h2>
+          <p>Story folders, personal notes, exported context packs, engagement documents — read off disk instead of attached to a prompt.</p>
+        </div>
+        <dl class="facts">
+          <div class="fact"><dt>Owner</dt><dd>You — personal, local</dd></div>
+          <div class="fact"><dt>The assistant</dt><dd>Reads for intent; may help write</dd></div>
+        </dl>
+      </div>
+
+      <div class="repo prj">
+        <div>
+          <div class="role">02 · The project repository</div>
+          <h2>&lt;project name&gt;-d365/</h2>
+          <p>Unpacked solutions and source code. This is the tree that makes an agent grounded rather than plausible.</p>
+        </div>
+        <dl class="facts">
+          <div class="fact"><dt>Owner</dt><dd>The team — shared, PR-reviewed</dd></div>
+          <div class="fact"><dt>The assistant</dt><dd>Reads and writes — it builds here</dd></div>
+        </dl>
+      </div>
+
+      <div class="repo wiki">
+        <div>
+          <div class="role">03 · Live documentation</div>
+          <h2>&lt;project name&gt;-wiki/</h2>
+          <p>A wiki backed by git is a surface the assistant can read and write, not a browser-only one. A push is a publication.</p>
+        </div>
+        <dl class="facts">
+          <div class="fact"><dt>Owner</dt><dd>Everyone — the wiki's own review flow</dd></div>
+          <div class="fact"><dt>The assistant</dt><dd>Drafts; a human edits and publishes</dd></div>
+        </dl>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="payoff">
+    <div class="section-title">The point: one prompt is able to span all three</div>
+    <q>Read the story in <span class="c1">&lt;project name&gt;-Context/1234-*</span>, check it against the solutions in <span class="c2">&lt;project name&gt;-d365/solutions/</span> and the source code, and tell me which wiki pages under <span class="c3">Functional/</span> will need updating.</q>
+    <p class="after">The assistant works across all three, reading what it needs — no re-explaining, no pasted screenshots.</p>
+  </div>
+
+  <div class="tag-row">
+    <span class="tag">#Dynamics365</span>
+    <span class="tag">#PowerPlatform</span>
+    <span class="tag">#Dataverse</span>
+    <span class="tag">#AIAssistants</span>
+    <span class="tag">#DeliveryPractice</span>
+  </div>
+
+</div>
+</body>
+</html>
