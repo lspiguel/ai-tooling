@@ -341,10 +341,10 @@ footer{
   flex-direction:column;
   gap:26px;
 }
-.repos .repo + .repo{padding-top:26px;border-top:2px solid var(--ink);}
+.repos .repo + .repo{padding-top:26px;border-top:2px solid var(--neutral);}
 .repo{
   display:grid;
-  grid-template-columns:minmax(0,240px) minmax(0,1fr) minmax(0,130px);
+  grid-template-columns:minmax(0,240px) minmax(0,1fr) minmax(0,170px);
   grid-template-areas:"attrs box future" "feeds box future";
   grid-template-rows:1fr auto;
   column-gap:22px;
@@ -377,9 +377,9 @@ footer{
   justify-content:center;text-align:center;
 }
 .future-arrow{
-  min-height:150px;
-  clip-path:polygon(0 50%,26px 0,26px 8%,calc(100% - 26px) 8%,calc(100% - 26px) 0,100% 50%,calc(100% - 26px) 100%,calc(100% - 26px) 92%,26px 92%,26px 100%);
-  padding:16px 30px;
+  min-height:112px;
+  clip-path:polygon(0 50%,30px 0,30px 16%,calc(100% - 30px) 16%,calc(100% - 30px) 0,100% 50%,calc(100% - 30px) 100%,calc(100% - 30px) 84%,30px 84%,30px 100%);
+  padding:14px 34px;
   justify-content:center;text-align:center;
 }
 .repo.ctx .future-box,.repo.ctx .future-arrow{background:var(--accent-1-bg);color:var(--accent-1);border:1px solid var(--accent-1);}
