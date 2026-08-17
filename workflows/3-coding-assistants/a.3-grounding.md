@@ -56,7 +56,7 @@ This repository holds the story folders, working notes, context packs and engage
     └── guides/
 ```
 
-The story folder is where the agent's own output lands too — the design options it drafted in [2.3](./2.3-planning.md), the task breakdown from [3.3](./3.3-tasking.md), the test scenarios from [5.3](./5.3-validation-peer-review.md). Once a human has reviewed them they belong next to the story, so the next session starts from where the last one ended rather than from zero.
+The story folder is where the agent's own output lands too — the design options it drafted in [2.3](./2.3-planning.md), the task breakdown from [3.3](./3.3-tasking.md), the test scenarios for [5.3](./5.3-validation-peer-review.md). Once a human has reviewed them they belong next to the story, so the next session starts from where the last one ended rather than from zero.
 
 What the coding assistant gets from it that the project repo can't give:
 
