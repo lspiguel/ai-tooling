@@ -1,6 +1,6 @@
 ---
 name: d365ce-planning
-description: Produces implementation plans for Microsoft Dynamics 365 Customer Engagement and Dataverse work. Covers researching the solution extract before planning, separating artefacts authored in source from changes made directly in the environment, splitting delivery into manual and agentic tasks, and tracking open points to resolution. Use when planning, scoping, or breaking down D365CE or Dataverse changes - plugins, custom APIs, web resources, forms, views, solutions, schema - or when turning a user story into an implementation plan.
+description: Produces implementation plans for Microsoft Dynamics 365 Customer Engagement and Dataverse work. Covers researching the solution extract before planning, separating artefacts authored in source from changes made directly in the environment, splitting delivery into manual and agentic tasks, scaling plan depth to the size of the change, and tracking open points to resolution. Use when planning, scoping, or breaking down D365CE or Dataverse changes - plugins, custom APIs, web resources, forms, views, solutions, schema - or when turning a user story into an implementation plan.
 ---
 
 # Planning D365CE Work
@@ -8,6 +8,22 @@ description: Produces implementation plans for Microsoft Dynamics 365 Customer E
 D365CE plans fail for reasons that have nothing to do with the code being wrong. They fail because the plan targeted a generated file, or a form nobody uses, or assumed a column was writable when it is a rollup, or changed a plugin step's trigger in a way that broke code the plan never looked at.
 
 This skill is about the research and framing that prevents those failures. Implementation conventions - naming, folder structure, tracing, StyleCop - come from the project rules, not from here.
+
+---
+
+## Scale the plan to the change
+
+The ground rules below hold at any size - a one-line fix can still target a generated file. Everything else scales: research covers what the plan touches, risks appear when the change can trigger them, and the document grows only as the design does. Size the plan before writing it, and when the expected complexity or the level of detail wanted is ambiguous - a quick fix versus the first slice of something larger - ask the user rather than defaulting to the full treatment.
+
+| Size | Typical shape | The plan carries |
+|---|---|---|
+| **Small** | One component, no schema writes, no new registrations - a label change, a guard in an existing handler, a column added to a view | The component's channel (ground rule 1), the approach in a sentence or two, and the task list. Half a page. |
+| **Medium** | A few components, possibly both channels, but the design is not in question - a new function in an existing web resource plus its form event wiring | Approach, component inventory, and task list in full; other sections only where they have content. |
+| **Large** | New schema, new plugin steps or components, behaviour spanning components, ordering constraints, rollups, recursion | The full skeleton. |
+
+- **The task list is never thinned.** Performer labels, prerequisites, and status lines are what make the plan a progress record; a one-task plan still carries all of them.
+- **Sections with nothing to say are omitted, not filled.** An open point is a genuine unknown that survived research; a risk belongs in the plan only when the change can trigger it. Inventing either to complete the skeleton spends reviewer attention exactly where the plan is meant to save it. "No open points" is one line, and it is a finding.
+- **The size call is provisional until research is done.** A label change that turns out to live on three forms has outgrown Small. Grow the plan and tell the user the scope moved, rather than growing it silently.
 
 ---
 
@@ -24,7 +40,7 @@ This splits every deliverable into one of two channels, and a plan is not finish
 - **Authored in source and committed by us** - plugin C# and unit tests, JavaScript and other web resource source, project files, PCF controls, build scripts.
 - **Changed directly in the environment, and reaching the repo only via the extract** - the compiled plugin assembly, plugin step registrations and images, published web resources, form and view XML, schema, security roles, solution membership.
 
-Put that split in the plan as an explicit table. It determines the whole task list: channel one is agentic work, channel two is manual work followed by waiting for an extract.
+Put that split in the plan explicitly - a routing table when several components are in play, a single line when there is one. It determines the whole task list: channel one is agentic work, channel two is manual work followed by waiting for an extract.
 
 A useful corollary: when JavaScript exists both in a source folder and inside the extract, the source copy is the one to edit. The extract copy appears after the web resource is published. Plan a diff of the two as a verification step, since a divergence means the wrong file was uploaded.
 
@@ -64,7 +80,7 @@ Resist new columns for values that can be computed at runtime. A total that Java
 
 ## Research before writing the plan
 
-Do this first. Every item below has changed a plan's design at least once.
+Do this first. Every item below has changed a plan's design at least once, and each applies only when the plan touches what it checks - a plan that writes no columns has no writability to confirm, and a change with no client-side surface needs no form research.
 
 **Column writability.** Read the entity XML for each column the plan writes. A column with `SourceType 2` is a rollup and a plan that writes it is invalid; `SourceType 1` is calculated; only `SourceType 0` with `ValidForUpdateApi 1` is a plain writable column. Note existing rollups on the same table and whether they filter by status - an unfiltered rollup next to a status-aware plan is a contradiction to resolve.
 
@@ -82,7 +98,7 @@ Do this first. Every item below has changed a plan's design at least once.
 
 ## Risks to analyse explicitly
 
-These recur across engagements and belong in the plan when relevant.
+These recur across engagements and belong in the plan when relevant. When the change cannot trigger one, leave it out - do not record it as not applicable.
 
 **Widening filtering attributes exposes latent defects.** Existing code written when a step had one filtering attribute may dereference that attribute unguarded, because the Target always carried it. Add a second filtering attribute and the Target often will not. Read the existing handler line by line before widening any filter, and when you find such a defect, note that it is **dormant today and becomes reachable on the change** - then make the sequencing explicit: the guarded assembly deploys *before* the filter widens, never after. Ordering inside a single manual task is easy to get wrong and expensive to debug.
 
@@ -100,7 +116,7 @@ These recur across engagements and belong in the plan when relevant.
 
 ## Plan document structure
 
-Write the plan as markdown, stored with the work item it implements and named for its id. Use this skeleton:
+Write the plan as markdown, stored with the work item it implements and named for its id. Use this skeleton, sized per the table in "Scale the plan to the change" - a Large change uses all of it, a smaller one keeps the numbering and drops the sections it does not need:
 
 ```markdown
 # <id> - <title>: Implementation Plan
@@ -169,7 +185,7 @@ Update it in place as implementation progresses, so the plan itself is the progr
 
 ## Open points
 
-Number them and keep them in the plan as it evolves. Each needs the assumption, the consequence if it is wrong, and the cost of changing course. Quantify that cost concretely - "one extra condition in the query method" tells a reader how much is at stake in a way that "may require rework" does not.
+Number them and keep them in the plan as it evolves. Zero is a valid count - when research left no genuine unknowns, one line saying so closes the section, and an open point invented to fill it obliges someone to resolve it. Each real one needs the assumption, the consequence if it is wrong, and the cost of changing course. Quantify that cost concretely - "one extra condition in the query method" tells a reader how much is at stake in a way that "may require rework" does not.
 
 When one is settled, mark it resolved in place with the date and what was decided, rather than deleting it. The trail of what was considered and rejected is worth more than a clean list.
 
@@ -192,4 +208,5 @@ Before presenting a plan:
 - [ ] Manual tasks are numbered, tool-specific, and end in an observable verification
 - [ ] Every task carries a status line, set to `Pending.` in a new plan
 - [ ] Open points state the consequence and the cost of changing course
+- [ ] Plan depth matches the size of the change - no section, open point, or risk exists only to complete the skeleton
 - [ ] Findings that are defects or gaps, rather than planned work, are called out as such
