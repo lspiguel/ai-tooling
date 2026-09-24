@@ -9,12 +9,13 @@ Writes next to the markdown file, where <stem> is its name without ".md" and wit
   <stem>.docx                             built by pandoc
 
 Styles and page setup come from the committed <stem>.docx when there is one (pandoc's default otherwise),
-with body text at 9 pt and headings scaled up from there. A Microsoft Purview sensitivity label on the
+with body text at 9 pt and headings scaled up from there. A line holding only <div class="page-break"></div>
+becomes a Word page break. A Microsoft Purview sensitivity label on the
 committed DOCX is carried over.
 
-Rendering: SVG mockups and diagrams through Microsoft Edge headless at 2x, SVG icons (64 px or smaller)
-through ImageMagick at 4x, mermaid through mmdc. Needs pandoc, plus Edge, ImageMagick or mmdc for
-whichever of those the document uses.
+Rendering: SVG mockups and diagrams through Chrome or Edge headless at 2x, SVG icons (64 px or smaller)
+through ImageMagick at 4x, mermaid (```mermaid and ::: mermaid blocks) through mmdc. Needs pandoc, plus a
+browser, ImageMagick or mmdc for whichever of those the document uses.
 """
 import argparse
 import re
@@ -25,12 +26,10 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+from convert_common import (MERMAID_BLOCK, OPENXML_PAGE_BREAK, PAGE_BREAK, SVG_LINK, mermaid_png_width_in,
+                            render_mermaid, require, svg_display_width_in, svg_to_png)
+
 ASSETS_DIR = "_docx-assets"
-ICON_MAX_PX = 64
-ICON_WIDTH_IN = 0.2
-SVG_PX_PER_IN = 120     # a 390 px phone mockup prints 3.25 in wide
-MAX_WIDTH_IN = 6.5      # Letter with 1 in margins
-MERMAID_SCALE = 3
 
 # Style sizes in half-points: body 9 pt, everything else scaled up from there.
 DEFAULT_SIZE = 18
@@ -46,40 +45,6 @@ STYLE_SIZES = {
     "IntenseQuoteChar": 18, "QuoteChar": 18, "NoSpacing": 18,
 }
 
-EDGE_PATHS = [
-    Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"),
-    Path(r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"),
-]
-
-
-def require(name):
-    path = shutil.which(name)
-    if not path:
-        sys.exit(f"{name} is required on PATH")
-    return path
-
-
-def find_edge():
-    for path in EDGE_PATHS:
-        if path.exists():
-            return path
-    sys.exit("Microsoft Edge is required to render SVG mockups")
-
-
-def svg_size(svg):
-    tag = re.search(r"<svg\b[^>]*>", svg.read_text(encoding="utf-8", errors="ignore"), re.S).group(0)
-    w = re.search(r'(?<![\w-])width="([\d.]+)(?:px)?"', tag)
-    h = re.search(r'(?<![\w-])height="([\d.]+)(?:px)?"', tag)
-    if w and h:
-        return float(w.group(1)), float(h.group(1))
-    vb = re.search(r'viewBox="\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)', tag)
-    return float(vb.group(1)), float(vb.group(2))
-
-
-def png_width(png):
-    return int.from_bytes(png.read_bytes()[16:20], "big")
-
-
 def rewrite_images(md, folder):
     """Point local SVG image links at PNGs in _docx-assets and give each a display width."""
     renders = {}
@@ -91,14 +56,10 @@ def rewrite_images(md, folder):
             print(f"  missing, left as is: {rel}")
             return m.group(0)
         name = Path(rel).as_posix().removeprefix("./").replace("../", "up__").replace("/", "__")[:-4] + ".png"
-        w, h = svg_size(svg)
-        icon = max(w, h) <= ICON_MAX_PX
-        width = ICON_WIDTH_IN if icon else min(MAX_WIDTH_IN, w / SVG_PX_PER_IN)
-        renders[name] = (svg, icon, w, h)
-        return f"![{alt}]({ASSETS_DIR}/{name}){{width={width:.2f}in}}"
+        renders[name] = svg
+        return f"![{alt}]({ASSETS_DIR}/{name}){{width={svg_display_width_in(svg):.2f}in}}"
 
-    out = re.sub(r"!\[([^\]]*)\]\((?![a-zA-Z][\w+.-]*:)([^)\s]+\.svg)\)", repl, md)
-    return out, renders
+    return SVG_LINK.sub(repl, md), renders
 
 
 def replace_mermaid(md, assets, nl):
@@ -108,36 +69,19 @@ def replace_mermaid(md, assets, nl):
     def repl(m):
         nonlocal count
         count += 1
-        body = m.group(1)
         mmd = assets / f"mermaid-diagram-{count}.mmd"
         png = assets / f"mermaid-diagram-{count}.png"
-        norm = lambda s: s.replace("\r\n", "\n").strip()
-        if mmd.exists() and png.exists() and norm(mmd.read_text(encoding="utf-8")) == norm(body):
-            print(f"  mermaid-diagram-{count}: unchanged, keeping PNG")
-        else:
-            mmd.write_bytes((norm(body).replace("\n", nl) + nl).encode("utf-8"))
-            print(f"  mermaid-diagram-{count}: rendering")
-            subprocess.run([require("mmdc"), "-i", str(mmd), "-o", str(png), "-s", str(MERMAID_SCALE), "-b", "white"],
-                           check=True, capture_output=True)
-        width = min(MAX_WIDTH_IN, png_width(png) / (MERMAID_SCALE * 96))
-        return f"![Mermaid diagram {count}]({ASSETS_DIR}/{png.name}){{width={width:.2f}in}}"
+        rendered = render_mermaid(m.group("body"), mmd, png, nl)
+        print(f"  mermaid-diagram-{count}: {'rendered' if rendered else 'unchanged, keeping PNG'}")
+        return f"![Mermaid diagram {count}]({ASSETS_DIR}/{png.name}){{width={mermaid_png_width_in(png):.2f}in}}"
 
-    return re.sub(r"```mermaid\r?\n(.*?)\r?\n```", repl, md, flags=re.S)
+    return MERMAID_BLOCK.sub(repl, md)
 
 
 def render(renders, assets, work):
-    edge = None
-    for name, (svg, icon, w, h) in renders.items():
-        png = assets / name
+    for name, svg in renders.items():
         print(f"  {name}")
-        if icon:
-            subprocess.run([require("magick"), "-background", "none", "-density", "384", str(svg), str(png)], check=True)
-        else:
-            edge = edge or find_edge()
-            subprocess.run([str(edge), "--headless=new", "--disable-gpu", "--hide-scrollbars",
-                            f"--user-data-dir={work / 'edge-profile'}", "--force-device-scale-factor=2",
-                            f"--window-size={round(w)},{round(h)}", f"--screenshot={png}", svg.resolve().as_uri()],
-                           check=True, capture_output=True, timeout=120)
+        svg_to_png(svg, assets / name, work)
 
 
 def previous_docx(docx, work):
@@ -240,6 +184,7 @@ def main():
 
         print("Replacing mermaid blocks")
         md = replace_mermaid(md, assets, nl)
+        md = PAGE_BREAK.sub(lambda _: OPENXML_PAGE_BREAK.replace("\n", nl), md)
         md_final = folder / f"{stem}.docx-export.with-mermaid.tmp.md"
         md_final.write_bytes(md.encode("utf-8"))
 
