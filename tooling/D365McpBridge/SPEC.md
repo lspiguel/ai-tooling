@@ -27,9 +27,17 @@ An XrmToolBox plugin that exposes a local Model Context Protocol (MCP) endpoint 
 
 ## 1. Problem
 
-An agent working on an unpacked solution can see everything that is in flight: it reads the exported transport solutions and edits them locally. That only works once transport solutions exist.
+An agent working on an unpacked solution can see everything that is in flight: it reads the exported transport solutions and edits them locally. What it cannot see is anything not yet in a solution — above all, out-of-box components that have never been customized. Their IDs and current definitions exist only in the environment, and nothing exports them until they are added to a solution.
 
-At the start of a project there are none. The first configuration tasks — publisher, base solutions, first changes to out-of-box tables, forms, views, ribbons and sitemaps — have nothing to export, so the agent has no ground truth. It cannot see the out-of-box components, their IDs, or their current definitions.
+The need to reach those components is greatest at the start of a project, but it does not go away — it recurs, less often, for as long as the project runs:
+
+| Moment | What has to be pulled in |
+|---|---|
+| **Project start** | Everything — there are no transport solutions yet. Publisher, base solutions, and the first out-of-box tables, forms, views, ribbons and sitemaps to customize |
+| **During delivery** | Each out-of-box component a story touches for the first time — a table, form, view or ribbon not yet in any transport solution |
+| **A first-party app joins the solution** | Sales, Customer Service, Field Service or another app brings a new set of out-of-box tables, forms, views, sitemaps and ribbons, none of them in a transport solution |
+
+At each of these moments the agent has no ground truth for the components it needs: it cannot see them, their IDs, or their current definitions.
 
 The plugin closes that gap. It lets the agent:
 
@@ -39,7 +47,7 @@ The plugin closes that gap. It lets the agent:
 
 From there, PAC CLI exports and unpacks the solution, the agent edits it locally, and PAC CLI packs and imports it. The platform's import is the final validation.
 
-The same loop then continues for the rest of the project: one small WIP solution per user story or task.
+The same loop serves every moment above: one small WIP solution per user story or task, with discovery used whenever the work reaches beyond what the transport solutions already hold.
 
 ---
 
@@ -490,7 +498,16 @@ The persisted log records arguments and result summaries (counts, sizes, warning
 7. `pac solution pack`, `pac solution import --publish-changes`.
 8. Close-out: components move to the transport solution (same add rules), then `pac solution delete` removes the WIP solution while keeping its components.
 
-### 9.3 Why the overwrite check matters
+### 9.3 A first-party app joins the solution
+
+Sales, Customer Service, Field Service or another first-party app brings a new set of out-of-box components. None of them are in a transport solution yet, so this is a smaller cold start.
+
+1. **Prerequisite, outside the plugin:** a person installs the app in the development environment. Every downstream environment needs the same app installed before any transport solution that references its components is imported.
+2. `list_solution_components` on the app's managed solutions, plus `query` over `appmodule`, `sitemap`, `systemform` and `savedquery`, shows what the app added.
+3. A person decides which of those components the project will customize now. Only those are pulled in; the rest stay out until a story needs them.
+4. Each change then follows the per-story loop ([§9.2](#92-per-user-story--wip-solution)). Close-out places the new components in the transport solutions that own them, under the same add rules (R1).
+
+### 9.4 Why the overwrite check matters
 
 Forms, views and sitemaps are imported as whole documents: an unmanaged import replaces the environment's definition with the one in the solution. If someone changed the same form after the WIP export, the import silently discards their change. The baseline comparison detects that before it happens.
 
