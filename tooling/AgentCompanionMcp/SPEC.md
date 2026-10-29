@@ -1,6 +1,6 @@
-# D365 MCP Bridge — specification and plan
+# Agent Companion MCP — specification and plan
 
-> **Status:** Draft · **Date:** 2026-10-25 · **Plugin:** `D365McpBridge` · **Intended path:** `tooling/D365McpBridge/SPEC.md`
+> **Status:** Draft · **Date:** 2026-10-25 · **Plugin:** `AgentCompanionMcp` · **Intended path:** `tooling/AgentCompanionMcp/SPEC.md`
 
 An XrmToolBox plugin that exposes a local Model Context Protocol (MCP) endpoint over the active XrmToolBox connection. It gives a coding agent the few Dataverse operations PAC CLI cannot perform, so the agent can bootstrap and maintain small, unmanaged work-in-progress (WIP) solutions locally. Every call is shown in a visible log and authorized by a person before it runs.
 
@@ -142,7 +142,7 @@ Whichever path is used, `list_solution_components` runs afterwards (R1).
 │  ┌───────────────────┐   MCP over HTTP    ┌────────────────────────┐  │
 │  │ Coding agent      │  127.0.0.1:<port>  │ XrmToolBox             │  │
 │  │ (MCP client)      │ ─────────────────▶ │ ┌────────────────────┐ │  │
-│  │                   │  Bearer <token>    │ │ D365 MCP Bridge    │ │  │
+│  │                   │  Bearer <token>    │ │ Agent Companion MCP│ │  │
 │  │                   │ ◀───────────────── │ │ plugin             │ │  │
 │  │                   │   JSON results     │ │  • MCP host        │ │  │
 │  │                   │                    │ │  • approval queue  │ │  │
@@ -365,7 +365,7 @@ Rules:
 ### 8.1 Main panel
 
 ```
-┌─ D365 MCP Bridge ───────────────────────────────────────────────────┐
+┌─ Agent Companion MCP ───────────────────────────────────────────────┐
 │ Connection : [ClientName] DEV  (https://<org>.crm.dynamics.com)     │
 │ Dev env    : [x] I confirm this is a development environment        │
 │                                                                     │
@@ -464,8 +464,8 @@ The persisted log records arguments and result summaries (counts, sizes, warning
 ### 9.1 Cold start — first base solution
 
 ```
- Agent                              Bridge (MCP)               PAC CLI
- ─────                              ────────────               ───────
+ Agent                              Companion (MCP)            PAC CLI
+ ─────                              ───────────────            ───────
  get_connection_info ─────────────▶ confirm DEV env
  list_publishers ─────────────────▶ person confirms which
                                     publisher to use
