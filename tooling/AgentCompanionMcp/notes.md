@@ -8,7 +8,7 @@
 
 | Phase | Status | Exit criterion |
 |---|---|---|
-| [0 — Spikes](SPEC.md#phase-0--spikes) | In progress — S1, S2, S3, S5, S6 done; S4 waits on a VS Code re-test against the dual-era spike; S7 deferred (no build environment) | Every v1 spike has a written finding, and the spec is updated |
+| [0 — Spikes](SPEC.md#phase-0--spikes) | Done for v1, except S7 (deferred — no build environment) and S8 (deferred with strategy C); D8 open | Every v1 spike has a written finding, and the spec is updated |
 | [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | Not started | See spec |
 | [2 — Discovery](SPEC.md#phase-2--discovery) | Not started | See spec |
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | Not started | See spec |
@@ -32,13 +32,14 @@ Raised by the desk research.
 | D5 | **Live-work prerequisites** | Data-free sandbox available through the active PAC profile; PAC CLI updated to 2.14.1; spike registered in Claude Code at local scope. Spike code lives in [Spikes/](Spikes/) | — |
 | D6 | **How the response cap is measured** | Claude Code counts the **text content block**, not the whole result (S4). The 40,000 characters are measured on the text block | [SPEC §5](SPEC.md#serialization), §6.2 |
 | D7 | **Fallback for handshake-era clients** | **Dual-era host**: 2026-07-28 primary; 2025-11-25 and 2025-06-18 through `initialize`, with in-memory sessions. VS Code 1.144.0 and Claude Code 2.1.72 open with `initialize` (S4) | [SPEC §6.1](SPEC.md#61-protocol-surface), §6.2, §14 |
+| D8 | **Stable bearer token and clearer 401** — *open* | The token changes at every host start, so every XrmToolBox restart breaks saved client configurations; VS Code then answers the 401 by attempting OAuth discovery and offering manual client registration, a misleading prompt (S4). Recommendation: keep the token across restarts, protected with DPAPI for the current Windows user in the plugin settings, changed only by **Regenerate**; return a plain-text reason in the 401 body; document the VS Code reset step | Pending |
 
 ### Waiting on
 
 | Item | Needed for | Who |
 |---|---|---|
 | S7: a build environment with the WIP promotion pipeline — none available for now | S7 | Person |
-| VS Code call against the dual-era spike (v3): deploy the new DLL, restart XrmToolBox, reconnect, start the server in VS Code with the new token | S4 | Person |
+| Decision on D8 (stable token, clearer 401) | Spec §5, §6.2 | Person |
 
 ### Sandbox cleanup (after S7)
 
@@ -89,7 +90,7 @@ Spikes are throwaway. Set a timebox when a spike starts and record it in the tra
 | S1 | Plugin | — | Done — gate passed in XrmToolBox; Tool Library install left to Phase 5 packaging | | [§5](SPEC.md#5-architecture) host, JSON-RPC layer, serialization; [§6.1](SPEC.md#61-protocol-surface) protocol revision | [S1](#s1--mcp-host-inside-xrmtoolbox-on-net48) |
 | S2 | Platform | — | Done | | `tableBehavior` mapping in `add_solution_components`; component type codes; X6 | [S2](#s2--addsolutioncomponentrequest-flags-and-exports) |
 | S3 | Platform | — | Done | | Path B per component type ([§4](SPEC.md#4-responsibility-split--mcp-vs-pac-cli)) | [S3](#s3--pac-add-solution-component) |
-| S4 | Plugin | S1 | In progress — dual-era layer built and checked; Claude Code 2.1.72 and 2.1.312 both connect; VS Code re-test waiting | | Client configuration snippets; approval timeout default; response cap (D2) | [S4](#s4--agent-clients-over-local-http) |
+| S4 | Plugin | S1 | Done — Claude Code 2.1.312 (2026-07-28), Claude Code 2.1.72 and VS Code 1.144.0 (handshake fallback) all connect; D8 raised | | Client configuration snippets; approval timeout default; response cap (D2) | [S4](#s4--agent-clients-over-local-http) |
 | S5 | Desk research | — | Done | | Read tools kept or dropped ([§6.3](SPEC.md#63-tool-summary)) | [S5](#s5--overlap-with-the-dataverse-mcp-server) |
 | S6 | Plugin | S1 (same shell) | Done | | H1–H4 and C1–C10 ([§5](SPEC.md#host-and-connection-model)) | [S6](#s6--several-tabs-of-one-plugin) |
 | S7 | Platform | S2; build environment | Deferred — no build environment available | | A1 — whether the R1 check after promotion stays permanent | |
@@ -210,6 +211,17 @@ One entry per spike, written as soon as the spike ends, then applied to the spec
 - **Observed:** All thirty-one checks pass. Claude Code 2.1.72 now connects: `initialize` (2025-11-25 agreed) → `notifications/initialized` → `GET` (405, no stream offered) → `tools/list` → `tools/call hello`, which returned the result. Claude Code 2.1.312 still takes the 2026-07-28 path (`server/discover`).
 - **Conclusion:** The fallback serves a real handshake-era client end to end on the same endpoint, without touching tools, approvals or paging. VS Code is the remaining check.
 - **Spec change:** None beyond D7.
+
+#### S4 — VS Code against the dual-era spike
+
+- **Date:** 2026-10-30
+- **Versions:** VS Code 1.144.0 with GitHub Copilot agent mode · spike plugin v3 (dual-era) in XrmToolBox
+- **Steps:** Restarted XrmToolBox with spike v3 (new token); restarted the server in VS Code; read the spike log. Then wrote the token directly into the user `mcp.json`, restarted the server again and asked agent mode to run `hello`.
+- **Observed:**
+  - With the masked `promptString` input, every VS Code request got **401**: VS Code kept the token cached from before the restart. VS Code answered the 401 by fetching OAuth protected-resource and authorization-server metadata, then offered manual OAuth client registration, and its log looped on "Waiting for server to respond to `initialize`".
+  - With the current token in `mcp.json`: `initialize` (2025-11-25 requested and agreed) → `GET` (405) → `notifications/initialized` → `tools/list` → `tools/call hello`, answered by the spike in XrmToolBox (its process ID and host load time).
+- **Conclusion:** VS Code 1.144.0 works through the fallback (D7). A token that changes at every host start breaks saved client configurations, and in VS Code the 401 surfaces as a misleading OAuth prompt rather than a token error (D8).
+- **Spec change:** Pending D8. Minimum client versions for the Phase 5 README: Claude Code — any release from 2.1.72 on; VS Code — 1.144.0 tested.
 
 ### S5 — Overlap with the Dataverse MCP server
 
@@ -357,3 +369,4 @@ Spike solutions left in the sandbox: `AgentSpikeS2A`, `AgentSpikeS2B`, `AgentSpi
 | 2026-10-29 | S6 done: host stops when the last tab closes (H3). S7 deferred — no build environment. Claude Code registration removed (token expired with the host); re-add when the spike runs again |
 | 2026-10-29 | S4 VS Code: 1.144.0 sends `initialize` then legacy `GET`; cannot connect under D1. Its agent reported a false success via the console harness, caught in the spike log. D7 (dual-era fallback) raised |
 | 2026-10-29 | D7 decided: dual-era host. Fallback built in the spike layer; 31 protocol checks pass; Claude Code 2.1.72 (handshake) and 2.1.312 (2026-07-28) both connect. Spec §6.1 rewritten. VS Code re-test waits on the v3 DLL |
+| 2026-10-30 | S4 done: VS Code 1.144.0 connects through the handshake fallback and calls a spike tool in XrmToolBox. Token caching across host restarts caused 401s and an OAuth prompt in VS Code; D8 raised. Phase 0 done for v1 apart from S7 and S8 (deferred) |
