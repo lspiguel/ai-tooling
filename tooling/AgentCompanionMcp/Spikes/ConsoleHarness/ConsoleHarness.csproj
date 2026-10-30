@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Spike S1/S4: runs the hand-rolled MCP layer outside XrmToolBox, with fake tools. Throwaway. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Lspiguel.Xrm.AgentCompanionMcp.Spikes</RootNamespace>
+    <AssemblyName>AgentCompanionMcp.ConsoleHarness</AssemblyName>
+    <Version>0.0.1</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\McpLayer\*.cs" Link="McpLayer\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+</Project>
