@@ -1,6 +1,6 @@
 # Agent Companion MCP — specification and plan
 
-> **Status:** Draft · **Date:** 2026-10-25 · **Updated:** 2026-10-29 · **Plugin:** `AgentCompanionMcp` · **Intended path:** `tooling/AgentCompanionMcp/SPEC.md`
+> **Status:** Draft · **Date:** 2026-10-25 · **Updated:** 2026-10-30 · **Plugin:** `AgentCompanionMcp` · **Intended path:** `tooling/AgentCompanionMcp/SPEC.md`
 
 An XrmToolBox plugin that exposes a local Model Context Protocol (MCP) endpoint over one or more XrmToolBox connections. It gives a coding agent the few Dataverse operations PAC CLI cannot perform, so the agent can bootstrap and maintain small, unmanaged work-in-progress (WIP) solutions locally. One MCP host serves the whole XrmToolBox process; each open plugin tab binds one connection and is the window where a person sees and authorizes every call to it.
 
@@ -75,6 +75,8 @@ The same loop serves every moment above: a small set of WIP solutions per user s
 | R9 | **One plugin tab per connection; every call names its connection** — no default connection | Approvals for an environment happen in one place; a call never lands on the wrong environment |
 | R10 | **One transport group per WIP solution; one transport home per component** — placement follows the project's segmentation map ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)) | A component in the wrong transport solution is costly to move once deployed (X4) |
 | R11 | **WIP solutions are never deployed downstream** — only transport solutions are | A deployed WIP becomes a managed layer that ties its components' lifetime to the WIP (D1) |
+| R12 | **Write and Publisher calls must state a reason.** `reason` is required and must not be blank. A call without one fails before any dialog. The reason is still unverified agent text (R8) | The person approving a change sees the agent's stated intent next to the arguments, and a mismatch between them is grounds to deny |
+| R13 | **Every call is logged in the plugin window as a call line and an outcome line**, including denied, rejected and host calls ([§8.6](#86-call-log-format)). The log reaches disk only when the person uses **Save as…** | Gives each environment a reviewable record of what the agent asked for and what it got |
 
 ---
 
@@ -309,7 +311,7 @@ State that spans calls — the `connection` and paging `cursor` handles — trav
 
 **Connection.** Every tool except `list_connections` takes `connection` — the `connectionId` of an entry returned by `list_connections` — as a required parameter. It is the first property in each `inputSchema` and first in `required`, so clients that order arguments by schema present it first; on the wire, presence is what matters. There is no default: a call without `connection` fails with `invalid_argument` even when only one connection is bound. Agent-side rule: when exactly one connection is bound, the agent may use it and names it to the person; when more than one is bound, the agent asks which to use; it never switches connection within a task without saying so.
 
-**Agent reason.** Every tool except `list_connections` also accepts an optional `reason` (string, at most 500 characters). It is shown in the *Agent-supplied — not verified* box of the approval dialog (R8) and recorded in the log. It never influences what the tool does. The per-tool input tables below omit it, and omit the paging inputs `cursor` and `pageSize`; paged tools are marked *Paged*.
+**Agent reason.** Every tool except `list_connections` also accepts `reason` (string, at most 500 characters). It is optional for Read tools. For Write and Publisher tools it is **required** (R12). Their `inputSchema` lists it in `required` with `minLength: 1`, and a call whose `reason` is missing, or holds only whitespace, fails with `invalid_argument` (`details.argument: "reason"`). That check runs before every other check and before any dialog. The reason is shown in the *Agent-supplied — not verified* box of the approval dialog (R8) and in full on the call's log line ([§8.6](#86-call-log-format)). It never influences what the tool does. The per-tool input tables below omit `reason`, and they also omit the paging inputs `cursor` and `pageSize`. Paged tools are marked *Paged*.
 
 **Value formats**
 
@@ -942,7 +944,7 @@ The agent judges each requirement; the plugin does not. A requirement is in plac
 
 ### 6.6 Write tools
 
-All Write tools fail with `dev_environment_not_confirmed` on a connection not confirmed as development, before any dialog is shown.
+Every Write tool requires `reason` (R12). A call without one fails with `invalid_argument` ([§6.2](#62-conventions)). Every Write tool also fails with `dev_environment_not_confirmed` on a connection not confirmed as development. Both checks run before any dialog is shown.
 
 #### `create_solution`
 
@@ -1072,7 +1074,7 @@ interface CreatePublisherResult {
 }
 ```
 
-Disabled unless the user enables it for the connection. When disabled, the tool returns `tool_disabled`, telling the agent that a person must create or choose the publisher. When enabled, it raises the publisher dialog ([§8.3](#83-publisher-creation-dialog)); a wrong typed confirmation counts as `denied_by_user`. Requires dev-environment confirmation. Fails with `already_exists` if the unique name is taken; a prefix shared with an existing publisher is warned about in the dialog, not refused.
+Disabled unless the user enables it for the connection. When disabled, the tool returns `tool_disabled`, telling the agent that a person must create or choose the publisher. When enabled, it raises the publisher dialog ([§8.3](#83-publisher-creation-dialog)); a wrong typed confirmation counts as `denied_by_user`. Requires `reason` (R12) and dev-environment confirmation. Fails with `already_exists` if the unique name is taken; a prefix shared with an existing publisher is warned about in the dialog, not refused.
 
 ---
 
@@ -1084,8 +1086,8 @@ The plugin's approval is the authoritative gate. The agent client's own tool-app
 |---|---|---|---|
 | **Host** | `list_connections` | None | No dialog; logged on every tab (R2) |
 | **Read** | Every read tool — connection info, identity, publishers, solutions, metadata, ribbons, queries (configuration and records), component state, solution components, required components | One prompt for all reads, scoped *once*, *session*, *environment* or *always* | Record queries can be switched off per connection |
-| **Write** | `create_solution`, `add_solution_components`, `remove_solution_component` | Once, per call | Requires dev-environment confirmation |
-| **Publisher** | `create_publisher` | Once, with typed confirmation | Disabled by default (R3) |
+| **Write** | `create_solution`, `add_solution_components`, `remove_solution_component` | Once, per call | Requires dev-environment confirmation and a `reason` (R12) |
+| **Publisher** | `create_publisher` | Once, with typed confirmation | Disabled by default (R3); requires a `reason` (R12) |
 
 ### Read approval
 
@@ -1120,7 +1122,7 @@ Environment and always scopes persist between sessions in XrmToolBox's plugin se
 
 - **Scoped by organization.** Session and environment scopes belong to an organization, not to a tab; a tab that rebinds to the same organization finds them in place (C8).
 - **Deny is a normal result.** The agent receives a tool error, `denied_by_user` or `denied_no_response`, and must not retry the same call without new instructions from the person.
-- **Arguments shown verbatim.** The dialog shows the full arguments (FetchXML pretty-printed, component lists resolved to names) and flags a query that touches records. The agent-supplied `reason`, if present, is shown in a separate box labelled *Agent-supplied — not verified* (R8).
+- **Arguments shown verbatim.** The dialog shows the full arguments (FetchXML pretty-printed, component lists resolved to names) and flags a query that touches records. The agent-supplied `reason` is shown in a separate box labelled *Agent-supplied — not verified* (R8). The box is always filled for Write and Publisher calls (R12), and for Read calls it appears only when a reason was given.
 - **One dialog per call.** Concurrent calls to one connection queue; the queue length is visible in its tab.
 
 ---
@@ -1146,21 +1148,25 @@ Each tab shows its own connection on top and the shared host below it.
 │ Bound      : 2 — [ClientName] DEV (this tab), [ClientName] DEV2   │
 │ Limits     : Max page size [500]  Response cap [40K]  Timeout     │
 │              [120 s]                                              │
-├─ Call log — this connection ──────────────────────────────────────┤
-│ Time     Tool                     Tier     Result     Duration    │
-│ 14:02:11 list_publishers          Read     Allowed     0.3 s      │
-│ 14:02:40 get_table_metadata       Read     Env         1.1 s      │
-│ 14:03:05 create_solution          Write    Allowed     0.8 s      │
-│ 14:03:31 add_solution_components  Write    Allowed  ⚠  2.4 s      │
-│ 14:04:02 query (records)          Read     Denied        —        │
+├─ Call log — this connection ─── no wrap; scrolls horizontally ───┤
+│ 2026-10-30 14:02:11  list_publishers  reason —  connection=000000 │
+│   → ok  environment  0.3 s  publishers=[{"publish…  nextCursor=nu │
+│ 2026-10-30 14:03:05  create_solution  reason "Base solution for s │
+│   → ok  once  0.8 s  solutionId=00000000-0…  uniqueName=[prefix]_ │
+│ 2026-10-30 14:03:31  add_solution_components  reason "Adding the  │
+│   → ok  once  2.4 s  solution={"solution…  results=[{"index":…  u │
+│   ⚠ unexpected Relationship [prefix]_account_contact              │
+│ 2026-10-30 14:04:02  query  reason "Count active accounts by segm │
+│   → error denied_by_user  —  9.6 s  The person denied the call.   │
 ├─ Host log ────────────────────────────────────────────────────────┤
-│ 14:01:58 list_connections                  2 bound                │
+│ 2026-10-30 14:01:58  list_connections  reason —                   │
+│   → ok  none  0.0 s  host={"version"…  connections=[{"connect…    │
 │                                                                   │
-│ Pending approvals: 0          [Export log…]  [Clear]              │
+│ Pending approvals: 0   Running: 0   [Save as…]  [Clear]           │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-`⚠` marks a call that returned unexpected components. An unbound tab shows only the host section and a **Connect** prompt.
+The log lines are cut at the panel's edge here only; in the plugin they scroll horizontally. Their format, and **Save as…**, are in [§8.6](#86-call-log-format). `⚠` lines name components a call added unexpectedly. An unbound tab shows only the host section and a **Connect** prompt.
 
 ### 8.2 Approval dialog
 
@@ -1226,7 +1232,7 @@ For Read calls the dialog offers **Allow once**, **Allow for this session** and 
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-The persisted log records arguments and result summaries (counts, sizes, warnings), not result payloads. It is written to a user-chosen folder outside any repository (R7).
+Double-clicking a call line opens its detail. The detail is held in memory only and is never saved. A saved log ([§8.6](#86-call-log-format)) holds the lines as shown in the panel, with parameters and return values truncated. It never holds full arguments or result payloads, and it is written only to a file the person chooses, outside any repository (R7).
 
 ### 8.5 Connection already active dialog
 
@@ -1247,6 +1253,50 @@ Shown when a tab receives a connection that another tab already holds (C3). The 
 ```
 
 When the match is on organization rather than connection ID, the text names both: *[ConnectionName] connects to the same organization as [OtherConnectionName], which is active in another Agent Companion tab.* **Choose another connection** re-opens the XrmToolBox connection dialog for this tab.
+
+### 8.6 Call log format
+
+Every tool call is written to the log as two lines: a call line, then an outcome line (R13). This covers `list_connections`, calls naming an unknown connection, calls rejected for invalid arguments, denied and timed-out calls, and each continuation page. Calls to the tab's connection go to its call log. Host calls (C10) go to the host log on every tab.
+
+```
+2026-10-30 14:03:05  create_solution  reason "Base solution for story 1234."  connection=00000000-0…  uniqueName=[prefix]_W…  friendlyName=WIP 1234  publisherUniqueName=[Publisher…
+  → ok  once  0.8 s  solutionId=00000000-0…  uniqueName=[prefix]_W…  friendlyName=WIP 1234  version=1.0.0.0  publisher={"publishe…
+2026-10-30 14:03:20  remove_solution_component  reason —  connection=00000000-0…  solutionUniqueName=[prefix]_W…  component={"type":1,…
+  → error invalid_argument  —  0.0 s  reason is required for Write and Publisher tools.
+```
+
+**Call line**
+
+| Part | Content |
+|---|---|
+| Timestamp | When the host received the call, in local time, `yyyy-MM-dd HH:mm:ss` |
+| Tool | The tool name as called |
+| Reason | The agent's `reason` in full, in quotes, or `reason —` when there is none. It is agent text and is not verified (R8) |
+| Parameters | Every argument the agent sent except `reason`, as `name=value`, in input-schema order with `connection` first. Each value is truncated |
+
+**Outcome line**, indented under its call line
+
+| Part | Content |
+|---|---|
+| Status | `ok`, or `error` followed by the `ToolError` code |
+| Approval | How the call was authorized: `once`, `session`, `environment` or `always`; `none` for `list_connections`; `page` for a continuation page, which runs under its first call's approval; `—` when the call never ran because it was rejected, denied or timed out |
+| Duration | From receipt to reply, including time spent awaiting approval |
+| Return values | On `ok`, each top-level field of `structuredContent` as `name=value`, in output-schema order. Each value is truncated |
+| Error message | On `error`, the `ToolError` message in full |
+
+After an `add_solution_components` outcome line, one `⚠ unexpected <type> <name>` line follows for each unexpected component. The name is shown in full so that a person can find the component (R1).
+
+**Values**
+
+- Strings are shown as they are, without quotes. Numbers, booleans and `null` are shown as JSON literals, and objects and arrays as compact JSON.
+- **Truncation.** A parameter or return value longer than 10 characters is cut to its first 10 characters, followed by `…` (U+2026). A value of 10 characters or fewer is shown whole, so an ellipsis always means something was cut. The reason and error messages are not truncated.
+- **Line safety.** Before a line is written, every control character (including CR, LF and tab) and every Unicode bidirectional-formatting character is replaced by a space. This applies to the reason, values, names and messages, and happens before truncation. Agent-supplied text therefore cannot start a fake log line or reorder what the person sees (R8).
+
+**Behaviour**
+
+- Both lines of a pair are written together when the call ends, so another call's lines never come between them. Until then, the call shows in the approval dialog and in the **Pending approvals** and **Running** counts.
+- Lines do not wrap. The log uses a monospaced font and scrolls both ways. It is kept in memory for the life of the tab, and **Clear** empties it.
+- **Save as…** opens a standard Windows save dialog. The default name is `AgentCompanion-[ConnectionName]-yyyyMMdd-HHmmss.txt`. The plugin writes a UTF-8 text file holding a header line (connection name, organization friendly name and save time), then this tab's call log, then the host log under a `Host log` heading. Lines are written exactly as shown, truncation included. If the chosen folder is inside a Git working tree, meaning it or a parent folder contains `.git`, the plugin warns and asks the person to confirm (R7). The log is written to disk only through **Save as…**.
 
 ---
 
@@ -1466,7 +1516,8 @@ In-product pipelines export a solution from a source environment when a maker re
 | Paging (cursor binding to connection, tool and arguments; cap-limited pages; XML chunking; snapshot consistency; expiry) | Unit tests with recorded fixtures and a fake clock |
 | Add-components guard (resolution before approval, fixed flags, stop on first failure, unexpected-component detection) | Unit tests with mocked `IOrganizationService` |
 | Serializers (records, metadata projections, ribbon decompression) | Unit tests with recorded fixtures — synthetic, never client data |
-| Tool schemas (every `inputSchema` has `connection` first and required, except `list_connections`; outputs validate against `outputSchema`) | Unit tests over `tools/list` and recorded results |
+| Tool schemas (every `inputSchema` has `connection` first and required, except `list_connections`; Write and Publisher tools require a non-blank `reason`, checked before any dialog; outputs validate against `outputSchema`) | Unit tests over `tools/list` and recorded results |
+| Log formatter (line pair per call; parameter and return-value truncation at 10 characters with `…`; reason and error messages in full; control and bidirectional characters replaced; pair written together; **Save as…** content and the Git working-tree warning) | Unit tests over synthetic calls, including values of exactly 10 and 11 characters and a reason containing line breaks |
 | JSON-RPC / MCP layer, error mapping, both protocol eras | Unit tests on request/response pairs — start from the thirty-one cases in the spike's [Invoke-ProtocolChecks.ps1](Spikes/ConsoleHarness/Invoke-ProtocolChecks.ps1); manual test with Claude Code (current and a handshake-era release) and VS Code |
 | Handshake sessions (issue, continue, expire, `DELETE`, unknown session) | Unit tests with a fake clock |
 | Token store (generate once, DPAPI round trip, regenerate, missing or corrupt setting) | Unit tests over a fake settings store |
@@ -1515,11 +1566,11 @@ Short, throwaway investigations against a development environment. Each produces
 - Connection registry: synchronous claim, binding, the *Connection already active* dialog, unbinding on close and change, routing by `connection`.
 - Main panel, per-connection dev-environment confirmation and settings.
 - Approval queue and dialogs (Read and Write tiers); read-approval and dev-confirmation scopes with their persistence; revoke; timeout.
-- Call log, host log and log detail; export to a user-chosen folder.
+- Call log and host log in the line-pair format ([§8.6](#86-call-log-format)), log detail, and **Save as…** to a text file.
 - Error model and result envelope ([§6.2](#62-conventions)).
 - Tools: `list_connections`, `get_connection_info`, `who_am_i`, `list_publishers`.
 
-**Exit:** with two tabs on different connections, `list_connections` returns both and calls route to the right tab; a third tab on an already bound connection gets the dialog and both actions work; a toolbar connect applied to several tabs binds the first in XrmToolBox's order; denial, timeout and unknown connection reach the agent as tool errors; a once-scoped approval ends with its call, a session scope ends with the host, and Revoke clears environment scopes; Claude Code (2026-07-28) and VS Code (handshake fallback) both call a tool, and both still connect after an XrmToolBox restart without reconfiguration.
+**Exit:** with two tabs on different connections, `list_connections` returns both and calls route to the right tab; a third tab on an already bound connection gets the dialog and both actions work; a toolbar connect applied to several tabs binds the first in XrmToolBox's order; denial, timeout and unknown connection reach the agent as tool errors; every one of those calls appears as a line pair in the right log and survives **Save as…** unchanged; a once-scoped approval ends with its call, a session scope ends with the host, and Revoke clears environment scopes; Claude Code (2026-07-28) and VS Code (handshake fallback) both call a tool, and both still connect after an XrmToolBox restart without reconfiguration.
 
 ### Phase 2 — Discovery
 
@@ -1536,7 +1587,7 @@ Short, throwaway investigations against a development environment. Each produces
 - `create_solution`, `add_solution_components` (resolution, fixed flags, unexpected-component detection), `remove_solution_component`.
 - `create_publisher` behind its setting and dialog.
 
-**Exit:** the cold-start workflow ([§9.1](#91-cold-start--first-base-solution)) runs end to end on a clean development environment, and `list_solution_components` shows exactly the intended components.
+**Exit:** the cold-start workflow ([§9.1](#91-cold-start--first-base-solution)) runs end to end on a clean development environment, and `list_solution_components` shows exactly the intended components. A Write or Publisher call with no reason, or a blank one, fails with `invalid_argument` and raises no dialog (R12).
 
 ### Phase 4 — Agent skills and scripts
 
@@ -1573,7 +1624,8 @@ Agent-side work that makes the local edits safe. Skills decide between Path A an
 | Publisher selection | The existing publisher is reused; a new one only with explicit certainty (R3) |
 | Classifying a story's components | Each component's group follows the segmentation map; components already in a transport solution stay there (W1, W2) |
 | Overlap with other open WIPs | Shared whole documents are sequenced or reviewed (W7, X1) |
-| Every Write approval | Connection, solution name, component list, fixed flags shown as OFF |
+| Every Write approval | Connection, solution name, component list, fixed flags shown as OFF; the agent's reason matches what the arguments do (R12) |
+| Reviewing or handing over a session | The call log shows the expected calls and outcomes; a saved log is kept outside any repository (R13, R7) |
 | After every add | `list_solution_components` shows nothing unexpected (R1) |
 | Read approval scope | Per environment only for development environments; per session for production; *always* only with a reason ([§7](#7-authorization-model)) |
 | A query that touches records | The tables and columns are needed for the task; no more |
