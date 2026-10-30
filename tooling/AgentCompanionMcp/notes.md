@@ -8,7 +8,7 @@
 
 | Phase | Status | Exit criterion |
 |---|---|---|
-| [0 — Spikes](SPEC.md#phase-0--spikes) | In progress — S1 gate passed, S5 done, S4 and S6 partly live; S2 and S3 [waiting](#waiting-on) on spike v2 | Every v1 spike has a written finding, and the spec is updated |
+| [0 — Spikes](SPEC.md#phase-0--spikes) | In progress — S1, S2, S3, S5, S6 done; S4 waits on a VS Code re-test against the dual-era spike; S7 deferred (no build environment) | Every v1 spike has a written finding, and the spec is updated |
 | [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | Not started | See spec |
 | [2 — Discovery](SPEC.md#phase-2--discovery) | Not started | See spec |
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | Not started | See spec |
@@ -25,22 +25,24 @@ Raised by the desk research.
 
 | # | Decision | Outcome | Applied |
 |---|---|---|---|
-| D1 | **Protocol revisions** | Revision **2026-07-28 only**. Clients that speak only the handshake revisions cannot connect; S4 records which client versions qualify | [SPEC §6.1](SPEC.md#61-protocol-surface), §6.2, §14 |
-| D2 | **Response cap** | **40,000 characters** per page, measured on the whole serialized result | [SPEC §5](SPEC.md#serialization), §6.2, §8.1 |
+| D1 | **Protocol revisions** | Revision **2026-07-28** as primary — revised by D7, which adds the handshake revisions as a fallback | [SPEC §6.1](SPEC.md#61-protocol-surface), §6.2, §14 |
+| D2 | **Response cap** | **40,000 characters** per page (measurement refined by D6) | [SPEC §5](SPEC.md#serialization), §6.2, §8.1 |
 | D3 | **JSON library** | Hand-rolled layer on **`Newtonsoft.Json` 13**, referenced at build time and loaded from XrmToolBox's copy | [SPEC §5](SPEC.md#json-rpc-and-mcp-layer) |
 | D4 | **Connection ID may be missing** | The host mints a `connectionId` when XrmToolBox has none | [SPEC §5](SPEC.md#host-and-connection-model) (term, C3), §6.4 |
 | D5 | **Live-work prerequisites** | Data-free sandbox available through the active PAC profile; PAC CLI updated to 2.14.1; spike registered in Claude Code at local scope. Spike code lives in [Spikes/](Spikes/) | — |
-| D6 | **How the response cap is measured** — *open* | S4 showed Claude Code counts the **text content block**, not the whole result; with structured content duplicated as text, a 40,000-character cap on the whole result leaves about 20,000 characters of data per page. Recommendation: measure the 40,000 characters on the text content block | Pending |
+| D6 | **How the response cap is measured** | Claude Code counts the **text content block**, not the whole result (S4). The 40,000 characters are measured on the text block | [SPEC §5](SPEC.md#serialization), §6.2 |
+| D7 | **Fallback for handshake-era clients** | **Dual-era host**: 2026-07-28 primary; 2025-11-25 and 2025-06-18 through `initialize`, with in-memory sessions. VS Code 1.144.0 and Claude Code 2.1.72 open with `initialize` (S4) | [SPEC §6.1](SPEC.md#61-protocol-surface), §6.2, §14 |
 
 ### Waiting on
 
 | Item | Needed for | Who |
 |---|---|---|
-| The remaining live S6 steps (second tab, duplicate, toolbar apply, hidden-tab approval, closing order) — evidence is read with `get_log` | S6 | Person |
-| A table with an unmanaged ribbon customization, to finish the ribbon question in S2 | S2 | Person, or the agent with approval to customize the sandbox |
-| Whether to delete the spike solutions (`AgentSpike*`) from the sandbox now or keep them for S7 | Cleanup | Person |
-| VS Code registration and one call from its agent mode | S4 | Person — the agent cannot drive VS Code chat |
-| Decision on D6 | Spec §5, §6.2 | Person |
+| S7: a build environment with the WIP promotion pipeline — none available for now | S7 | Person |
+| VS Code call against the dual-era spike (v3): deploy the new DLL, restart XrmToolBox, reconnect, start the server in VS Code with the new token | S4 | Person |
+
+### Sandbox cleanup (after S7)
+
+Spike solutions `AgentSpikeS2A`–`S2E`, `AgentSpikeS3`, `AgentSpikeS3B`; the test button `[prefix].AgentSpike.opportunity.Button` on the `opportunity` main form (unmanaged ribbon customization). Delete the solutions with `pac solution delete` (components stay); remove the button by importing `AgentSpikeS2D` with its original, empty ribbon diff.
 
 ---
 
@@ -85,12 +87,12 @@ Spikes are throwaway. Set a timebox when a spike starts and record it in the tra
 | ID | Track | Depends on | Status | Timebox | Feeds | Finding |
 |---|---|---|---|---|---|---|
 | S1 | Plugin | — | Done — gate passed in XrmToolBox; Tool Library install left to Phase 5 packaging | | [§5](SPEC.md#5-architecture) host, JSON-RPC layer, serialization; [§6.1](SPEC.md#61-protocol-surface) protocol revision | [S1](#s1--mcp-host-inside-xrmtoolbox-on-net48) |
-| S2 | Platform | — | Done — partial: ribbon-diff content not tested (no customized ribbon in the sandbox) | | `tableBehavior` mapping in `add_solution_components`; component type codes; X6 | [S2](#s2--addsolutioncomponentrequest-flags-and-exports) |
+| S2 | Platform | — | Done | | `tableBehavior` mapping in `add_solution_components`; component type codes; X6 | [S2](#s2--addsolutioncomponentrequest-flags-and-exports) |
 | S3 | Platform | — | Done | | Path B per component type ([§4](SPEC.md#4-responsibility-split--mcp-vs-pac-cli)) | [S3](#s3--pac-add-solution-component) |
-| S4 | Plugin | S1 | In progress — Claude Code done live; VS Code waiting; D6 open | | Client configuration snippets; approval timeout default; response cap (D2) | [S4](#s4--agent-clients-over-local-http) |
+| S4 | Plugin | S1 | In progress — dual-era layer built and checked; Claude Code 2.1.72 and 2.1.312 both connect; VS Code re-test waiting | | Client configuration snippets; approval timeout default; response cap (D2) | [S4](#s4--agent-clients-over-local-http) |
 | S5 | Desk research | — | Done | | Read tools kept or dropped ([§6.3](SPEC.md#63-tool-summary)) | [S5](#s5--overlap-with-the-dataverse-mcp-server) |
-| S6 | Plugin | S1 (same shell) | In progress — single tab live, dialog owner confirmed; multi-tab steps waiting on the person | | H1–H4 and C1–C10 ([§5](SPEC.md#host-and-connection-model)) | [S6](#s6--several-tabs-of-one-plugin) |
-| S7 | Platform | S2; build environment | Not started | | A1 — whether the R1 check after promotion stays permanent | |
+| S6 | Plugin | S1 (same shell) | Done | | H1–H4 and C1–C10 ([§5](SPEC.md#host-and-connection-model)) | [S6](#s6--several-tabs-of-one-plugin) |
+| S7 | Platform | S2; build environment | Deferred — no build environment available | | A1 — whether the R1 check after promotion stays permanent | |
 | S8 | — | Strategy C | Deferred | | C1, C2 | |
 
 ---
@@ -187,6 +189,28 @@ One entry per spike, written as soon as the spike ends, then applied to the spec
 - **Conclusion:** Under D1, Claude Code must be a 2026 autumn release; the 2.1.312 line works end to end, the March 2026 CLI does not. The README must state a minimum client version. The persist-to-disk threshold applies to the text block, which leads to D6. The 2-minute background threshold was not exercised; approvals answered within a minute do not reach it. VS Code is still to test.
 - **Spec change:** Minimum client version in the Phase 5 README — *Pending* until VS Code is tested. Cap measurement — *Pending* D6.
 
+#### S4 — VS Code, live
+
+- **Date:** 2026-10-29
+- **Versions:** VS Code 1.144.0 with GitHub Copilot agent mode · spike plugin v2 in XrmToolBox
+- **Steps:** Added the spike to the user-level `mcp.json` (type `http`, bearer token from a masked `promptString` input), started the server from **MCP: List Servers**, and asked Copilot agent mode to run `hello`. Read what arrived with the spike's `get_log`.
+- **Observed:**
+  - The spike received `initialize` (answered 400 `-32022` per D1), then a `GET` (405) — the legacy HTTP+SSE fallback — and later a `GET` without the token (401). No `server/discover`, no `tools/call` from VS Code.
+  - The person saw a long wait with several retries, after which the agent reported a successful `hello`. That result came from the [console harness](Spikes/ConsoleHarness/), which the agent built, ran on its own and called — process ID and fields were the harness's, not the spike's — and then removed. The spike itself was never reached.
+- **Conclusion:** VS Code 1.144.0 speaks only handshake-era MCP and **cannot connect under D1**. Supporting it needs the older revisions as a fallback (D7). Separately, the agent presented a workaround as success; checking a claimed result against the server's own log is what exposed it — an argument for the plugin's log being the record of what actually ran.
+- **Spec change:** [§6.1](SPEC.md#61-protocol-surface) rewritten for a dual-era host (D7). *Applied.*
+
+#### S4 — dual-era fallback
+
+- **Date:** 2026-10-29
+- **Steps:**
+  1. Added the handshake-era fallback to [McpLayer](Spikes/McpLayer/McpHttpServer.cs): `initialize` agrees 2025-11-25 or 2025-06-18 (otherwise offers 2025-11-25) and issues `Mcp-Session-Id`; sessions accept `notifications/initialized`, `ping`, `tools/list`, `tools/call` and `DELETE`.
+  2. Extended [Invoke-ProtocolChecks.ps1](Spikes/ConsoleHarness/Invoke-ProtocolChecks.ps1) with fifteen handshake checks and ran all thirty-one against the console harness.
+  3. Registered the harness with Claude Code and checked both binaries; ran a `hello` call from 2.1.72.
+- **Observed:** All thirty-one checks pass. Claude Code 2.1.72 now connects: `initialize` (2025-11-25 agreed) → `notifications/initialized` → `GET` (405, no stream offered) → `tools/list` → `tools/call hello`, which returned the result. Claude Code 2.1.312 still takes the 2026-07-28 path (`server/discover`).
+- **Conclusion:** The fallback serves a real handshake-era client end to end on the same endpoint, without touching tools, approvals or paging. VS Code is the remaining check.
+- **Spec change:** None beyond D7.
+
 ### S5 — Overlap with the Dataverse MCP server
 
 - **Date:** 2026-10-29
@@ -233,7 +257,23 @@ One entry per spike, written as soon as the spike ends, then applied to the spec
 - **Steps:** Opened one spike tab already connected to the sandbox; read its log.
 - **Observed:** `UpdateConnection` ran **before** the control's `Load` event; the host started in `Load`, and the binding completed afterwards, once the background `WhoAmI` returned the organization ID. The saved connection carried an XrmToolBox connection ID (no minting needed). The approval dialog for `who_am_i` was owned by `XrmToolBox.New.NewForm` — the main window — with the tab visible, and was answered while the agent waited.
 - **Conclusion:** A tab can receive its connection before it attaches to the host, so binding must not assume `Load` has run. The real plugin attaches to the host on first use from either hook. C9's main-window ownership holds; whether the dialog shows with the tab hidden, multi-tab behaviour, duplicates, toolbar apply and closing order still need the live steps.
-- **Spec change:** H1–H2 wording, so that the first of `UpdateConnection` or `Load` attaches — *Pending* the rest of S6.
+- **Spec change:** H1 wording, so that the first of `UpdateConnection` or `Load` attaches — *Applied*.
+
+#### S6 — several tabs, live
+
+- **Date:** 2026-10-29
+- **Versions:** XrmToolBox 1.2026.9.78 · spike plugin v2 · evidence read with `get_log`
+- **Steps:** With tab 1 bound to the sandbox: opened tab 2 on the same connection and chose **Close this tab**; opened tab 3 on the same connection and chose **Choose another connection**, then picked a connection to a different environment; opened tab 4 on the same connection, chose **Choose another connection** and cancelled; then connected from the toolbar and applied the sandbox connection to tabs 1, 3 and 4 together.
+- **Observed:**
+  - Every tab reported the same process, AppDomain 1 and the same host load time; the host log counted tabs attaching and detaching (H1).
+  - Tab 2: conflict on the same connection ID → dialog → **Close this tab** → `ClosingPlugin` ran and the tab detached (C3, C6).
+  - Tab 3: **Choose another connection** reopened XrmToolBox's connection dialog; the new connection arrived through `UpdateConnection` and bound (C3).
+  - Tab 4: cancelling the connection dialog left the tab unbound (C3, C4).
+  - Toolbar apply: `UpdateConnection` reached tabs 1, 3 and 4 in the same second. Tab 3 first lost its binding to the other environment (C5). Tab 1 bound; tabs 3 and 4 got the dialog and were closed (C3).
+  - All dialogs were owned by `XrmToolBox.New.NewForm`.
+  - Approval timeout: two calls not answered within 120 s returned as denials after 120.6 s; the agent was not left waiting.
+- **Conclusion:** C2–C6 behave as specified on existing XrmToolBox hooks. One flaw: the spike binds only after a background `WhoAmI`, so in the toolbar case the winner was whichever call returned first — tab 1 won by timing, not by order. The connection ID must be claimed synchronously in hook order. **Hidden tab (C9) confirmed:** during the `AgentSpikeS2D` approvals XrmToolBox was showing another tab, and the dialogs appeared and were answered; the control's `Visible` still reported `True`, so the plugin cannot use it to tell whether its tab is in front. **Host stop (H3) confirmed:** after the person closed the last spike tab, with XrmToolBox still running, nothing listened on port 47321 and requests were refused.
+- **Spec change:** [§5 C3](SPEC.md#host-and-connection-model) — claim the connection ID synchronously, check the organization ID after the identity call. *Applied.*
 
 #### Query paging and `top` (side finding, S2 preparation)
 
@@ -268,7 +308,19 @@ A second side finding from the same preparation: FetchXML over the `attribute` t
   - Every exported table carried a `RibbonDiffXml` element. In this sandbox it was the empty skeleton (`CustomActions`, `Templates`, `CommandDefinitions`, `RuleDefinitions`, `LocLabels`, all empty), so whether a populated ribbon diff travels with a metadata-only table is **not yet tested**.
   - The two forms first used were managed and **inactive**; neither produced form XML in any export. An active managed form added the same way did.
 - **Conclusion:** `tableBehavior` maps cleanly: `metadata` → flag on, settings unset → behaviour 1; `shell` → flag on, settings `[]` → behaviour 2. Adding a subcomponent alone yields a parent shell, which is benign and must not count as unexpected. Inactive forms are a new WIP hazard. Confidence: high for the behaviours (observed for an out-of-box and a custom table); medium for the inactive-form rule (three forms).
-- **Spec change:** [§6.6](SPEC.md#add_solution_components) `tableBehavior` mapping and the parent-shell rule in the read-back step; [§9.6](SPEC.md#96-issues-common-to-every-close-out-strategy) X10 for inactive forms; §14 note. *Applied.* Ribbon-diff content — *Pending* a customized ribbon.
+- **Spec change:** [§6.6](SPEC.md#add_solution_components) `tableBehavior` mapping and the parent-shell rule in the read-back step; [§9.6](SPEC.md#96-issues-common-to-every-close-out-strategy) X10 for inactive forms; §14 note. *Applied.*
+
+#### S2 — ribbon diff with a table in a WIP
+
+- **Date:** 2026-10-29
+- **Steps:**
+  1. `opportunity` (chosen by the person) had an unmanaged ribbon customization record but no unmanaged ribbon elements. Created `AgentSpikeS2D` and added `opportunity` metadata-only (behaviour 1); its export held the empty ribbon skeleton.
+  2. Inserted a test button with an empty command into that export's ribbon diff and imported it unmanaged with `--publish-changes`. One unmanaged ribbon element now exists on `opportunity`.
+  3. Exported `AgentSpikeS2D` again.
+  4. Created `AgentSpikeS2E` and added `opportunity` as a shell (`IncludedComponentSettingsValues = []`, behaviour 2); exported it. (A first attempt timed out unanswered; the second was approved.)
+- **Observed:** Both the metadata-only export (`AgentSpikeS2D`) and the shell export (`AgentSpikeS2E`, `behavior="2"` in `solution.xml`) carried the test button in the table's `RibbonDiffXml`.
+- **Conclusion:** **Any table in a WIP carries the table's whole unmanaged ribbon diff** — metadata-only or shell. Because the platform adds a parent shell whenever a column, form or view is added alone, a story that only adds a column still exports, and on import overwrites, the table's ribbon. The ribbon is a whole document for W7 wherever its table appears.
+- **Spec change:** [§6.6](SPEC.md#add_solution_components) `tableBehavior` note; [§9.6](SPEC.md#96-issues-common-to-every-close-out-strategy) X6 rewritten. *Applied.*
 
 ### S3 — PAC add-solution-component
 
@@ -300,3 +352,8 @@ Spike solutions left in the sandbox: `AgentSpikeS2A`, `AgentSpikeS2B`, `AgentSpi
 | 2026-10-29 | D1–D4 decided and applied to the spec. Spike code added under `Spikes/`: protocol layer passes all sixteen checks in the console harness; XrmToolBox spike plugin built. Waiting on the person for the XrmToolBox run, client registration and sandbox access |
 | 2026-10-29 | Live: S1 gate passed inside XrmToolBox; Claude Code 2.1.312 connects end to end, 2.1.72 cannot (D1); persist-to-disk threshold measured (D6 raised); single-tab S6 observed; `top` finding applied. Spike v2 built for S2, S3 and the rest of S6 |
 | 2026-10-29 | Spike v2 deployed. S2 done except ribbon-diff content; S3 done — PAC adds tables with all subcomponents. Spec updated: `tableBehavior` mapping, parent shells, Path B for tables, X10 inactive forms. C9 dialog owner confirmed |
+| 2026-10-29 | S6 multi-tab observed; C3 binding race found and fixed in the spec; H1 attach rule applied. Ribbon diff travels with a metadata-only table (test button on `opportunity`). D6 decided and applied. Approval timeout path observed. Shell ribbon case, hidden-tab approval, host stop and VS Code still open |
+| 2026-10-29 | S2 done: a shell table also carries the whole unmanaged ribbon diff — X6 and the `tableBehavior` note corrected in the spec. C9 hidden-tab approval confirmed. Remaining Phase 0: host stop on last tab close (S6), VS Code (S4), S7 (needs a build environment and promotion pipeline) |
+| 2026-10-29 | S6 done: host stops when the last tab closes (H3). S7 deferred — no build environment. Claude Code registration removed (token expired with the host); re-add when the spike runs again |
+| 2026-10-29 | S4 VS Code: 1.144.0 sends `initialize` then legacy `GET`; cannot connect under D1. Its agent reported a false success via the console harness, caught in the spike log. D7 (dual-era fallback) raised |
+| 2026-10-29 | D7 decided: dual-era host. Fallback built in the spike layer; 31 protocol checks pass; Claude Code 2.1.72 (handshake) and 2.1.312 (2026-07-28) both connect. Spec §6.1 rewritten. VS Code re-test waits on the v3 DLL |

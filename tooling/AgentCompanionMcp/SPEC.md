@@ -187,13 +187,13 @@ The PAC auth profile and the plugin's connections are independent, and with seve
 
 | # | Behaviour |
 |---|---|
-| H1 | The host is a process-wide singleton, created when the first instance opens and shared by every later instance. No instance owns it: closing the tab that created it does not stop it |
+| H1 | The host is a process-wide singleton, created when the first instance opens and shared by every later instance. No instance owns it: closing the tab that created it does not stop it. An instance attaches on whichever comes first, its connection (`UpdateConnection`) or its `Load` event — XrmToolBox delivers the connection of a tab opened already connected **before** `Load` (spike S6) |
 | H2 | Opening the first instance starts the host — no connection is needed and there is no separate Start step. If the port is taken (for example by a second XrmToolBox process), the host does not start and every instance shows the error and the port setting |
 | H3 | The host stops when the last instance closes or XrmToolBox exits. **Stop server** / **Start server** on any instance acts on the shared host and is labelled as affecting all connections. Stopping answers pending calls with `server_stopping` and ends every session-scoped approval and confirmation; environment and always scopes persist ([§7](#7-authorization-model)) |
 | H4 | Port, bearer token, response cap, maximum page size and approval timeout are host-level: one value each, shown and editable on every instance. Changing the port or token affects every connection |
 | C1 | An instance binds at most one connection — the XrmToolBox connection of its tab. XrmToolBox's additional-connections feature is not used |
 | C2 | Binding happens when the instance receives a connection: opened with one already selected, connected later, or changed. Only bound connections are returned by `list_connections` and accept calls. The person is expected to connect every instance they open |
-| C3 | **One instance per connection.** Before binding, the instance checks the host's registry. The connection is already active when another instance is bound to the same XrmToolBox connection ID, **or** to the same organization (same organization ID) through a different saved connection. In that case the instance does not bind and shows the *Connection already active* dialog ([§8.5](#85-connection-already-active-dialog)): **Close this tab** closes the instance; **Choose another connection** re-opens the XrmToolBox connection dialog for this tab, and the new choice goes through the same check. Cancelling the connection dialog leaves the instance unbound. One connect from the XrmToolBox toolbar can apply the same connection to several open tabs; they are updated one after another, so the first binds and the others get the dialog |
+| C3 | **One instance per connection.** Before binding, the instance checks the host's registry. The connection is already active when another instance is bound to the same XrmToolBox connection ID, **or** to the same organization (same organization ID) through a different saved connection. In that case the instance does not bind and shows the *Connection already active* dialog ([§8.5](#85-connection-already-active-dialog)): **Close this tab** closes the instance; **Choose another connection** re-opens the XrmToolBox connection dialog for this tab, and the new choice goes through the same check. Cancelling the connection dialog leaves the instance unbound. One connect from the XrmToolBox toolbar can apply the same connection to several open tabs; XrmToolBox updates them one after another. So that the first tab in that order binds and the others get the dialog, the instance **claims the connection ID synchronously** inside `UpdateConnection`, and checks the organization ID only after the asynchronous identity call returns. Spike S6 showed that binding everything after the asynchronous call makes the winner a race |
 | C4 | An unbound instance shows the host status and a prompt to connect. No calls are routed to it |
 | C5 | When a bound instance's connection changes, the old binding ends before the new one is checked: queued and pending calls for it fail with `connection_closed`, any once-scoped dev-environment confirmation ends, open paging cursors are released, and it disappears from `list_connections`. Session, environment and always scopes stay with their organization ([§7](#7-authorization-model)). The new connection then goes through C3 |
 | C6 | Closing a bound instance ends its binding the same way. If it was the last instance, H3 applies |
@@ -244,7 +244,7 @@ The official MCP C# SDK cannot be used in-process: every stable release needs `S
 | Records | Human-readable JSON with typed wrappers for references, money, option sets and aliased values, plus formatted values — the value rules under [`query`](#query). Library choice and source-inclusion confirmed in spike S1. |
 | Metadata | Trimmed projection (see each tool in [§6](#6-mcp-interface)) — never the raw `EntityMetadata` graph. Labels in the organization's base language. |
 | XML payloads (FormXml, ribbon XML) | Returned as strings. Ribbon responses are decompressed server-side. |
-| Size cap | Every response is capped (default 40,000 characters, measured on the whole serialized result). Clients may save larger results to disk — Claude Code does above 50,000 characters — so the cap keeps every page in memory end to end. Large results are always paged, never truncated and never written to a file — lists by item, XML payloads in chunks ([§6.2](#62-conventions)). |
+| Size cap | Every response is capped (default 40,000 characters, measured on the text content block — the JSON copy that clients count and may persist; the structured copy duplicates it on the wire). Clients may save larger results to disk — Claude Code does above 50,000 characters — so the cap keeps every page in memory end to end. Large results are always paged, never truncated and never written to a file — lists by item, XML payloads in chunks ([§6.2](#62-conventions)). |
 
 ---
 
@@ -254,7 +254,18 @@ This section is the contract the host implements and the agent skills code again
 
 ### 6.1 Protocol surface
 
-The host implements MCP revision **2026-07-28** only — the stateless revision, with no `initialize` handshake and no protocol sessions. Clients that speak only the earlier, handshake-based revisions cannot connect; spike S4 records which client versions qualify.
+The host is **dual-era** on one endpoint, as revision 2026-07-28 allows. Revision **2026-07-28** is primary: stateless, with the protocol version in every request's `_meta`. Clients that still open with the `initialize` handshake are served through a fallback under **2025-11-25** or **2025-06-18** — the handshake revisions with structured tool output. Older revisions are not supported. Spike S4 showed both kinds of client in use: Claude Code 2.1.312 speaks 2026-07-28, while VS Code 1.144.0 and Claude Code 2.1.72 only open with `initialize`.
+
+The host chooses the era per request:
+
+| Request carries | Era |
+|---|---|
+| `_meta["io.modelcontextprotocol/protocolVersion"]` | 2026-07-28 — stateless |
+| Method `initialize` | Handshake — opens a session |
+| `Mcp-Session-Id` header and no `_meta` version | Handshake — continues that session |
+| None of these | Rejected as 2026-07-28 with an unsupported version |
+
+**2026-07-28 methods**
 
 | Method | Behaviour |
 |---|---|
@@ -262,22 +273,37 @@ The host implements MCP revision **2026-07-28** only — the stateless revision,
 | `tools/list` | Every tool in [§6.3](#63-tool-summary), in a fixed order, each with `name`, `title`, `description`, `inputSchema` and `outputSchema`, plus `ttlMs` and `cacheScope: "private"`. The list does not depend on which connections are bound; `create_publisher` is listed even when disabled |
 | `tools/call` | Runs one tool, routed by its `connection` argument (C7) |
 
-Transport and protocol rules the host enforces:
+Every 2026-07-28 result carries `resultType: "complete"` and `_meta["io.modelcontextprotocol/serverInfo"]`.
+
+**Handshake-era fallback**
+
+| Method | Behaviour |
+|---|---|
+| `initialize` | Agrees the client's `protocolVersion` when it is `2025-11-25` or `2025-06-18`; otherwise offers `2025-11-25`, and the client decides whether to continue. Returns `protocolVersion`, `capabilities: { "tools": { "listChanged": false } }`, `serverInfo` and `instructions`, and issues a session in the `Mcp-Session-Id` response header |
+| `notifications/initialized` | HTTP `202` |
+| `ping` | Empty result |
+| `tools/list`, `tools/call` | The same tools, arguments, approvals and results as 2026-07-28, without the fields that revision added (`resultType`, `ttlMs`, `cacheScope`, result `_meta`) |
+| HTTP `DELETE` with the session header | Ends the session |
+
+Sessions hold only the agreed revision and a last-used time, in memory; they expire after 30 minutes idle and when the host stops. They carry no approvals, connections or cursors — those stay where they are in 2026-07-28.
+
+**Transport and protocol rules**
 
 | Situation | Response |
 |---|---|
-| Request without `_meta["io.modelcontextprotocol/protocolVersion"]`, or with a version other than `2026-07-28` | HTTP `400`, JSON-RPC error `-32022` (`UnsupportedProtocolVersion`) with `data.supported: ["2026-07-28"]` and `data.requested` |
-| `MCP-Protocol-Version`, `Mcp-Method` or `Mcp-Name` header missing, or not matching the body | HTTP `400`, JSON-RPC error `-32020` (`HeaderMismatch`) |
-| `initialize` from a handshake-era client | HTTP `400`, JSON-RPC error naming the supported revision, so the client can show why it failed |
-| Unknown method | HTTP `404`, JSON-RPC error `-32601` |
+| No `_meta` version, no `initialize`, no session — or a `_meta` version other than `2026-07-28` | HTTP `400`, JSON-RPC error `-32022` (`UnsupportedProtocolVersion`) with `data.supported: ["2026-07-28"]` and `data.requested` |
+| 2026-07-28: `MCP-Protocol-Version`, `Mcp-Method` or `Mcp-Name` header missing, or not matching the body | HTTP `400`, JSON-RPC error `-32020` (`HeaderMismatch`) |
+| Handshake era: unknown or expired session | HTTP `404`, JSON-RPC error `-32001`; the client starts again with `initialize` |
+| Handshake era: `MCP-Protocol-Version` header not matching the session's revision | HTTP `400`, JSON-RPC error `-32600` |
+| Unknown method | 2026-07-28: HTTP `404`, JSON-RPC error `-32601`. Handshake era: JSON-RPC error `-32601` |
 | Unknown tool name | JSON-RPC error `-32602` |
-| HTTP `GET` or `DELETE` on the endpoint | HTTP `405` |
-| `Mcp-Session-Id` or `Last-Event-ID` header | Ignored; no session is minted or echoed |
+| HTTP `GET` on the endpoint, or `DELETE` without a session | HTTP `405` — no notification stream is offered in either era |
+| `Mcp-Session-Id` on a 2026-07-28 request, or `Last-Event-ID` | Ignored |
 | JSON-RPC notification | HTTP `202`, no body |
 
-Every result carries `resultType: "complete"` and `_meta["io.modelcontextprotocol/serverInfo"]`. Responses are single `application/json` bodies; the host does not open SSE streams. A call awaiting approval holds its HTTP request open until the person answers or the approval times out. The client closing that request cancels the call and withdraws its dialog.
+Responses are single `application/json` bodies; the host never opens SSE streams. A call awaiting approval holds its HTTP request open until the person answers or the approval times out. The client closing that request cancels the call and withdraws its dialog.
 
-State that spans calls — the `connection` and paging `cursor` handles — travels as ordinary tool arguments, as the revision recommends.
+State that spans calls — the `connection` and paging `cursor` handles — travels as ordinary tool arguments in both eras, as revision 2026-07-28 recommends.
 
 ### 6.2 Conventions
 
@@ -303,7 +329,7 @@ State that spans calls — the `connection` and paging `cursor` handles — trav
 | Level | When | Shape |
 |---|---|---|
 | HTTP | Missing or wrong bearer token → `401`; non-local `Origin` → `403`; `GET` or `DELETE` → `405` | No body |
-| JSON-RPC | Malformed request, unsupported protocol version, header mismatch, unknown method, unknown tool name — with the HTTP status in [§6.1](#61-protocol-surface) | Standard JSON-RPC `error` object |
+| JSON-RPC | Malformed request, unsupported protocol version, header mismatch, unknown session, unknown method, unknown tool name — with the HTTP status in [§6.1](#61-protocol-surface) | Standard JSON-RPC `error` object |
 | Tool | Everything else — invalid arguments, unknown connection, denial, Dataverse fault | `isError: true`; one text block holding a `ToolError` as JSON; no `structuredContent` |
 
 | Code | Meaning | Agent's next step |
@@ -332,7 +358,7 @@ State that spans calls — the `connection` and paging `cursor` handles — trav
 Every paged result carries `nextCursor`, which is `null` when there is nothing more.
 
 - **Cursors are host-side handles**, opaque to the agent and bound to the connection, tool and arguments of the first call. Continuation pages run under that call's approval; they raise no new dialog.
-- **Pages respect the response cap** (default 40,000 characters). A page that would exceed it ends early at a whole item and the next page carries on. XML payloads are split into chunks of at most the cap, which the agent concatenates in order.
+- **Pages respect the response cap** (default 40,000 characters of text content). A page that would exceed it ends early at a whole item and the next page carries on. XML payloads are split into chunks of at most the cap, which the agent concatenates in order.
 - **One snapshot per paged call.** Record-backed tools page with Dataverse paging cookies. Metadata and XML results are read once, on the first call, and held in memory for the cursor's lifetime, so every page comes from the same snapshot. Nothing is written to disk.
 - **Cursors expire** after 10 minutes without use, when the connection's binding ends, or when the host stops. An expired or unknown cursor fails with `invalid_cursor`.
 
@@ -950,7 +976,7 @@ Fails with `already_exists` if the unique name is taken, `not_found` if the publ
 | `connection` | string | ✓ | |
 | `solutionUniqueName` | string | ✓ | Must be unmanaged, else `managed_solution` |
 | `components` | `ComponentSelector[]` | ✓ | 1–50 entries |
-| `tableBehavior` | `"metadata" \| "shell"` | | Tables only; default `metadata`. `metadata` → `DoNotIncludeSubcomponents = true` with `IncludedComponentSettingsValues` unset → root behaviour 1, exporting the table's own properties. `shell` → the same flag with an empty `IncludedComponentSettingsValues` array → root behaviour 2, exporting an empty table shell. Confirmed in spike S2 |
+| `tableBehavior` | `"metadata" \| "shell"` | | Tables only; default `metadata`. `metadata` → `DoNotIncludeSubcomponents = true` with `IncludedComponentSettingsValues` unset → root behaviour 1, exporting the table's own properties. `shell` → the same flag with an empty `IncludedComponentSettingsValues` array → root behaviour 2, exporting an empty table shell. **Both behaviours also export the table's whole unmanaged ribbon diff** — including a shell the platform adds as the parent of a column, form or view. Confirmed in spike S2 |
 
 ```ts
 type ComponentSelector =
@@ -1338,7 +1364,7 @@ How the plugin supports this: `list_solutions` finds open WIPs and the transport
 | X3 | **Deletions are not carried.** A WIP carries additions and updates only. Deleting a column, view, web resource or plug-in step in development is reflected by no WIP | Deleted components survive in the build environment or transport solution and are redeployed | A deletion is a separate, person-run task in each environment that transport is extracted from, followed by the managed upgrade that removes it downstream. The plugin does not delete ([§3](#3-scope)) |
 | X4 | **Moving a component between transport solutions.** Correcting a placement means removing it from one managed solution and adding it to another | If the losing solution is upgraded first, the platform deletes the component downstream — for tables and columns, with their data | Classify right the first time (W1, W2). When a move cannot be avoided, the receiving solution must be imported before the losing one is upgraded — staged import with reverse-order apply, or a dedicated release a person plans |
 | X5 | **Required components are excluded (R1).** Everything a WIP depends on must already exist where the WIP lands | The import into the build environment, or a pipeline's preflight, fails with a missing dependency | W5 ordering; before close-out, `get_required_components` shows whether each dependency sits in an earlier transport solution or an earlier WIP of the same story |
-| X6 | **Table-level payload.** A table added without subcomponents still exports its table-level properties, and possibly its ribbon diff (spike S2) | An unmanaged import can overwrite the table's properties and ribbon diff with development's in-flight state | Confirm in S2; treat a table in a WIP as a whole document for W7 |
+| X6 | **Table-level payload.** Any table in a WIP exports its whole unmanaged ribbon diff — metadata-only, shell, and the shell the platform adds when a story touches only a column, form or view. A metadata-only table also exports its table-level properties (spike S2) | An unmanaged import overwrites the table's ribbon diff, and for metadata-only tables its properties, with development's in-flight state — even when the story only added a column | Treat every table in a WIP, including parent shells, as a whole document for W7: check overlap on the table's ribbon as well as its forms and views |
 | X7 | **Connection references and environment variables.** Each developer's flows can create their own connection reference, and environment variable current values travel with the WIP | Duplicate references downstream; development values carried forward | Reuse the project's existing connection references; deployment settings set values per environment; a promotion pipeline may consolidate references |
 | X8 | **Partial close-out.** A story's WIPs close out one at a time | A build in between carries half a story — Base without the app that uses it | Close out all of a story's WIPs together, in order; make sure no automated deployment runs between them, or accept the intermediate state knowingly |
 | X9 | **Leftover WIP solutions.** Unmanaged WIPs in development — and, for C, in source control — outlive their story | Stale WIPs distort overlap checks and clutter pipeline pickers | Delete each WIP at close-out (`pac solution delete` keeps components); `list_solutions` finds stragglers |
@@ -1565,4 +1591,4 @@ None open.
 
 [^4]: Microsoft Learn — *Connect to Azure DevOps* (Dataverse Git integration), <https://learn.microsoft.com/power-platform/alm/git-integration/connecting-to-azure-devops> (checked 2026-10-29). Supports: development and target environments must be managed environments.
 
-SDK message names and behaviours used in this spec (`WhoAmIRequest`, `RetrieveRequiredComponentsRequest`, `AddSolutionComponentRequest`, `RemoveSolutionComponentRequest`, `RetrieveEntityRibbonRequest`, `RetrieveApplicationRibbonRequest`, root component behaviour values, component type codes) are from working knowledge; root component behaviours, the `AddSolutionComponentRequest` flags and PAC's add behaviour were confirmed in spikes S2 and S3 (2026-10-29, [notes](notes.md#s2--addsolutioncomponentrequest-flags-and-exports)). MCP protocol details follow revision 2026-07-28 of the Model Context Protocol specification (<https://modelcontextprotocol.io/specification/2026-07-28>, checked 2026-10-29); client behaviour is confirmed in spike S4; XrmToolBox multi-tab and connection-handling behaviour in spike S6. The transport-solution order, segmentation map and promotion pipeline in [§9.5](#95-transport-solutions-and-segmented-wip-solutions)–[§9.7](#97-close-out-strategies) are generalized from existing delivery pipeline templates; the promotion copy step's behaviour is confirmed in spike S7.
+SDK message names and behaviours used in this spec (`WhoAmIRequest`, `RetrieveRequiredComponentsRequest`, `AddSolutionComponentRequest`, `RemoveSolutionComponentRequest`, `RetrieveEntityRibbonRequest`, `RetrieveApplicationRibbonRequest`, root component behaviour values, component type codes) are from working knowledge; root component behaviours, the `AddSolutionComponentRequest` flags and PAC's add behaviour were confirmed in spikes S2 and S3 (2026-10-29, [notes](notes.md#s2--addsolutioncomponentrequest-flags-and-exports)). MCP protocol details follow revisions 2026-07-28 (primary) and 2025-11-25 / 2025-06-18 (handshake fallback) of the Model Context Protocol specification (<https://modelcontextprotocol.io/specification/2026-07-28>, <https://modelcontextprotocol.io/specification/2025-11-25>, checked 2026-10-29); client behaviour is confirmed in spike S4; XrmToolBox multi-tab and connection-handling behaviour in spike S6. The transport-solution order, segmentation map and promotion pipeline in [§9.5](#95-transport-solutions-and-segmented-wip-solutions)–[§9.7](#97-close-out-strategies) are generalized from existing delivery pipeline templates; the promotion copy step's behaviour is confirmed in spike S7.

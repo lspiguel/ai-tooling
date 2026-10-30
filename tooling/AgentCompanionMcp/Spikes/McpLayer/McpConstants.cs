@@ -5,10 +5,20 @@
 
 namespace Lspiguel.Xrm.AgentCompanionMcp.Spikes.Mcp
 {
-    /// <summary>Protocol constants for MCP revision 2026-07-28 (spike S1).</summary>
+    /// <summary>
+    /// Protocol constants. Revision 2026-07-28 is primary; the handshake revisions 2025-11-25 and 2025-06-18
+    /// are served through <c>initialize</c> as a fallback for older clients (decision D7).
+    /// </summary>
     internal static class McpConstants
     {
         public const string ProtocolVersion = "2026-07-28";
+
+        /// <summary>Handshake-era revisions with structured tool output, preferred first.</summary>
+        public static readonly string[] LegacyVersions = { "2025-11-25", "2025-06-18" };
+
+        public const string HeaderSessionId = "Mcp-Session-Id";
+        public const string MethodPing = "ping";
+        public const int SessionNotFound = -32001;
 
         public const string MetaProtocolVersion = "io.modelcontextprotocol/protocolVersion";
         public const string MetaServerInfo = "io.modelcontextprotocol/serverInfo";
