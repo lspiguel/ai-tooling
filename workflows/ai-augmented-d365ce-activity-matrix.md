@@ -141,7 +141,7 @@ Ordered roughly by leverage. Several already exist in your plugin roadmap; this 
 | **`d365-gap-analysis` skill** | [1] Specification | Chains a Context Exporter pack + an Azure DevOps CLI query + the unpacked solution into a structured "new vs existing" report. |
 | **Plugin A — Component Snapshot & Drift Tracker** | [5] Validation, [6] Documentation | Already specced (MVP, no git in MVP). The review row needs it. |
 | **Context Exporter CI refresh** | [6] Documentation | Headless run that commits regenerated packs — your "update grounding" future enhancement, now load-bearing. |
-| **Agent Companion MCP** (XrmToolBox plugin) | [C] Project setup, [4] Implementation | Specified, not built ([SPEC](../tooling/AgentCompanionMcp/SPEC.md)). A local MCP endpoint over XrmToolBox connections that reaches what the Dataverse MCP server does not ([A.iii]): out-of-box components not yet in any solution, and small WIP solutions shaped without required components or subcomponents. Every call is approved by a person. |
+| **Agent Companion MCP** (XrmToolBox plugin) | [C] Project setup, [4] Implementation | Specified, not built ([SPEC](../tooling/D365AgentCompanionMcp/SPEC.md)). A local MCP endpoint over XrmToolBox connections that reaches what the Dataverse MCP server does not ([A.iii]): out-of-box components not yet in any solution, and small WIP solutions shaped without required components or subcomponents. Every call is approved by a person. |
 
 ---
 

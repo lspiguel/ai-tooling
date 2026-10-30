@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>Lspiguel.Xrm.D365AgentCompanionMcp</RootNamespace>
+    <AssemblyName>D365AgentCompanionMcp</AssemblyName>
+    <Company>Luciano Spiguel</Company>
+    <Authors>Luciano Spiguel</Authors>
+    <AssemblyVersion>1.2026.10.1</AssemblyVersion>
+    <FileVersion>1.2026.10.1</FileVersion>
+    <Version>1.2026.10.1</Version>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <PolySharpUsePublicAccessibilityForGeneratedTypes>false</PolySharpUsePublicAccessibilityForGeneratedTypes>
+    <Platforms>AnyCPU</Platforms>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>CS1591</NoWarn>
+    <Description>XrmToolBox plugin that gives a coding agent a local MCP endpoint over XrmToolBox connections, with every call authorized by a person in the plugin.</Description>
+    <Copyright>Copyright 2026- Luciano Spiguel</Copyright>
+    <PackageProjectUrl>https://github.com/lspiguel/ai-tooling</PackageProjectUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="stylecop.json" />
+    <InternalsVisibleTo Include="D365AgentCompanionMcp.Tests" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MscrmTools.Xrm.Connection" Version="1.2025.9.64" />
+    <PackageReference Include="XrmToolBoxPackage" Version="1.2025.10.74" />
+    <!-- Compiled against Newtonsoft.Json; at run time XrmToolBox's own copy is used (SPEC §5, D3). Never ship it. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" ExcludeAssets="runtime" />
+    <PackageReference Include="PolySharp" Version="1.15.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.ServiceModel" />
+  </ItemGroup>
+</Project>
