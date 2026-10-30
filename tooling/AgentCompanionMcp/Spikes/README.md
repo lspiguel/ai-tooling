@@ -6,7 +6,7 @@
 |---|---|---|
 | [McpLayer/](McpLayer/) | S1, S4 | Hand-rolled MCP Streamable HTTP endpoint for revision 2026-07-28 on `HttpListener` and `Newtonsoft.Json`. Shared source, compiled into both projects below |
 | [ConsoleHarness/](ConsoleHarness/) | S1, S4 | Runs the MCP layer as a console app with fake tools (`hello`, `wait`, `big`), plus [Invoke-ProtocolChecks.ps1](ConsoleHarness/Invoke-ProtocolChecks.ps1) |
-| [XtbHostSpike/](XtbHostSpike/) | S1, S6 | XrmToolBox plugin: process-wide singleton host, one tab per connection, *Connection already active* dialog, approval dialog owned by the main window. Tools: `hello`, `list_connections`, `who_am_i` |
+| [XtbHostSpike/](XtbHostSpike/) | S1, S6 | XrmToolBox plugin: process-wide singleton host, one tab per connection, *Connection already active* dialog, approval dialog owned by the main window. Tools: `hello`, `get_log` and `list_connections` (no approval); `who_am_i`, `create_solution` and `add_solution_component` (approved in the tab; the last runs `AddSolutionComponentRequest` with `AddRequiredComponents = false` and explicit flags, for S2) |
 
 ## Build
 

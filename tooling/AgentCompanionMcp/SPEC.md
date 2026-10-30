@@ -769,7 +769,7 @@ interface RibbonResult {
 | Input | Type | Required | Notes |
 |---|---|---|---|
 | `connection` | string | ✓ | |
-| `fetchXml` | string | ✓ | `page`, `count` and `paging-cookie` attributes are set by the server and ignored if supplied |
+| `fetchXml` | string | ✓ | `page`, `count` and `paging-cookie` attributes are set by the server and ignored if supplied. `top` is rejected with `invalid_argument` — Dataverse refuses `top` together with paging; use `pageSize` |
 | `includeFormattedValues` | boolean | | Default `true` |
 
 *Paged* — default page size 50.

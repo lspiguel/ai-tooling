@@ -8,7 +8,7 @@
 
 | Phase | Status | Exit criterion |
 |---|---|---|
-| [0 — Spikes](SPEC.md#phase-0--spikes) | In progress — S5 done; protocol layer built and checked; live XrmToolBox, client and Dataverse work [waiting](#waiting-on) | Every v1 spike has a written finding, and the spec is updated |
+| [0 — Spikes](SPEC.md#phase-0--spikes) | In progress — S1 gate passed, S5 done, S4 and S6 partly live; S2 and S3 [waiting](#waiting-on) on spike v2 | Every v1 spike has a written finding, and the spec is updated |
 | [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | Not started | See spec |
 | [2 — Discovery](SPEC.md#phase-2--discovery) | Not started | See spec |
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | Not started | See spec |
@@ -29,15 +29,17 @@ Raised by the desk research.
 | D2 | **Response cap** | **40,000 characters** per page, measured on the whole serialized result | [SPEC §5](SPEC.md#serialization), §6.2, §8.1 |
 | D3 | **JSON library** | Hand-rolled layer on **`Newtonsoft.Json` 13**, referenced at build time and loaded from XrmToolBox's copy | [SPEC §5](SPEC.md#json-rpc-and-mcp-layer) |
 | D4 | **Connection ID may be missing** | The host mints a `connectionId` when XrmToolBox has none | [SPEC §5](SPEC.md#host-and-connection-model) (term, C3), §6.4 |
-| D5 | **Live-work prerequisites** | A data-free sandbox environment is available. Spike code lives in [Spikes/](Spikes/). Still open — see [Waiting on](#waiting-on) | — |
+| D5 | **Live-work prerequisites** | Data-free sandbox available through the active PAC profile; PAC CLI updated to 2.14.1; spike registered in Claude Code at local scope. Spike code lives in [Spikes/](Spikes/) | — |
+| D6 | **How the response cap is measured** — *open* | S4 showed Claude Code counts the **text content block**, not the whole result; with structured content duplicated as text, a 40,000-character cap on the whole result leaves about 20,000 characters of data per page. Recommendation: measure the 40,000 characters on the text content block | Pending |
 
 ### Waiting on
 
 | Item | Needed for | Who |
 |---|---|---|
-| Copy the spike DLL into XrmToolBox's `Plugins` folder and run the steps in [Spikes/README.md](Spikes/README.md#xrmtoolbox-spike--live-steps-s1-s6) | S1 live, S6 live | Person — XrmToolBox is a desktop app the agent cannot drive |
-| Register the spike endpoint in Claude Code and VS Code | S4 live | Person, or the agent with explicit approval — it changes client configuration |
-| Which PAC auth profile (or how to authenticate) reaches the sandbox; PAC CLI updated from 1.34.4 | S2, S3 | Person |
+| Deploy spike v2 (adds `get_log`, `create_solution`, `add_solution_component`): close XrmToolBox, replace the DLL, reopen, connect, copy the new token | S2, S3, S6 | Person |
+| The remaining live S6 steps (second tab, duplicate, toolbar apply, closing order) — evidence is then read with `get_log` | S6 | Person |
+| VS Code registration and one call from its agent mode | S4 | Person — the agent cannot drive VS Code chat |
+| Decision on D6 | Spec §5, §6.2 | Person |
 
 ---
 
@@ -63,15 +65,15 @@ The hand-rolled layer (D3) passes every protocol check outside XrmToolBox; the l
 
 ### Shared setup
 
-- [x] **Disposable development environment** with no client data — a sandbox with schema only. S2 and S3 add out-of-box tables to solutions; expect to reset it. Its URL stays out of this file.
-- [ ] **Publisher** for the spikes, with a placeholder prefix.
-- [ ] **Fixture set**, used unchanged by S2, S3 and S7 so their results compare:
-  - `account` (out-of-box table) and one custom table with one column and one alternate key;
-  - the `account` main form and one `account` view;
-  - one web resource;
-  - one classic ribbon button on `account`, for the ribbon-diff question in S2.
+- [x] **Disposable development environment** with no client data — a sandbox with schema only. S2 and S3 add out-of-box tables to solutions; expect to reset it. Its URL and schema names stay out of this file.
+- [x] **Publisher** for the spikes: the sandbox's existing default publisher — no new publisher (R3).
+- [ ] **Fixture set**, used unchanged by S2, S3 and S7 so their results compare. IDs resolved with `pac env fetch`; recorded here only as placeholders:
+  - [x] `account` (out-of-box table) and `[CustomTable]` (an existing custom table from the sandbox schema); its column and alternate key still to pick;
+  - [x] an `account` main form and the default `account` view;
+  - [x] one unmanaged web resource;
+  - [ ] one classic ribbon button on `account`, for the ribbon-diff question in S2 — none identified yet.
 - [ ] **Build environment and promotion pipeline** (S7 only).
-- [x] **Versions recorded** (2026-10-29, workstation): XrmToolBox 1.2026.9.78 · PAC CLI 1.34.4 (current release 2.14.1 — update before S3) · .NET SDK 10.0.401 · Claude Code 2.1.72 · VS Code 1.144.0. Environment version: when one is assigned.
+- [x] **Versions recorded** (2026-10-29, workstation): XrmToolBox 1.2026.9.78 · PAC CLI 2.14.1 (updated from 1.34.4) · .NET SDK 10.0.401 · Claude Code 2.1.72 on the PATH and 2.1.312 bundled with the VS Code extension · VS Code 1.144.0.
 
 ### Timeboxes
 
@@ -81,12 +83,12 @@ Spikes are throwaway. Set a timebox when a spike starts and record it in the tra
 
 | ID | Track | Depends on | Status | Timebox | Feeds | Finding |
 |---|---|---|---|---|---|---|
-| S1 | Plugin | — | In progress — layer built, protocol checks pass; live in XrmToolBox waiting | | [§5](SPEC.md#5-architecture) host, JSON-RPC layer, serialization; [§6.1](SPEC.md#61-protocol-surface) protocol revision | [S1](#s1--mcp-host-inside-xrmtoolbox-on-net48) |
-| S2 | Platform | — | Waiting on sandbox access details | | `tableBehavior` mapping in `add_solution_components`; component type codes; X6 | |
-| S3 | Platform | — | Waiting on sandbox access details and PAC update | | Path B per component type ([§4](SPEC.md#4-responsibility-split--mcp-vs-pac-cli)) | |
-| S4 | Plugin | S1 | In progress — desk done; live needs S1 | | Client configuration snippets; approval timeout default; response cap (D2) | [S4](#s4--agent-clients-over-local-http) |
+| S1 | Plugin | — | Done — gate passed in XrmToolBox; Tool Library install left to Phase 5 packaging | | [§5](SPEC.md#5-architecture) host, JSON-RPC layer, serialization; [§6.1](SPEC.md#61-protocol-surface) protocol revision | [S1](#s1--mcp-host-inside-xrmtoolbox-on-net48) |
+| S2 | Platform | — | Fixture resolved; waiting on spike v2 for `AddSolutionComponentRequest` | | `tableBehavior` mapping in `add_solution_components`; component type codes; X6 | |
+| S3 | Platform | — | PAC ready; waiting on a spike solution (spike v2 `create_solution`) | | Path B per component type ([§4](SPEC.md#4-responsibility-split--mcp-vs-pac-cli)) | |
+| S4 | Plugin | S1 | In progress — Claude Code done live; VS Code waiting; D6 open | | Client configuration snippets; approval timeout default; response cap (D2) | [S4](#s4--agent-clients-over-local-http) |
 | S5 | Desk research | — | Done | | Read tools kept or dropped ([§6.3](SPEC.md#63-tool-summary)) | [S5](#s5--overlap-with-the-dataverse-mcp-server) |
-| S6 | Plugin | S1 (same shell) | In progress — desk done; spike plugin built; live waiting | | H1–H4 and C1–C10 ([§5](SPEC.md#host-and-connection-model)) | [S6](#s6--several-tabs-of-one-plugin) |
+| S6 | Plugin | S1 (same shell) | In progress — single tab live; multi-tab steps waiting on spike v2 | | H1–H4 and C1–C10 ([§5](SPEC.md#host-and-connection-model)) | [S6](#s6--several-tabs-of-one-plugin) |
 | S7 | Platform | S2; build environment | Not started | | A1 — whether the R1 check after promotion stays permanent | |
 | S8 | — | Strategy C | Deferred | | C1, C2 | |
 
@@ -145,6 +147,15 @@ One entry per spike, written as soon as the spike ends, then applied to the spec
 - **Conclusion:** The protocol layer behaves as SPEC §6.1 requires, without the SDK. Open for the live test: loading inside XrmToolBox and the clients' real requests. Spec gap: cancelling a pending approval when the client disconnects needs a way to detect the disconnect.
 - **Spec change:** None yet — the disconnect gap is recorded here until the live test shows whether it matters.
 
+#### S1 — inside XrmToolBox
+
+- **Date:** 2026-10-29
+- **Versions:** XrmToolBox 1.2026.9.78 · spike plugin v1, installed by copying the DLL into `Plugins`
+- **Steps:** Opened the spike tab, connected it to the sandbox, then ran [Invoke-ProtocolChecks.ps1](Spikes/ConsoleHarness/Invoke-ProtocolChecks.ps1) against it and called `hello` and `list_connections`.
+- **Observed:** The tab started the host on `127.0.0.1:47321` with no elevation. All sixteen protocol checks pass inside XrmToolBox. `hello` reports one process, AppDomain 1 and one host load time. No `Newtonsoft.Json.dll` ships with the spike; XrmToolBox's copy serves it.
+- **Conclusion:** **Gate passed.** An MCP host runs inside XrmToolBox on `net48` without a private DLL. The exit criterion's Tool Library install and uninstall needs a NuGet package and moves to Phase 5 packaging; the manual install and removal work.
+- **Spec change:** None.
+
 ### S4 — Agent clients over local HTTP
 
 *Desk part. Connection, timeout and structured-content behaviour still need a live server.*
@@ -158,6 +169,22 @@ One entry per spike, written as soon as the spike ends, then applied to the spec
   - **VS Code:** `mcp.json` with `servers` → `"type": "http"`, `url`, `headers`; the token comes from an `inputs` entry (`promptString`, `password: true`) referenced as `${input:<id>}`. Servers that use input variables are not forwarded to the Copilot harness. No documented protocol revision, timeout or output limit.
 - **Conclusion:** Both clients support a local HTTP server with a bearer header. The 120-second default approval timeout stays under Claude Code's 2-minute backgrounding and 5-minute idle timeout. The 1 MB page cap does not: large pages would be written to disk by the client, contrary to Q2 (D2). Worth considering: setting `anthropic/requiresUserInteraction` on Write and Publisher tools, as a second prompt in Claude Code alongside the plugin's own approval. Confidence: medium — documentation only.
 - **Spec change:** §5 and §6.2 response cap per D2 — *Applied*. Client configuration snippets are in [Spikes/README.md](Spikes/README.md#client-registration-s4) and go to the Phase 5 README.
+
+#### S4 — Claude Code, live
+
+- **Date:** 2026-10-29
+- **Versions:** Claude Code 2.1.72 (CLI on the PATH, released 2026-03-09) and 2.1.312 (bundled with the VS Code extension)
+- **Steps:**
+  1. Registered the XrmToolBox spike at local scope with `claude mcp add --transport http … --header "Authorization: Bearer <token>"`; checked status with both binaries, with and without `MCP_SDK_GENERATION=v2`.
+  2. Registered the console harness on port 47322 to log what each client sends.
+  3. With 2.1.312, ran `claude -p` calls: `hello` and `list_connections` (no approval); `who_am_i` (approved in the XrmToolBox dialog); harness `big` with 30,000 and 60,000 characters.
+- **Observed:**
+  - **2.1.72 fails to connect**, with and without `MCP_SDK_GENERATION=v2`: it opens with `initialize`, which the server answers with 400 `-32022` as specified.
+  - **2.1.312 connects**: it sends `server/discover`, then `tools/list`, then `tools/call`. Tool results arrive as structured JSON.
+  - `who_am_i` waited for the person and returned after 13 seconds with first name, last name and full name.
+  - A 30,000-character result stayed in context; a 60,000-character result was saved to a file under the user's Claude project folder. Claude Code reported 60,030 characters — the **text block** — while the HTTP body was 120,310 characters, because the result carries the JSON twice.
+- **Conclusion:** Under D1, Claude Code must be a 2026 autumn release; the 2.1.312 line works end to end, the March 2026 CLI does not. The README must state a minimum client version. The persist-to-disk threshold applies to the text block, which leads to D6. The 2-minute background threshold was not exercised; approvals answered within a minute do not reach it. VS Code is still to test.
+- **Spec change:** Minimum client version in the Phase 5 README — *Pending* until VS Code is tested. Cap measurement — *Pending* D6.
 
 ### S5 — Overlap with the Dataverse MCP server
 
@@ -198,6 +225,22 @@ One entry per spike, written as soon as the spike ends, then applied to the spec
 - **Conclusion:** H1 (static singleton) and C2–C6 map onto existing hooks: override `UpdateConnection` for binding and the C3 check, `ClosingPlugin` for unbinding (C6), `CloseTool` and `OnRequestConnection` for the two dialog buttons (C3). A connection applied to two Agent Companion tabs at once is handled in order: the first binds, the second gets the dialog. The connection ID can be missing (D4). Main-window dialog ownership (C9) is not visible in source. Confidence: high for the hooks; the runtime test confirms them.
 - **Spec change:** §5 C3 and §6.4 per D4, and the note in C3 that one connect can reach several tabs — *Applied*.
 
+#### S6 — one tab, live
+
+- **Date:** 2026-10-29
+- **Versions:** XrmToolBox 1.2026.9.78 · spike plugin v1
+- **Steps:** Opened one spike tab already connected to the sandbox; read its log.
+- **Observed:** `UpdateConnection` ran **before** the control's `Load` event; the host started in `Load`, and the binding completed afterwards, once the background `WhoAmI` returned the organization ID. The saved connection carried an XrmToolBox connection ID (no minting needed). The approval dialog appeared and was answered while the agent waited.
+- **Conclusion:** A tab can receive its connection before it attaches to the host, so binding must not assume `Load` has run. The real plugin attaches to the host on first use from either hook. Multi-tab behaviour, duplicates, toolbar apply, dialog ownership with the tab hidden, and closing order still need the live steps.
+- **Spec change:** H1–H2 wording, so that the first of `UpdateConnection` or `Load` attaches — *Pending* the rest of S6.
+
+#### Query paging and `top` (side finding, S2 preparation)
+
+- **Date:** 2026-10-29
+- **Observed:** `pac env fetch`, which pages every query, fails with "The top attribute can't be specified with paging attribute page" when the FetchXML has `top`.
+- **Conclusion:** Dataverse refuses `top` with paging. The `query` tool always pages, so it must refuse `top`.
+- **Spec change:** [§6.5 `query`](SPEC.md#query) — `top` rejected with `invalid_argument`. *Applied.*
+
 ---
 
 ## Log
@@ -207,3 +250,4 @@ One entry per spike, written as soon as the spike ends, then applied to the spec
 | 2026-10-29 | Spec drafted through the resolved open questions; notes created. Phase 0 not started |
 | 2026-10-29 | Phase 0 started. Desk research for S1, S4, S5 and S6; S5 done and applied. Decisions D1–D5 raised; live work waits on D5 |
 | 2026-10-29 | D1–D4 decided and applied to the spec. Spike code added under `Spikes/`: protocol layer passes all sixteen checks in the console harness; XrmToolBox spike plugin built. Waiting on the person for the XrmToolBox run, client registration and sandbox access |
+| 2026-10-29 | Live: S1 gate passed inside XrmToolBox; Claude Code 2.1.312 connects end to end, 2.1.72 cannot (D1); persist-to-disk threshold measured (D6 raised); single-tab S6 observed; `top` finding applied. Spike v2 built for S2, S3 and the rest of S6 |

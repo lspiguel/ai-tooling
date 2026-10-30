@@ -6,7 +6,9 @@
 namespace Lspiguel.Xrm.AgentCompanionMcp.Spikes
 {
     using System;
+    using System.Collections.Generic;
     using System.Security.Cryptography;
+    using System.Threading;
     using Lspiguel.Xrm.AgentCompanionMcp.Spikes.Mcp;
 
     /// <summary>
@@ -17,9 +19,13 @@ namespace Lspiguel.Xrm.AgentCompanionMcp.Spikes
     {
         public const int Port = 47321;
 
+        private const int LogCapacity = 500;
+
         private static readonly object Gate = new object();
+        private static readonly Queue<string> RecentLines = new Queue<string>();
         private static McpHttpServer server;
         private static int instances;
+        private static int tabCounter;
 
         /// <summary>Raised for every host-level log line; tabs show it.</summary>
         public static event Action<string> HostLog;
@@ -92,7 +98,35 @@ namespace Lspiguel.Xrm.AgentCompanionMcp.Spikes
             }
         }
 
-        private static void Write(string line) => HostLog?.Invoke(line);
+        /// <summary>A short label for a new tab, so log lines from several tabs can be told apart.</summary>
+        public static string NextTabLabel() => $"tab{Interlocked.Increment(ref tabCounter)}";
+
+        /// <summary>Keeps a line from any tab or the host for the spike's <c>get_log</c> tool.</summary>
+        public static void Record(string line)
+        {
+            lock (RecentLines)
+            {
+                RecentLines.Enqueue($"{DateTime.Now:HH:mm:ss} {line}");
+                while (RecentLines.Count > LogCapacity)
+                {
+                    RecentLines.Dequeue();
+                }
+            }
+        }
+
+        public static string[] RecentLog()
+        {
+            lock (RecentLines)
+            {
+                return RecentLines.ToArray();
+            }
+        }
+
+        private static void Write(string line)
+        {
+            Record($"[host] {line}");
+            HostLog?.Invoke(line);
+        }
 
         private static string NewToken()
         {

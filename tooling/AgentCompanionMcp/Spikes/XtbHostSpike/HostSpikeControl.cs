@@ -28,6 +28,7 @@ namespace Lspiguel.Xrm.AgentCompanionMcp.Spikes
         private readonly Button copyToken = new Button { Dock = DockStyle.Top, Height = 28, Text = "Copy bearer token" };
         private readonly TextBox log = new TextBox { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Font = new Font(FontFamily.GenericMonospace, 9f) };
         private readonly Action<string> hostLogHandler;
+        private readonly string tabLabel = CompanionHost.NextTabLabel();
         private BoundConnection binding;
         private bool attached;
 
@@ -37,7 +38,7 @@ namespace Lspiguel.Xrm.AgentCompanionMcp.Spikes
             this.Controls.Add(this.copyToken);
             this.Controls.Add(this.status);
 
-            this.hostLogHandler = line => this.Log($"[host] {line}");
+            this.hostLogHandler = line => this.Show($"[host] {line}");
             this.copyToken.Click += (sender, e) =>
             {
                 if (CompanionHost.Token != null)
@@ -103,6 +104,12 @@ namespace Lspiguel.Xrm.AgentCompanionMcp.Spikes
         }
 
         public void Log(string line)
+        {
+            CompanionHost.Record($"[{this.tabLabel}] {line}");
+            this.Show(line);
+        }
+
+        private void Show(string line)
         {
             var text = $"{DateTime.Now:HH:mm:ss} {line}{Environment.NewLine}";
             if (this.log.IsHandleCreated && this.log.InvokeRequired)
@@ -183,7 +190,7 @@ namespace Lspiguel.Xrm.AgentCompanionMcp.Spikes
         {
             var host = CompanionHost.Endpoint ?? $"not running — {CompanionHost.StartError}";
             var tab = this.binding == null ? "unbound" : $"{this.binding.ConnectionName} → {this.binding.ConnectionId}";
-            this.status.Text = $"Host: {host}{Environment.NewLine}This tab: {tab}{Environment.NewLine}Tabs open: {CompanionHost.Instances}";
+            this.status.Text = $"Host: {host}{Environment.NewLine}This tab ({this.tabLabel}): {tab}{Environment.NewLine}Tabs open: {CompanionHost.Instances}";
         }
     }
 }
