@@ -190,7 +190,7 @@ The PAC auth profile and the plugin's connections are independent, and with seve
 | H1 | The host is a process-wide singleton, created when the first instance opens and shared by every later instance. No instance owns it: closing the tab that created it does not stop it. An instance attaches on whichever comes first, its connection (`UpdateConnection`) or its `Load` event — XrmToolBox delivers the connection of a tab opened already connected **before** `Load` (spike S6) |
 | H2 | Opening the first instance starts the host — no connection is needed and there is no separate Start step. If the port is taken (for example by a second XrmToolBox process), the host does not start and every instance shows the error and the port setting |
 | H3 | The host stops when the last instance closes or XrmToolBox exits. **Stop server** / **Start server** on any instance acts on the shared host and is labelled as affecting all connections. Stopping answers pending calls with `server_stopping` and ends every session-scoped approval and confirmation; environment and always scopes persist ([§7](#7-authorization-model)) |
-| H4 | Port, bearer token, response cap, maximum page size and approval timeout are host-level: one value each, shown and editable on every instance. Changing the port or token affects every connection |
+| H4 | Port, bearer token, response cap, maximum page size and approval timeout are host-level: one value each, shown and editable on every instance, and kept across restarts. Changing the port or regenerating the token affects every connection and every client configuration |
 | C1 | An instance binds at most one connection — the XrmToolBox connection of its tab. XrmToolBox's additional-connections feature is not used |
 | C2 | Binding happens when the instance receives a connection: opened with one already selected, connected later, or changed. Only bound connections are returned by `list_connections` and accept calls. The person is expected to connect every instance they open |
 | C3 | **One instance per connection.** Before binding, the instance checks the host's registry. The connection is already active when another instance is bound to the same XrmToolBox connection ID, **or** to the same organization (same organization ID) through a different saved connection. In that case the instance does not bind and shows the *Connection already active* dialog ([§8.5](#85-connection-already-active-dialog)): **Close this tab** closes the instance; **Choose another connection** re-opens the XrmToolBox connection dialog for this tab, and the new choice goes through the same check. Cancelling the connection dialog leaves the instance unbound. One connect from the XrmToolBox toolbar can apply the same connection to several open tabs; XrmToolBox updates them one after another. So that the first tab in that order binds and the others get the dialog, the instance **claims the connection ID synchronously** inside `UpdateConnection`, and checks the organization ID only after the asynchronous identity call returns. Spike S6 showed that binding everything after the asynchronous call makes the winner a race |
@@ -222,7 +222,7 @@ The PAC auth profile and the plugin's connections are independent, and with seve
 | Concern | Decision |
 |---|---|
 | Transport | MCP Streamable HTTP on `HttpListener`, bound to `127.0.0.1` only. stdio is not possible: the agent cannot launch a process that lives inside XrmToolBox. |
-| Authentication | Random bearer token generated each time the host starts, shared by all connections, shown masked on every instance with a copy button. Regenerate on demand. |
+| Authentication | Random bearer token, shared by all connections, shown masked on every instance with a copy button. Generated on first use and **kept across host starts and XrmToolBox restarts** — stored in the plugin settings, encrypted with DPAPI for the current Windows user — so saved client configurations keep working. Changed only by **Regenerate**, which every client must then pick up. A rejected token is answered as described in [§6.2](#62-conventions) (D8, spike S4). |
 | Origin checks | Reject requests with a non-local `Origin` header (DNS-rebinding protection). |
 | Port | Configurable; default fixed so the agent's MCP configuration stays stable. |
 | Lifecycle | Singleton; starts with the first instance, stops with the last — H1 to H3 in [Host and connection model](#host-and-connection-model). |
@@ -328,9 +328,11 @@ State that spans calls — the `connection` and paging `cursor` handles — trav
 
 | Level | When | Shape |
 |---|---|---|
-| HTTP | Missing or wrong bearer token → `401`; non-local `Origin` → `403`; `GET` or `DELETE` → `405` | No body |
+| HTTP | Missing or wrong bearer token → `401`; non-local `Origin` → `403`; `GET`, or `DELETE` without a session → `405` | `401` carries a plain-text body: *"Agent Companion MCP: bearer token missing or not current. Copy the token from the plugin panel and update the client."* Other statuses have no body |
 | JSON-RPC | Malformed request, unsupported protocol version, header mismatch, unknown session, unknown method, unknown tool name — with the HTTP status in [§6.1](#61-protocol-surface) | Standard JSON-RPC `error` object |
 | Tool | Everything else — invalid arguments, unknown connection, denial, Dataverse fault | `isError: true`; one text block holding a `ToolError` as JSON; no `structuredContent` |
+
+**A `401` looks like OAuth to clients.** MCP clients treat `401` as the start of an OAuth flow. In spike S4, VS Code answered a stale token by probing for OAuth metadata and offering manual client registration. The host does not use OAuth: it serves only the MCP endpoint, so the well-known OAuth paths answer `404`, and the `401` body names the real cause. The README tells users what to do when a client shows an OAuth prompt: update the token (in VS Code, **MCP: Reset Cached Inputs**, then restart the server) and cancel any client registration. Keeping the token across restarts (D8) makes this rare.
 
 | Code | Meaning | Agent's next step |
 |---|---|---|
@@ -1112,7 +1114,7 @@ The confirmation that lets Write tools run on a connection ([§5](#host)) has th
 
 *Always* is set only in settings, never from the binding prompt. It carries a warning and is shown on every tab while it is on. Write and Publisher calls still need their own per-call approval.
 
-Environment and always scopes persist between sessions in XrmToolBox's plugin settings, which record only organization IDs, friendly names and scopes — no tokens, arguments or results.
+Environment and always scopes persist between sessions in XrmToolBox's plugin settings, which record only organization IDs, friendly names and scopes, plus the host's bearer token encrypted with DPAPI for the current Windows user — no arguments or results.
 
 ### Rules
 
@@ -1465,7 +1467,10 @@ In-product pipelines export a solution from a source environment when a maker re
 | Add-components guard (resolution before approval, fixed flags, stop on first failure, unexpected-component detection) | Unit tests with mocked `IOrganizationService` |
 | Serializers (records, metadata projections, ribbon decompression) | Unit tests with recorded fixtures — synthetic, never client data |
 | Tool schemas (every `inputSchema` has `connection` first and required, except `list_connections`; outputs validate against `outputSchema`) | Unit tests over `tools/list` and recorded results |
-| JSON-RPC / MCP layer, error mapping | Unit tests on request/response pairs; manual test with each supported client |
+| JSON-RPC / MCP layer, error mapping, both protocol eras | Unit tests on request/response pairs — start from the thirty-one cases in the spike's [Invoke-ProtocolChecks.ps1](Spikes/ConsoleHarness/Invoke-ProtocolChecks.ps1); manual test with Claude Code (current and a handshake-era release) and VS Code |
+| Handshake sessions (issue, continue, expire, `DELETE`, unknown session) | Unit tests with a fake clock |
+| Token store (generate once, DPAPI round trip, regenerate, missing or corrupt setting) | Unit tests over a fake settings store |
+| Binding order (connection ID claimed synchronously in hook order; organization check after the identity call; `UpdateConnection` before `Load`) | Unit tests with fake instances and a controllable identity call |
 
 ---
 
@@ -1475,7 +1480,9 @@ Each phase ends with a usable, reviewable increment.
 
 ### Phase 0 — Spikes
 
-Short, throwaway investigations against a development environment. Each produces a written finding that updates this spec. Tracks, sequencing, shared setup and findings are kept in [notes.md](notes.md).
+Short, throwaway investigations against a development environment. Each produces a written finding that updates this spec. Tracks, sequencing, shared setup and findings are kept in [notes.md](notes.md); the spike code is in [Spikes/](Spikes/).
+
+**Status (2026-10-30): done for v1.** S1–S6 are complete and applied to this spec. **S7 is in cold storage** — no build environment with the promotion pipeline is available; until it runs, A1's R1 check after every promotion stays mandatory. S8 stays deferred with strategy C. The spike solutions and the test ribbon button have been removed from the sandbox.
 
 | ID | Question | Exit criterion |
 |---|---|---|
@@ -1485,20 +1492,34 @@ Short, throwaway investigations against a development environment. Each produces
 | S4 | Do the target agent clients (Claude Code, VS Code agent mode) connect to a local HTTP MCP server with a bearer header, read `structuredContent`, and how do they surface errors and long waits during approval? | Client configuration snippets and timeout behaviour documented |
 | S5 | Which of the Read tools does the Microsoft Dataverse MCP server already provide, and could it replace any of them? Requires a dated, sourced check. | Overlap table; decision recorded |
 | S6 | How does XrmToolBox host several tabs of one plugin? Is a static singleton shared across tabs (one assembly load per process)? Which hooks report a connection being set and changed, how does a plugin close its own tab, and how does it re-open the connection dialog? Is the connection ID stable across restarts, and can a dialog be owned by the main window? | Two tabs bound to different connections share one host; a duplicate is detected and both dialog actions work; closing tabs in any order leaves the registry correct |
-| S7 | Does the promotion pipeline's component copy preserve each component's root component behaviour, and does it ever add required components or subcomponents? | `list_solution_components` on the build environment before and after promoting a WIP holding a metadata-only table, a column, a form and a web resource matches what was intended |
+| S7 | *Cold storage — no build environment.* Does the promotion pipeline's component copy preserve each component's root component behaviour, and does it ever add required components or subcomponents? | `list_solution_components` on the build environment before and after promoting a WIP holding a metadata-only table, a column, a form and a web resource matches what was intended |
 | S8 | *Deferred with strategy C.* With Dataverse Git integration, does environment binding commit WIP solutions as solutions in their own right, and can an unbound WIP hold objects of solutions bound under solution binding? | Documented behaviour, and the recommended binding for projects that use WIP solutions |
 
 ### Phase 1 — Host, connections, approvals and log
 
-- Singleton host: start with the first instance, stop with the last, port-in-use handling, shared token and limits.
-- Connection registry: binding, the *Connection already active* dialog, unbinding on close and change, routing by `connection`.
+**Carried from Phase 0.** The spikes settled these points; Phase 1 builds on them rather than re-deciding them. Details and evidence are in [notes.md](notes.md#phase-0-outcome--handover-to-phase-1).
+
+| Area | What Phase 1 must do | Source |
+|---|---|---|
+| Protocol layer | Hand-rolled on `HttpListener` and XrmToolBox's `Newtonsoft.Json` — no MCP SDK, no shipped DLL. Dual-era: 2026-07-28 primary, 2025-11-25 / 2025-06-18 through `initialize`. Start from the spike's [McpLayer](Spikes/McpLayer/) and its thirty-one protocol checks | S1, S4, D1, D3, D7 |
+| Host lifecycle | Process-wide static singleton. Attach on whichever comes first, `UpdateConnection` or `Load`; stop when the last tab closes. Static state survives a host stop and restart within one XrmToolBox session | S6, H1–H3 |
+| Binding | Claim the connection ID synchronously inside `UpdateConnection`, in hook order; resolve the organization ID with the asynchronous identity call afterwards. Mint a connection ID when XrmToolBox has none | S6, C3, D4 |
+| Dialogs | Own every dialog by XrmToolBox's main window (`TopLevelControl`), so it appears whichever tab is active. Do not rely on the control's `Visible` — it reports `True` for a background tab | S6, C9 |
+| Token | Persist across restarts with DPAPI; plain-text `401` body; README guidance for OAuth prompts | S4, D8 |
+| Response cap | 40,000 characters, measured on the text content block | S4, D2, D6 |
+| Cancellation | `HttpListener` gives no signal when a client abandons a request; the spike only noticed when the reply failed to write. Phase 1 must choose how to withdraw a pending approval dialog when the client goes away — for example answering long calls as an SSE stream with periodic keep-alive comments, whose failed write signals the disconnect. This touches the "no SSE" rule in §6.1 and is a decision for Phase 1 | S1 |
+| Clients | Supported and tested: Claude Code 2.1.312 (2026-07-28), Claude Code 2.1.72 and VS Code 1.144.0 (handshake fallback) | S4 |
+
+- Singleton host: start with the first tab, stop with the last, port-in-use handling, shared limits, persisted token (D8).
+- Dual-era MCP layer ([§6.1](#61-protocol-surface)), including handshake sessions.
+- Connection registry: synchronous claim, binding, the *Connection already active* dialog, unbinding on close and change, routing by `connection`.
 - Main panel, per-connection dev-environment confirmation and settings.
 - Approval queue and dialogs (Read and Write tiers); read-approval and dev-confirmation scopes with their persistence; revoke; timeout.
 - Call log, host log and log detail; export to a user-chosen folder.
 - Error model and result envelope ([§6.2](#62-conventions)).
 - Tools: `list_connections`, `get_connection_info`, `who_am_i`, `list_publishers`.
 
-**Exit:** with two tabs on different connections, `list_connections` returns both and calls route to the right tab; a third tab on an already bound connection gets the dialog and both actions work; denial, timeout and unknown connection reach the agent as tool errors; a once-scoped approval ends with its call, a session scope ends with the host, and Revoke clears environment scopes.
+**Exit:** with two tabs on different connections, `list_connections` returns both and calls route to the right tab; a third tab on an already bound connection gets the dialog and both actions work; a toolbar connect applied to several tabs binds the first in XrmToolBox's order; denial, timeout and unknown connection reach the agent as tool errors; a once-scoped approval ends with its call, a session scope ends with the host, and Revoke clears environment scopes; Claude Code (2026-07-28) and VS Code (handshake fallback) both call a tool, and both still connect after an XrmToolBox restart without reconfiguration.
 
 ### Phase 2 — Discovery
 
@@ -1534,7 +1555,8 @@ Agent-side work that makes the local edits safe. Skills decide between Path A an
 
 ### Phase 5 — Release
 
-- Tooling README with installation, client configuration, tool table, the one-tab-per-connection behaviour, and settings.
+- Tooling README with installation, client configuration (snippets in [Spikes/README.md](Spikes/README.md#client-registration-s4)), minimum client versions, what to do when a client shows an OAuth prompt, tool table, the one-tab-per-connection behaviour, and settings.
+- Tool Library install and uninstall from the NuGet package — the part of S1's exit criterion the spike could not cover.
 - CI workflow, NuGet package, Tool Library listing.
 - Repository updates outside this plugin: the instructions file's tooling-conventions section, the codebase map, the root README and the matrix's build-backlog row already describe the plugin as specified, not built — change them to describe it as shipped. Add the column-3 guide changes then, not before: registering the plugin's MCP endpoint in [C.3 §7](../../workflows/3-coding-assistants/c.3-project-setup.md#7-wire-up-mcp-and-finish-grounding), and the segmented WIP loop where [4.3](../../workflows/3-coding-assistants/4.3-implementation.md) covers solution changes. Adding a guide also updates the matrix, the root README table and the column README together.
 

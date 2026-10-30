@@ -8,8 +8,8 @@
 
 | Phase | Status | Exit criterion |
 |---|---|---|
-| [0 — Spikes](SPEC.md#phase-0--spikes) | Done for v1, except S7 (deferred — no build environment) and S8 (deferred with strategy C); D8 open | Every v1 spike has a written finding, and the spec is updated |
-| [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | Not started | See spec |
+| [0 — Spikes](SPEC.md#phase-0--spikes) | **Done for v1** (2026-10-30). S7 in cold storage (no build environment); S8 deferred with strategy C. Sandbox and workstation cleaned up | Every v1 spike has a written finding, and the spec is updated |
+| [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | **Ready to start** — see [handover](#phase-0-outcome--handover-to-phase-1) | See spec |
 | [2 — Discovery](SPEC.md#phase-2--discovery) | Not started | See spec |
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | Not started | See spec |
 | [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | Not started | See spec |
@@ -19,9 +19,90 @@ Status values: *Not started* · *In progress* · *Blocked* (say on what) · *Don
 
 ---
 
+## Phase 0 outcome — handover to Phase 1
+
+### Where things stand
+
+- Every Phase 0 finding is applied to [SPEC.md](SPEC.md); decisions D1–D8 are closed; the spec has no open questions. [SPEC §11 Phase 1](SPEC.md#phase-1--host-connections-approvals-and-log) carries the points Phase 1 must build on.
+- S7 is in [cold storage](#s7--cold-storage); S8 stays deferred with close-out strategy C.
+- Nothing from the spikes is left in the sandbox, in XrmToolBox, or in client configuration — see the [cleanup record](#cleanup-record).
+- The spike code stays in [Spikes/](Spikes/) as the starting point for Phase 1 and as reproducible evidence.
+
+### What Phase 0 established
+
+| # | Topic | Finding | Evidence | Spec |
+|---|---|---|---|---|
+| F1 | MCP inside XrmToolBox | An MCP host runs inside XrmToolBox on `net48` with no private DLL: hand-rolled on `HttpListener`, serialized with XrmToolBox's own `Newtonsoft.Json` 13 | [S1](#s1--inside-xrmtoolbox) | §5 |
+| F2 | MCP C# SDK | Unusable in-process: every stable release needs `System.Text.Json` 10.x and other 10.x assemblies; XrmToolBox ships and redirects to 9.0.0.7; the SDK's HTTP server targets .NET 8+ only | [S1](#s1--mcp-host-inside-xrmtoolbox-on-net48) | §5 |
+| F3 | Binding the port | `HttpListener` binds `127.0.0.1` and `localhost` without elevation on the test workstation; locked-down machines may need a URL reservation | [S1](#s1--mcp-host-inside-xrmtoolbox-on-net48) | §5 |
+| F4 | Protocol eras | Clients in use span both eras: Claude Code 2.1.312 speaks 2026-07-28; Claude Code 2.1.72 and VS Code 1.144.0 open with `initialize`. A dual-era host serves all three on one endpoint | [S4 fallback](#s4--dual-era-fallback), [S4 VS Code](#s4--vs-code-against-the-dual-era-spike) | §6.1 (D1, D7) |
+| F5 | Output limits | Claude Code persists text results over 50,000 characters to a file and counts the **text block**, not the HTTP body, which carries the JSON twice | [S4](#s4--claude-code-live) | §5, §6.2 (D2, D6) |
+| F6 | Long waits | A 120-second approval stays inside Claude Code's 2-minute backgrounding and 5-minute idle limits; an unanswered approval returns as a denial after 120 s | [S4](#s4--claude-code-live), [S6](#s6--several-tabs-live) | §5 |
+| F7 | Token handling | A token that changes at each host start breaks saved client configurations; VS Code answers the resulting `401` with OAuth discovery and a client-registration prompt | [S4 VS Code](#s4--vs-code-against-the-dual-era-spike) | §5, §6.2 (D8) |
+| F8 | Tabs and hooks | One assembly and AppDomain per process, so a static host is shared; `UpdateConnection` arrives **before** `Load`; `CloseTool` and `OnRequestConnection` drive the two dialog buttons; a toolbar connect can reach several tabs at once; binding after an asynchronous call makes the winner a race; static state survives a host stop and restart; the host stops when the last tab closes | [S6](#s6--several-tabs-of-one-plugin) | §5 H1–H4, C1–C10 |
+| F9 | Dialogs | Dialogs owned by XrmToolBox's main window appear and are answered while another tab is in front; the control's `Visible` still reports `True` then | [S6](#s6--several-tabs-live) | §5 C9 |
+| F10 | `tableBehavior` | `metadata` = `DoNotIncludeSubcomponents = true`, settings unset → behaviour 1; `shell` = same flag, settings `[]` → behaviour 2 | [S2](#s2--addsolutioncomponentrequest-flags-and-exports) | §6.6 |
+| F11 | Parent shells | Adding a column, form or view alone makes the platform add its table as a shell (behaviour 2), through the SDK and through PAC alike | [S2](#s2--addsolutioncomponentrequest-flags-and-exports), [S3](#s3--pac-add-solution-component) | §6.6 |
+| F12 | PAC and tables | `pac solution add-solution-component` adds a table with **all its subcomponents** (behaviour 0), and its success message does not say so | [S3](#s3--pac-add-solution-component) | §4 |
+| F13 | Ribbon | Any table in a WIP — metadata, shell or parent shell — exports the table's whole unmanaged ribbon diff | [S2 ribbon](#s2--ribbon-diff-with-a-table-in-a-wip) | §6.6, §9.6 X6 |
+| F14 | Inactive forms | Two inactive managed main forms in a WIP produced no form XML on export; an active one did (medium confidence) | [S2](#s2--addsolutioncomponentrequest-flags-and-exports) | §9.6 X10 |
+| F15 | FetchXML `top` | Dataverse refuses `top` together with paging | [Side finding](#query-paging-and-top-side-finding-s2-preparation) | §6.5 `query` |
+| F16 | Column ownership | FetchXML over `attribute` cannot tell which table a column belongs to; metadata needs the metadata API | [Side finding](#query-paging-and-top-side-finding-s2-preparation) | §6.5 |
+| F17 | Dataverse MCP server | Replaces none of the Read tools | [S5](#s5--overlap-with-the-dataverse-mcp-server) | §6.3 |
+| F18 | Agent claims | VS Code's agent reported a successful call that had gone to a harness it started itself; only the server's own log showed the truth | [S4 VS Code](#s4--vs-code-live) | §8 (the log as the record) |
+
+### Considerations for Phase 1 and later
+
+| Phase | Consideration |
+|---|---|
+| 1 | **Cancellation is undecided.** `HttpListener` gives no disconnect signal; the spike only noticed when writing the reply failed. Decide how a pending approval dialog is withdrawn when the client gives up — for example answering long-running calls as an SSE stream with keep-alive comments, whose failed write is the signal. That would amend the "no SSE" rule in SPEC §6.1 |
+| 1 | **Token store.** DPAPI (current user) in XrmToolBox's plugin settings, next to the persisted approval scopes. Handle a missing or unreadable value by generating a new token and saying so on every tab |
+| 1 | **Binding order.** Claim the connection ID synchronously in `UpdateConnection`; resolve the organization afterwards; attach to the host from whichever hook comes first. The spike does none of this correctly — do not copy its `Bind` method |
+| 1 | **Do not use `Visible`** to decide whether the tab is in front. If the plugin ever needs to draw attention, flash the main window instead |
+| 1 | **Logs over MCP.** The spike's `get_log` tool was an investigation aid. The v1 surface has no such tool; logs reach people through the panel and the export (SPEC §8), not agents |
+| 1 | **Tests.** Port the thirty-one checks of `Invoke-ProtocolChecks.ps1` into unit tests; keep the console harness and the script for manual client checks |
+| 1 | **Second XrmToolBox process.** Only one host can hold the port; the second process shows the error (H2). Not exercised in Phase 0 |
+| 2 | Paging, cursors, the response cap, record-query detection and the metadata tools were not exercised by the spikes; Phase 2 tests them first against the sandbox |
+| 2 | `query` must refuse `top` (F15); `get_table_metadata` must use `RetrieveEntityRequest` (F16) |
+| 3 | `add_solution_components` must treat parent shells as expected (F11) and keep the R1 read-back — PAC's and the SDK's success messages hide what was added |
+| 4 | Skills: never add tables through PAC (F12); check `formactivationstate` before adding a form (F14); treat every table in a WIP as a whole document including its ribbon (F13); verify a claimed tool result against the plugin's log when it matters (F18) |
+| 5 | README: minimum client versions (Claude Code from 2.1.72, VS Code 1.144.0 tested), client snippets, what to do on an OAuth prompt; Tool Library install and uninstall from the package |
+| — | **Sandbox reuse.** Fixture IDs were never stored here (R7); resolve them again with `pac env fetch` when Phase 2 needs them. Reuse the sandbox's default publisher rather than creating one (R3) |
+
+### Reusing the spike code
+
+| Spike part | Reuse in Phase 1 | Change before reuse |
+|---|---|---|
+| [McpLayer](Spikes/McpLayer/) | Basis of the protocol layer, both eras | Add the §6.2 error envelope and tool-error codes, the response cap, cursor paging, cancellation (see above), and structured logging into the call log |
+| [CompanionHost](Spikes/XtbHostSpike/CompanionHost.cs), [ConnectionRegistry](Spikes/XtbHostSpike/ConnectionRegistry.cs) | Singleton and registry shape | Persisted token, synchronous claim, attach on first hook, settings and scopes |
+| [HostSpikeControl](Spikes/XtbHostSpike/HostSpikeControl.cs), [ChoiceForm](Spikes/XtbHostSpike/ChoiceForm.cs) | Hook usage, dialog ownership | Real panel (§8.1) and approval dialog with scopes (§8.2); no `Visible` checks |
+| [SpikeTools](Spikes/XtbHostSpike/SpikeTools.cs) | Request patterns (`WhoAmI`, `AddSolutionComponentRequest` flags) | Replace with the §6 tool surface; drop `get_log` |
+| [ConsoleHarness](Spikes/ConsoleHarness/), [Invoke-ProtocolChecks.ps1](Spikes/ConsoleHarness/Invoke-ProtocolChecks.ps1) | Manual client checks and regression | None |
+
+### S7 — cold storage
+
+Parked on 2026-10-30: no build environment with the WIP promotion pipeline is available. Until it runs, SPEC A1 stands — R1's check runs after every promotion, against the build environment. To resume, a person provides a build environment with the promotion pipeline configured; the agent then promotes a WIP holding a metadata-only table, a column, a form and a web resource, and compares `list_solution_components` on the build environment before and after (SPEC §11, S7).
+
+### Cleanup record
+
+Done on 2026-10-30, after the person closed XrmToolBox.
+
+| Where | Removed | Verified by |
+|---|---|---|
+| Sandbox | Test ribbon button on `opportunity`, by importing the spike solution again with an empty ribbon diff | No unmanaged `ribbondiff` rows left on `opportunity` |
+| Sandbox | Spike solutions `AgentSpikeS2A`–`S2E`, `AgentSpikeS3`, `AgentSpikeS3B`, with `pac solution delete` — their components were existing sandbox components and stay | No solution named `AgentSpike*` |
+| XrmToolBox | Spike plugin DLL and PDB from the `Plugins` folder | Folder listing |
+| VS Code | User-level `mcp.json` created for S4 | File removed (it did not exist before) |
+| Claude Code | Local-scope registrations `agent-companion-spike` and `companion-probe` | `claude mcp list` |
+| Workstation | Solution exports, query outputs and the token-bearing call helper in the session scratchpad | Folder listing |
+
+Left as is: PAC CLI 2.14.1 (updated by the person); Claude Code 2.1.72 on the PATH; the spike code and its ignored build output in the repository.
+
+---
+
 ## Decisions
 
-Raised by the desk research.
+Raised by the desk research and the live spikes. All closed.
 
 | # | Decision | Outcome | Applied |
 |---|---|---|---|
@@ -29,21 +110,10 @@ Raised by the desk research.
 | D2 | **Response cap** | **40,000 characters** per page (measurement refined by D6) | [SPEC §5](SPEC.md#serialization), §6.2, §8.1 |
 | D3 | **JSON library** | Hand-rolled layer on **`Newtonsoft.Json` 13**, referenced at build time and loaded from XrmToolBox's copy | [SPEC §5](SPEC.md#json-rpc-and-mcp-layer) |
 | D4 | **Connection ID may be missing** | The host mints a `connectionId` when XrmToolBox has none | [SPEC §5](SPEC.md#host-and-connection-model) (term, C3), §6.4 |
-| D5 | **Live-work prerequisites** | Data-free sandbox available through the active PAC profile; PAC CLI updated to 2.14.1; spike registered in Claude Code at local scope. Spike code lives in [Spikes/](Spikes/) | — |
-| D6 | **How the response cap is measured** | Claude Code counts the **text content block**, not the whole result (S4). The 40,000 characters are measured on the text block | [SPEC §5](SPEC.md#serialization), §6.2 |
-| D7 | **Fallback for handshake-era clients** | **Dual-era host**: 2026-07-28 primary; 2025-11-25 and 2025-06-18 through `initialize`, with in-memory sessions. VS Code 1.144.0 and Claude Code 2.1.72 open with `initialize` (S4) | [SPEC §6.1](SPEC.md#61-protocol-surface), §6.2, §14 |
-| D8 | **Stable bearer token and clearer 401** — *open* | The token changes at every host start, so every XrmToolBox restart breaks saved client configurations; VS Code then answers the 401 by attempting OAuth discovery and offering manual client registration, a misleading prompt (S4). Recommendation: keep the token across restarts, protected with DPAPI for the current Windows user in the plugin settings, changed only by **Regenerate**; return a plain-text reason in the 401 body; document the VS Code reset step | Pending |
-
-### Waiting on
-
-| Item | Needed for | Who |
-|---|---|---|
-| S7: a build environment with the WIP promotion pipeline — none available for now | S7 | Person |
-| Decision on D8 (stable token, clearer 401) | Spec §5, §6.2 | Person |
-
-### Sandbox cleanup (after S7)
-
-Spike solutions `AgentSpikeS2A`–`S2E`, `AgentSpikeS3`, `AgentSpikeS3B`; the test button `[prefix].AgentSpike.opportunity.Button` on the `opportunity` main form (unmanaged ribbon customization). Delete the solutions with `pac solution delete` (components stay); remove the button by importing `AgentSpikeS2D` with its original, empty ribbon diff.
+| D5 | **Live-work prerequisites** | Data-free sandbox through the active PAC profile; PAC CLI 2.14.1; temporary client registrations, since removed. Spike code in [Spikes/](Spikes/) | — |
+| D6 | **How the response cap is measured** | On the **text content block**, the copy clients count (S4) | [SPEC §5](SPEC.md#serialization), §6.2 |
+| D7 | **Fallback for handshake-era clients** | **Dual-era host**: 2026-07-28 primary; 2025-11-25 and 2025-06-18 through `initialize`, with in-memory sessions | [SPEC §6.1](SPEC.md#61-protocol-surface), §6.2, §14 |
+| D8 | **Stable bearer token and clearer 401** | Token kept across restarts, DPAPI-protected in the plugin settings, changed only by **Regenerate**; plain-text `401` body; README guidance for OAuth prompts | [SPEC §5](SPEC.md#host) (Authentication, H4), §6.2, §7, §11 |
 
 ---
 
@@ -71,12 +141,12 @@ The hand-rolled layer (D3) passes every protocol check outside XrmToolBox; the l
 
 - [x] **Disposable development environment** with no client data — a sandbox with schema only. S2 and S3 add out-of-box tables to solutions; expect to reset it. Its URL and schema names stay out of this file.
 - [x] **Publisher** for the spikes: the sandbox's existing default publisher — no new publisher (R3).
-- [ ] **Fixture set**, used unchanged by S2, S3 and S7 so their results compare. IDs resolved with `pac env fetch`; recorded here only as placeholders:
-  - [x] `account` (out-of-box table) and `[CustomTable]` (an existing custom table from the sandbox schema); its column and alternate key still to pick;
+- [x] **Fixture set**, used unchanged by S2, S3 and S7 so their results compare. IDs resolved with `pac env fetch`; recorded here only as placeholders:
+  - [x] `account` (out-of-box table) and `[CustomTable]` (an existing custom table from the sandbox schema), with its primary-key column standing in for a column (F16);
   - [x] an `account` main form and the default `account` view;
   - [x] one unmanaged web resource;
-  - [ ] one classic ribbon button on `account`, for the ribbon-diff question in S2 — none identified yet.
-- [ ] **Build environment and promotion pipeline** (S7 only).
+  - [x] a classic ribbon button — none existed on `account`; a test button was added to `opportunity` for S2 and removed at cleanup.
+- [ ] **Build environment and promotion pipeline** (S7 only) — not available; S7 in [cold storage](#s7--cold-storage).
 - [x] **Versions recorded** (2026-10-29, workstation): XrmToolBox 1.2026.9.78 · PAC CLI 2.14.1 (updated from 1.34.4) · .NET SDK 10.0.401 · Claude Code 2.1.72 on the PATH and 2.1.312 bundled with the VS Code extension · VS Code 1.144.0.
 
 ### Timeboxes
@@ -93,7 +163,7 @@ Spikes are throwaway. Set a timebox when a spike starts and record it in the tra
 | S4 | Plugin | S1 | Done — Claude Code 2.1.312 (2026-07-28), Claude Code 2.1.72 and VS Code 1.144.0 (handshake fallback) all connect; D8 raised | | Client configuration snippets; approval timeout default; response cap (D2) | [S4](#s4--agent-clients-over-local-http) |
 | S5 | Desk research | — | Done | | Read tools kept or dropped ([§6.3](SPEC.md#63-tool-summary)) | [S5](#s5--overlap-with-the-dataverse-mcp-server) |
 | S6 | Plugin | S1 (same shell) | Done | | H1–H4 and C1–C10 ([§5](SPEC.md#host-and-connection-model)) | [S6](#s6--several-tabs-of-one-plugin) |
-| S7 | Platform | S2; build environment | Deferred — no build environment available | | A1 — whether the R1 check after promotion stays permanent | |
+| S7 | Platform | S2; build environment | Cold storage — no build environment | | A1 — whether the R1 check after promotion stays permanent | [Cold storage](#s7--cold-storage) |
 | S8 | — | Strategy C | Deferred | | C1, C2 | |
 
 ---
@@ -370,3 +440,4 @@ Spike solutions left in the sandbox: `AgentSpikeS2A`, `AgentSpikeS2B`, `AgentSpi
 | 2026-10-29 | S4 VS Code: 1.144.0 sends `initialize` then legacy `GET`; cannot connect under D1. Its agent reported a false success via the console harness, caught in the spike log. D7 (dual-era fallback) raised |
 | 2026-10-29 | D7 decided: dual-era host. Fallback built in the spike layer; 31 protocol checks pass; Claude Code 2.1.72 (handshake) and 2.1.312 (2026-07-28) both connect. Spec §6.1 rewritten. VS Code re-test waits on the v3 DLL |
 | 2026-10-30 | S4 done: VS Code 1.144.0 connects through the handshake fallback and calls a spike tool in XrmToolBox. Token caching across host restarts caused 401s and an OAuth prompt in VS Code; D8 raised. Phase 0 done for v1 apart from S7 and S8 (deferred) |
+| 2026-10-30 | D8 applied to the spec. S7 moved to cold storage. Sandbox cleaned (test button and seven spike solutions removed) and workstation cleaned (plugin DLL, client registrations, scratch files). Phase 0 handover written; Phase 1 ready to start |
