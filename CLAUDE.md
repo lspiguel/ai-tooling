@@ -22,7 +22,7 @@ A **playbook plus supporting tooling** for AI-augmented delivery on Dynamics 365
 | `skills/` | Reusable assistant skills: `d365ce-planning`, `d365ce-documenting`, `power-automate-flow-editing` (each a `SKILL.md` plus `references/` and, for the flow skill, `scripts/`) |
 | `scripts/` | Standalone utilities — Azure DevOps auth (`.ps1`/`.sh` pair), encode/decode, markdown/SVG conversion, HTML→PNG export |
 | `tooling/D365ContextExporter/` | XrmToolBox plugin that exports Dataverse metadata into markdown context packs |
-| `tooling/AgentCompanionMcp/` | **Spec only** (`SPEC.md`, draft): a planned XrmToolBox plugin — one local MCP host per XrmToolBox process, one plugin tab per connection, every call human-authorized — for discovering components and shaping segmented WIP solutions. No code yet; its rules are in INSTRUCTIONS.md under *Tooling conventions — Agent Companion MCP* |
+| `tooling/AgentCompanionMcp/` | **Spec only** (`SPEC.md`, draft; progress and spike findings in `notes.md`): a planned XrmToolBox plugin — one local MCP host per XrmToolBox process, one plugin tab per connection, every call human-authorized — for discovering components and shaping segmented WIP solutions. No code yet; its rules are in INSTRUCTIONS.md under *Tooling conventions — Agent Companion MCP* |
 | `.github/workflows/` | CI for the Context Exporter; `.github/copilot-instructions.md` and `AGENTS.md` are pointers to INSTRUCTIONS.md like this file |
 | `nupkg/` | Pack output drop (git-ignored contents) |
 

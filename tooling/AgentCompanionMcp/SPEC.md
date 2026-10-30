@@ -1433,7 +1433,7 @@ Each phase ends with a usable, reviewable increment.
 
 ### Phase 0 — Spikes
 
-Short, throwaway investigations against a development environment. Each produces a written finding that updates this spec.
+Short, throwaway investigations against a development environment. Each produces a written finding that updates this spec. Tracks, sequencing, shared setup and findings are kept in [notes.md](notes.md).
 
 | ID | Question | Exit criterion |
 |---|---|---|
