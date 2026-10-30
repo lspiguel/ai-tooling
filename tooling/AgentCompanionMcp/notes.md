@@ -36,8 +36,9 @@ Raised by the desk research.
 
 | Item | Needed for | Who |
 |---|---|---|
-| Deploy spike v2 (adds `get_log`, `create_solution`, `add_solution_component`): close XrmToolBox, replace the DLL, reopen, connect, copy the new token | S2, S3, S6 | Person |
-| The remaining live S6 steps (second tab, duplicate, toolbar apply, closing order) — evidence is then read with `get_log` | S6 | Person |
+| The remaining live S6 steps (second tab, duplicate, toolbar apply, hidden-tab approval, closing order) — evidence is read with `get_log` | S6 | Person |
+| A table with an unmanaged ribbon customization, to finish the ribbon question in S2 | S2 | Person, or the agent with approval to customize the sandbox |
+| Whether to delete the spike solutions (`AgentSpike*`) from the sandbox now or keep them for S7 | Cleanup | Person |
 | VS Code registration and one call from its agent mode | S4 | Person — the agent cannot drive VS Code chat |
 | Decision on D6 | Spec §5, §6.2 | Person |
 
@@ -84,11 +85,11 @@ Spikes are throwaway. Set a timebox when a spike starts and record it in the tra
 | ID | Track | Depends on | Status | Timebox | Feeds | Finding |
 |---|---|---|---|---|---|---|
 | S1 | Plugin | — | Done — gate passed in XrmToolBox; Tool Library install left to Phase 5 packaging | | [§5](SPEC.md#5-architecture) host, JSON-RPC layer, serialization; [§6.1](SPEC.md#61-protocol-surface) protocol revision | [S1](#s1--mcp-host-inside-xrmtoolbox-on-net48) |
-| S2 | Platform | — | Fixture resolved; waiting on spike v2 for `AddSolutionComponentRequest` | | `tableBehavior` mapping in `add_solution_components`; component type codes; X6 | |
-| S3 | Platform | — | PAC ready; waiting on a spike solution (spike v2 `create_solution`) | | Path B per component type ([§4](SPEC.md#4-responsibility-split--mcp-vs-pac-cli)) | |
+| S2 | Platform | — | Done — partial: ribbon-diff content not tested (no customized ribbon in the sandbox) | | `tableBehavior` mapping in `add_solution_components`; component type codes; X6 | [S2](#s2--addsolutioncomponentrequest-flags-and-exports) |
+| S3 | Platform | — | Done | | Path B per component type ([§4](SPEC.md#4-responsibility-split--mcp-vs-pac-cli)) | [S3](#s3--pac-add-solution-component) |
 | S4 | Plugin | S1 | In progress — Claude Code done live; VS Code waiting; D6 open | | Client configuration snippets; approval timeout default; response cap (D2) | [S4](#s4--agent-clients-over-local-http) |
 | S5 | Desk research | — | Done | | Read tools kept or dropped ([§6.3](SPEC.md#63-tool-summary)) | [S5](#s5--overlap-with-the-dataverse-mcp-server) |
-| S6 | Plugin | S1 (same shell) | In progress — single tab live; multi-tab steps waiting on spike v2 | | H1–H4 and C1–C10 ([§5](SPEC.md#host-and-connection-model)) | [S6](#s6--several-tabs-of-one-plugin) |
+| S6 | Plugin | S1 (same shell) | In progress — single tab live, dialog owner confirmed; multi-tab steps waiting on the person | | H1–H4 and C1–C10 ([§5](SPEC.md#host-and-connection-model)) | [S6](#s6--several-tabs-of-one-plugin) |
 | S7 | Platform | S2; build environment | Not started | | A1 — whether the R1 check after promotion stays permanent | |
 | S8 | — | Strategy C | Deferred | | C1, C2 | |
 
@@ -230,8 +231,8 @@ One entry per spike, written as soon as the spike ends, then applied to the spec
 - **Date:** 2026-10-29
 - **Versions:** XrmToolBox 1.2026.9.78 · spike plugin v1
 - **Steps:** Opened one spike tab already connected to the sandbox; read its log.
-- **Observed:** `UpdateConnection` ran **before** the control's `Load` event; the host started in `Load`, and the binding completed afterwards, once the background `WhoAmI` returned the organization ID. The saved connection carried an XrmToolBox connection ID (no minting needed). The approval dialog appeared and was answered while the agent waited.
-- **Conclusion:** A tab can receive its connection before it attaches to the host, so binding must not assume `Load` has run. The real plugin attaches to the host on first use from either hook. Multi-tab behaviour, duplicates, toolbar apply, dialog ownership with the tab hidden, and closing order still need the live steps.
+- **Observed:** `UpdateConnection` ran **before** the control's `Load` event; the host started in `Load`, and the binding completed afterwards, once the background `WhoAmI` returned the organization ID. The saved connection carried an XrmToolBox connection ID (no minting needed). The approval dialog for `who_am_i` was owned by `XrmToolBox.New.NewForm` — the main window — with the tab visible, and was answered while the agent waited.
+- **Conclusion:** A tab can receive its connection before it attaches to the host, so binding must not assume `Load` has run. The real plugin attaches to the host on first use from either hook. C9's main-window ownership holds; whether the dialog shows with the tab hidden, multi-tab behaviour, duplicates, toolbar apply and closing order still need the live steps.
 - **Spec change:** H1–H2 wording, so that the first of `UpdateConnection` or `Load` attaches — *Pending* the rest of S6.
 
 #### Query paging and `top` (side finding, S2 preparation)
@@ -240,6 +241,53 @@ One entry per spike, written as soon as the spike ends, then applied to the spec
 - **Observed:** `pac env fetch`, which pages every query, fails with "The top attribute can't be specified with paging attribute page" when the FetchXML has `top`.
 - **Conclusion:** Dataverse refuses `top` with paging. The `query` tool always pages, so it must refuse `top`.
 - **Spec change:** [§6.5 `query`](SPEC.md#query) — `top` rejected with `invalid_argument`. *Applied.*
+
+A second side finding from the same preparation: FetchXML over the `attribute` table cannot tell which table a column belongs to — it exposes no `entityid` and no join to `entity`. `get_table_metadata` must use the metadata API (`RetrieveEntityRequest`), as the spec already implies; `query` is no substitute.
+
+### S2 — AddSolutionComponentRequest flags and exports
+
+- **Date:** 2026-10-29
+- **Versions:** sandbox (schema only) · spike plugin v2 · PAC CLI 2.14.1
+- **Question:** What does `AddSolutionComponentRequest` produce for an out-of-box and a custom table with `DoNotIncludeSubcomponents = true`; how is a shell-only table achieved; does the export carry the table's ribbon diff?
+- **Steps:**
+  1. Created `AgentSpikeS2A`, `AgentSpikeS2B` and `AgentSpikeS2C` with the spike's `create_solution`, under the sandbox's existing default publisher. Each call approved in XrmToolBox.
+  2. S2A: added `account` and `[CustomTable]` with `DoNotIncludeSubcomponents = true` and `IncludedComponentSettingsValues` unset; then a column of `[CustomTable]`, an `account` main form, the default `account` view and a web resource. `AddRequiredComponents = false` throughout.
+  3. S2B: added `account` with `DoNotIncludeSubcomponents = true` and `IncludedComponentSettingsValues = []`.
+  4. S2C: added only the form, the view and the column — no tables.
+  5. Read `solutioncomponent` for the spike solutions; exported each unmanaged and compared `customizations.xml`.
+  6. Checked `formactivationstate` of the forms used, and repeated the form export with an active form.
+- **Observed:**
+
+  | Case | Table rows | Subcomponent rows | Export |
+  |---|---|---|---|
+  | S2A — flag on, settings unset | Both tables, root behaviour 1 (*Do not include subcomponents*) | Column under `[CustomTable]`; form and view under `account` | Table `EntityInfo` with the table's own properties (localized names, introduced version); only the added column; the view |
+  | S2B — flag on, settings `[]` | `account`, root behaviour 2 (*Include As Shell Only*) | — | An empty shell: `EntityInfo` with no attributes and no properties |
+  | S2C — no tables added | Platform added both tables, behaviour 2 | Form, view, column as children of the shells | Same shells, plus the column and the view |
+
+  - No required components appeared in any case; nothing beyond what was requested, apart from the parent shells in S2C.
+  - Every exported table carried a `RibbonDiffXml` element. In this sandbox it was the empty skeleton (`CustomActions`, `Templates`, `CommandDefinitions`, `RuleDefinitions`, `LocLabels`, all empty), so whether a populated ribbon diff travels with a metadata-only table is **not yet tested**.
+  - The two forms first used were managed and **inactive**; neither produced form XML in any export. An active managed form added the same way did.
+- **Conclusion:** `tableBehavior` maps cleanly: `metadata` → flag on, settings unset → behaviour 1; `shell` → flag on, settings `[]` → behaviour 2. Adding a subcomponent alone yields a parent shell, which is benign and must not count as unexpected. Inactive forms are a new WIP hazard. Confidence: high for the behaviours (observed for an out-of-box and a custom table); medium for the inactive-form rule (three forms).
+- **Spec change:** [§6.6](SPEC.md#add_solution_components) `tableBehavior` mapping and the parent-shell rule in the read-back step; [§9.6](SPEC.md#96-issues-common-to-every-close-out-strategy) X10 for inactive forms; §14 note. *Applied.* Ribbon-diff content — *Pending* a customized ribbon.
+
+### S3 — PAC add-solution-component
+
+- **Date:** 2026-10-29
+- **Versions:** PAC CLI 2.14.1 · sandbox
+- **Question:** What does `pac solution add-solution-component` do for each v1 component type without `--AddRequiredComponents` — in particular for tables?
+- **Steps:**
+  1. `AgentSpikeS3`: added `account` (by name), `[CustomTable]`, the column, the form, the view and the web resource, in that order, without `--AddRequiredComponents`.
+  2. `AgentSpikeS3B`: added only the column, the forms and the view — no tables.
+  3. Read `solutioncomponent` and exported S3B.
+- **Observed:**
+  - **Tables added through PAC get root behaviour 0, *Include Subcomponents*** — every column, form, view and relationship of the table comes into the solution. For a managed out-of-box table this is the layering problem R1 exists to prevent.
+  - The column, form and view added after the tables reported "has been added" but got no rows of their own: the include-all root already covered them.
+  - Added without their tables (S3B), the column, form and view behave exactly as through the SDK: the platform adds the parent table as a shell (behaviour 2) with the component as its child.
+  - The web resource is a root with behaviour 0, which has no subcomponents to include.
+- **Conclusion:** Path B (PAC) is **unsafe for tables** and safe for columns, forms, views and web resources added on their own. PAC's success message does not reveal the include-all behaviour, so the R1 check after every add stays mandatory. Confidence: high.
+- **Spec change:** [§4](SPEC.md#two-paths-for-adding-components) Path B row. *Applied.*
+
+Spike solutions left in the sandbox: `AgentSpikeS2A`, `AgentSpikeS2B`, `AgentSpikeS2C`, `AgentSpikeS3`, `AgentSpikeS3B`. Deleting them with `pac solution delete` keeps their components.
 
 ---
 
@@ -251,3 +299,4 @@ One entry per spike, written as soon as the spike ends, then applied to the spec
 | 2026-10-29 | Phase 0 started. Desk research for S1, S4, S5 and S6; S5 done and applied. Decisions D1–D5 raised; live work waits on D5 |
 | 2026-10-29 | D1–D4 decided and applied to the spec. Spike code added under `Spikes/`: protocol layer passes all sixteen checks in the console harness; XrmToolBox spike plugin built. Waiting on the person for the XrmToolBox run, client registration and sandbox access |
 | 2026-10-29 | Live: S1 gate passed inside XrmToolBox; Claude Code 2.1.312 connects end to end, 2.1.72 cannot (D1); persist-to-disk threshold measured (D6 raised); single-tab S6 observed; `top` finding applied. Spike v2 built for S2, S3 and the rest of S6 |
+| 2026-10-29 | Spike v2 deployed. S2 done except ribbon-diff content; S3 done — PAC adds tables with all subcomponents. Spec updated: `tableBehavior` mapping, parent shells, Path B for tables, X10 inactive forms. C9 dialog owner confirmed |

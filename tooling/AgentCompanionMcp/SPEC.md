@@ -132,7 +132,7 @@ Both are specified so the choice can be made per component type in the skills, o
 | | Path A — MCP `add_solution_components` | Path B — PAC `add-solution-component` |
 |---|---|---|
 | Required components | Forced off, cannot be overridden | Off unless `--AddRequiredComponents` is passed — **never pass it** |
-| Table subcomponents | Forced off (table added as metadata-only or shell) | **No switch exists** in the PAC reference[^1]; behaviour for tables must be confirmed in spike S2. Until proven safe, **tables must not be added through PAC** |
+| Table subcomponents | Forced off (table added as metadata-only or shell) | **No switch exists** in the PAC reference[^1], and spike S3 showed PAC adds a table with **all its subcomponents** (root behaviour 0). **Tables must never be added through PAC.** Columns, forms and views added through PAC on their own are safe: the platform adds their table as a shell (behaviour 2), exactly as the SDK does |
 | Authorization | Plugin approval dialog per call | Agent client's own terminal-command approval |
 | Batch | One call, one approval, a list of components | One command per component |
 | Visible in plugin log | Yes | No |
@@ -950,7 +950,7 @@ Fails with `already_exists` if the unique name is taken, `not_found` if the publ
 | `connection` | string | ✓ | |
 | `solutionUniqueName` | string | ✓ | Must be unmanaged, else `managed_solution` |
 | `components` | `ComponentSelector[]` | ✓ | 1–50 entries |
-| `tableBehavior` | `"metadata" \| "shell"` | | Tables only; default `metadata`. Exact mapping confirmed in spike S2 |
+| `tableBehavior` | `"metadata" \| "shell"` | | Tables only; default `metadata`. `metadata` → `DoNotIncludeSubcomponents = true` with `IncludedComponentSettingsValues` unset → root behaviour 1, exporting the table's own properties. `shell` → the same flag with an empty `IncludedComponentSettingsValues` array → root behaviour 2, exporting an empty table shell. Confirmed in spike S2 |
 
 ```ts
 type ComponentSelector =
@@ -991,7 +991,7 @@ Sequence:
 2. **Approve** — Write tier, one dialog for the whole list.
 3. **Snapshot** the solution's components.
 4. **Add** in request order with the fixed behaviour below. The first failure stops the run; later entries are `notAttempted`.
-5. **Read back** and compute `unexpected` = components present now − snapshot − requested. Each unexpected component is also raised as a warning in the call log.
+5. **Read back** and compute `unexpected` = components present now − snapshot − requested. Each unexpected component is also raised as a warning in the call log. One addition is expected, not unexpected: when a column, form or view is added without its table, the platform adds the table as a shell (root behaviour 2) to hold it (spike S2). Such a parent shell is reported in `results` with status `added` and `name` noting it was added as the parent, and is not counted in `unexpected` — unless it arrives with any behaviour other than 2.
 
 Fixed behaviour, not exposed to the caller:
 
@@ -1342,6 +1342,7 @@ How the plugin supports this: `list_solutions` finds open WIPs and the transport
 | X7 | **Connection references and environment variables.** Each developer's flows can create their own connection reference, and environment variable current values travel with the WIP | Duplicate references downstream; development values carried forward | Reuse the project's existing connection references; deployment settings set values per environment; a promotion pipeline may consolidate references |
 | X8 | **Partial close-out.** A story's WIPs close out one at a time | A build in between carries half a story — Base without the app that uses it | Close out all of a story's WIPs together, in order; make sure no automated deployment runs between them, or accept the intermediate state knowingly |
 | X9 | **Leftover WIP solutions.** Unmanaged WIPs in development — and, for C, in source control — outlive their story | Stale WIPs distort overlap checks and clutter pipeline pickers | Delete each WIP at close-out (`pac solution delete` keeps components); `list_solutions` finds stragglers |
+| X10 | **Inactive forms are not exported.** In spike S2, two inactive main forms in a WIP produced no form XML in the unmanaged export, while an active form did | The agent has nothing to edit locally, and an import cannot carry a change to that form | Check `formactivationstate` before adding a form; a person decides whether to activate it or work on another form |
 
 ### 9.7 Close-out strategies
 
@@ -1564,4 +1565,4 @@ None open.
 
 [^4]: Microsoft Learn — *Connect to Azure DevOps* (Dataverse Git integration), <https://learn.microsoft.com/power-platform/alm/git-integration/connecting-to-azure-devops> (checked 2026-10-29). Supports: development and target environments must be managed environments.
 
-SDK message names and behaviours used in this spec (`WhoAmIRequest`, `RetrieveRequiredComponentsRequest`, `AddSolutionComponentRequest`, `RemoveSolutionComponentRequest`, `RetrieveEntityRibbonRequest`, `RetrieveApplicationRibbonRequest`, root component behaviour values, component type codes) are from working knowledge and are confirmed in spikes S2 and S3 before implementation. MCP protocol details follow revision 2026-07-28 of the Model Context Protocol specification (<https://modelcontextprotocol.io/specification/2026-07-28>, checked 2026-10-29); client behaviour is confirmed in spike S4; XrmToolBox multi-tab and connection-handling behaviour in spike S6. The transport-solution order, segmentation map and promotion pipeline in [§9.5](#95-transport-solutions-and-segmented-wip-solutions)–[§9.7](#97-close-out-strategies) are generalized from existing delivery pipeline templates; the promotion copy step's behaviour is confirmed in spike S7.
+SDK message names and behaviours used in this spec (`WhoAmIRequest`, `RetrieveRequiredComponentsRequest`, `AddSolutionComponentRequest`, `RemoveSolutionComponentRequest`, `RetrieveEntityRibbonRequest`, `RetrieveApplicationRibbonRequest`, root component behaviour values, component type codes) are from working knowledge; root component behaviours, the `AddSolutionComponentRequest` flags and PAC's add behaviour were confirmed in spikes S2 and S3 (2026-10-29, [notes](notes.md#s2--addsolutioncomponentrequest-flags-and-exports)). MCP protocol details follow revision 2026-07-28 of the Model Context Protocol specification (<https://modelcontextprotocol.io/specification/2026-07-28>, checked 2026-10-29); client behaviour is confirmed in spike S4; XrmToolBox multi-tab and connection-handling behaviour in spike S6. The transport-solution order, segmentation map and promotion pipeline in [§9.5](#95-transport-solutions-and-segmented-wip-solutions)–[§9.7](#97-close-out-strategies) are generalized from existing delivery pipeline templates; the promotion copy step's behaviour is confirmed in spike S7.
