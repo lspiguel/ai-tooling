@@ -79,6 +79,8 @@ Status values: *Not started* · *In progress* · *Blocked* (say on what) · *Don
 | [SpikeTools](Spikes/XtbHostSpike/SpikeTools.cs) | Request patterns (`WhoAmI`, `AddSolutionComponentRequest` flags) | Replace with the §6 tool surface; drop `get_log` |
 | [ConsoleHarness](Spikes/ConsoleHarness/), [Invoke-ProtocolChecks.ps1](Spikes/ConsoleHarness/Invoke-ProtocolChecks.ps1) | Manual client checks and regression | None |
 
+`Spikes/` stays until Phase 1 has ported the protocol layer and the protocol checks into the plugin and its tests. Then delete it and repoint the links in this file and in SPEC.md to the pushed commit `643fe93`, the last state of the spike code.
+
 ### S7 — cold storage
 
 Parked on 2026-10-30: no build environment with the WIP promotion pipeline is available. Until it runs, SPEC A1 stands — R1's check runs after every promotion, against the build environment. To resume, a person provides a build environment with the promotion pipeline configured; the agent then promotes a WIP holding a metadata-only table, a column, a form and a web resource, and compares `list_solution_components` on the build environment before and after (SPEC §11, S7).
