@@ -108,6 +108,7 @@ The same loop serves every moment above: a small set of WIP solutions per user s
 | Step | Owner | Notes |
 |---|---|---|
 | Choose the environment | **MCP** `list_connections`, `get_connection_info` | One connection per task; the PAC profile is matched to it — see below |
+| Identify the user for WIP naming | **MCP** `who_am_i` | First and last names give the initials in WIP names ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)) |
 | Find publishers | **MCP** `list_publishers` | |
 | Create publisher | **MCP** `create_publisher` | R3; rarely used |
 | List solutions | **MCP** `list_solutions` | `pac solution list --json` still works but runs against the PAC profile, not the connection |
@@ -188,16 +189,16 @@ The PAC auth profile and the plugin's connections are independent, and with seve
 |---|---|
 | H1 | The host is a process-wide singleton, created when the first instance opens and shared by every later instance. No instance owns it: closing the tab that created it does not stop it |
 | H2 | Opening the first instance starts the host — no connection is needed and there is no separate Start step. If the port is taken (for example by a second XrmToolBox process), the host does not start and every instance shows the error and the port setting |
-| H3 | The host stops when the last instance closes or XrmToolBox exits. **Stop server** / **Start server** on any instance acts on the shared host and is labelled as affecting all connections. Stopping answers pending calls with `server_stopping` and revokes every session allowance |
+| H3 | The host stops when the last instance closes or XrmToolBox exits. **Stop server** / **Start server** on any instance acts on the shared host and is labelled as affecting all connections. Stopping answers pending calls with `server_stopping` and ends every session-scoped approval and confirmation; environment and always scopes persist ([§7](#7-authorization-model)) |
 | H4 | Port, bearer token, response cap, maximum page size and approval timeout are host-level: one value each, shown and editable on every instance. Changing the port or token affects every connection |
 | C1 | An instance binds at most one connection — the XrmToolBox connection of its tab. XrmToolBox's additional-connections feature is not used |
 | C2 | Binding happens when the instance receives a connection: opened with one already selected, connected later, or changed. Only bound connections are returned by `list_connections` and accept calls. The person is expected to connect every instance they open |
 | C3 | **One instance per connection.** Before binding, the instance checks the host's registry. The connection is already active when another instance is bound to the same XrmToolBox connection ID, **or** to the same organization (same organization ID) through a different saved connection. In that case the instance does not bind and shows the *Connection already active* dialog ([§8.5](#85-connection-already-active-dialog)): **Close this tab** closes the instance; **Choose another connection** re-opens the XrmToolBox connection dialog for this tab, and the new choice goes through the same check. Cancelling the connection dialog leaves the instance unbound |
 | C4 | An unbound instance shows the host status and a prompt to connect. No calls are routed to it |
-| C5 | When a bound instance's connection changes, the old binding ends before the new one is checked: queued and pending calls for it fail with `connection_closed`, its session allowances and dev-environment confirmation are cleared, and it disappears from `list_connections`. The new connection then goes through C3 |
+| C5 | When a bound instance's connection changes, the old binding ends before the new one is checked: queued and pending calls for it fail with `connection_closed`, any once-scoped dev-environment confirmation ends, open paging cursors are released, and it disappears from `list_connections`. Session, environment and always scopes stay with their organization ([§7](#7-authorization-model)). The new connection then goes through C3 |
 | C6 | Closing a bound instance ends its binding the same way. If it was the last instance, H3 applies |
 | C7 | Every tool except `list_connections` takes `connection` as its mandatory first parameter. The host routes the call to the instance bound to it; an unknown ID fails at once with `connection_not_found`, without a dialog |
-| C8 | Approvals, session allowances, the dev-environment confirmation, the record-query and publisher-creation settings, the approval queue and the call log are **per connection**, held by its instance. An approval in one tab never covers a call to another connection |
+| C8 | Read approvals and dev-environment confirmations are scoped by organization ([§7](#7-authorization-model)). The record-query and publisher-creation settings, the approval queue and the call log are **per connection**, held by its instance. An approval given for one organization never covers a call to another, except an approval the person explicitly scopes as *always* |
 | C9 | Approval dialogs are owned by the XrmToolBox main window, so they appear whichever tab is active, and name the connection in the title and on the Environment line. Each connection has its own queue; calls for different connections can await approval at the same time |
 | C10 | `list_connections` calls and calls naming an unknown connection are written to a host section of the call log, shown on every instance |
 
@@ -226,7 +227,7 @@ The PAC auth profile and the plugin's connections are independent, and with seve
 | Port | Configurable; default fixed so the agent's MCP configuration stays stable. |
 | Lifecycle | Singleton; starts with the first instance, stops with the last — H1 to H3 in [Host and connection model](#host-and-connection-model). |
 | Connection binding | One instance per connection; every call names its connection — C1 to C10. The bound connection is shown on every approval dialog. |
-| Environment guard | Per connection: when a tab is bound, the user confirms the connection is a development environment where the agent may shape solutions. Write tools refuse with `dev_environment_not_confirmed` without that confirmation. Environments the agent should only read — such as a build environment fed by a promotion pipeline — are bound and left unconfirmed. |
+| Environment guard | Per connection: when a tab is bound, the user confirms the connection is a development environment where the agent may shape solutions. Write tools refuse with `dev_environment_not_confirmed` without that confirmation. Environments the agent should only read — such as a build environment fed by a promotion pipeline — are bound and left unconfirmed. How long a confirmation lasts is chosen by the person ([§7](#7-authorization-model)). |
 | Threading | Requests are queued per connection; SDK calls run on a background worker using a clone of that connection's service; approvals marshal to the UI thread. |
 | Approval timeout | Configurable (default 120 s). Timeout returns `denied_no_response` to the agent. |
 
@@ -246,7 +247,7 @@ Spike S1 decides. The protocol revision is pinned at build time and reported in 
 | Records | Human-readable JSON with typed wrappers for references, money, option sets and aliased values, plus formatted values — the value rules under [`query`](#query). Library choice and source-inclusion confirmed in spike S1. |
 | Metadata | Trimmed projection (see each tool in [§6](#6-mcp-interface)) — never the raw `EntityMetadata` graph. Labels in the organization's base language. |
 | XML payloads (FormXml, ribbon XML) | Returned as strings. Ribbon responses are decompressed server-side. |
-| Size cap | Every response is capped (default 1 MB). Oversized list responses are cut at a whole element with `"truncated": true`; the agent narrows the request. XML payloads are never cut — they fail with `response_too_large`. |
+| Size cap | Every response is capped (default 1 MB). Large results are always paged, never truncated and never written to a file — lists by item, XML payloads in chunks ([§6.2](#62-conventions)). |
 
 ---
 
@@ -269,7 +270,7 @@ The pinned revision must support `outputSchema` and `structuredContent` on tool 
 
 **Connection.** Every tool except `list_connections` takes `connection` — the `connectionId` of an entry returned by `list_connections` — as a required parameter. It is the first property in each `inputSchema` and first in `required`, so clients that order arguments by schema present it first; on the wire, presence is what matters. There is no default: a call without `connection` fails with `invalid_argument` even when only one connection is bound. Agent-side rule: when exactly one connection is bound, the agent may use it and names it to the person; when more than one is bound, the agent asks which to use; it never switches connection within a task without saying so.
 
-**Agent reason.** Every tool except `list_connections` also accepts an optional `reason` (string, at most 500 characters). It is shown in the *Agent-supplied — not verified* box of the approval dialog (R8) and recorded in the log. It never influences what the tool does. The per-tool input tables below omit it.
+**Agent reason.** Every tool except `list_connections` also accepts an optional `reason` (string, at most 500 characters). It is shown in the *Agent-supplied — not verified* box of the approval dialog (R8) and recorded in the log. It never influences what the tool does. The per-tool input tables below omit it, and omit the paging inputs `cursor` and `pageSize`; paged tools are marked *Paged*.
 
 **Value formats**
 
@@ -300,25 +301,27 @@ The pinned revision must support `outputSchema` and `structuredContent` on tool 
 | `dev_environment_not_confirmed` | Write or Publisher tool on a connection not confirmed as development | Ask the person |
 | `denied_by_user` | The person denied the call | Do not retry without new instructions |
 | `denied_no_response` | Approval timed out | Do not retry without new instructions |
-| `tool_disabled` | `create_publisher`, or a Record-read `query`, switched off for this connection | Ask the person |
+| `tool_disabled` | `create_publisher`, or a `query` that touches records, switched off for this connection | Ask the person |
 | `not_found` | A named solution, publisher, table, column, option set, relationship or component does not exist. `details` names it | Check the name |
 | `already_exists` | Unique name already taken | Choose another name, or reuse the existing one |
 | `managed_solution` | Add or remove against a managed solution | Use an unmanaged solution |
-| `response_too_large` | XML payload over the response cap. `details.sizeBytes`, `details.capBytes` | Narrow the request, or ask the person to raise the cap |
+| `invalid_cursor` | The cursor is unknown, expired, or belongs to another connection or tool | Start again from the first page |
 | `server_stopping` | The host is stopping; the call did not run | Wait for the person |
 | `dataverse_error` | The platform returned a fault. `details.errorCode` (hex string, for example `0x80040217`) and `details.message` | Report to the person |
 
-**Paging** (`query`, `list_solution_components`)
+**Paging.** Large results are always paged — never truncated, and never written to a file. Every tool whose result can grow pages the same way:
 
 | Input | Type | Notes |
 |---|---|---|
-| `page` | integer | Default 1 |
-| `pageSize` | integer | Default per tool; maximum is the host's max page size (default 500) |
-| `pagingCookie` | string | From the previous page; omit on page 1 |
+| `cursor` | string | Omit on the first call. On later calls pass the previous result's `nextCursor` with the same `connection`; other arguments are ignored |
+| `pageSize` | integer | First call only. Items per page; default per tool; maximum is the host's max page size (default 500). Ignored for XML payloads |
 
-The result carries `page`, `pageSize`, `moreRecords` and `pagingCookie` (`null` when there are no more records).
+Every paged result carries `nextCursor`, which is `null` when there is nothing more.
 
-**Truncation.** List results that would exceed the response cap are cut at a whole element and carry `"truncated": true`. XML payloads fail with `response_too_large` instead.
+- **Cursors are host-side handles**, opaque to the agent and bound to the connection, tool and arguments of the first call. Continuation pages run under that call's approval; they raise no new dialog.
+- **Pages respect the response cap** (default 1 MB). A page that would exceed it ends early at a whole item and the next page carries on. XML payloads are split into chunks of at most the cap, which the agent concatenates in order.
+- **One snapshot per paged call.** Record-backed tools page with Dataverse paging cookies. Metadata and XML results are read once, on the first call, and held in memory for the cursor's lifetime, so every page comes from the same snapshot. Nothing is written to disk.
+- **Cursors expire** after 10 minutes without use, when the connection's binding ends, or when the host stops. An expired or unknown cursor fails with `invalid_cursor`.
 
 **Schema notation.** Inputs are given as tables, outputs in TypeScript notation. They map to JSON Schema as follows: `T | null` → a type array including `"null"`; `?` → not listed in `required`; string literal unions → `enum`; `Guid` → `{ "type": "string", "format": "uuid" }`; `DateTime` → `{ "type": "string", "format": "date-time" }`. Input schemas set `additionalProperties: false`. Output schemas do not: fields may be added in later versions, but none is removed or renamed within a major version.
 
@@ -334,11 +337,8 @@ interface ToolError {
   };
 }
 
-interface PageInfo {
-  page: number;
-  pageSize: number;
-  moreRecords: boolean;
-  pagingCookie: string | null;
+interface Paged {
+  nextCursor: string | null;         // null when there is nothing more
 }
 
 interface ComponentType {
@@ -381,6 +381,7 @@ Example `inputSchema`, showing `connection` first and required:
 |---|---|---|
 | `list_connections` | Host | Connections bound to plugin tabs — the values accepted as `connection` |
 | `get_connection_info` | Read | One connection: organization, version, base language, user, dev-environment confirmation, settings |
+| `who_am_i` | Read | The connected user's ID, first name, last name and full name — for WIP naming |
 | `list_publishers` | Read | Publishers with prefix and option value prefix |
 | `list_solutions` | Read | Solutions with version, managed state and publisher; filterable |
 | `list_tables` | Read | Tables with logical name, display name, custom/managed flags; filterable |
@@ -389,9 +390,10 @@ Example `inputSchema`, showing `connection` first and required:
 | `get_option_sets` | Read | Global choices with values and labels |
 | `get_entity_ribbon` | Read | Full classic ribbon for a table |
 | `get_application_ribbon` | Read | Full classic application ribbon |
-| `query` | Read or Record-read | FetchXML, paged; tier depends on the tables queried |
+| `query` | Read | FetchXML, paged; flags queries that touch records |
 | `list_solution_components` | Read | Components in a solution, with type, ID and root behaviour; paged |
 | `get_component_state` | Read | Version and modified-on for row-backed components |
+| `get_required_components` | Read | What components require, and which solutions already hold each requirement |
 | `create_solution` | Write | Empty unmanaged solution |
 | `add_solution_components` | Write | Add existing components, no subcomponents, no required components |
 | `remove_solution_component` | Write | Remove a component from a solution (the component itself is kept) |
@@ -448,8 +450,11 @@ interface ConnectionInfo {
     version: string;                 // platform version, for example "9.2.x"
     baseLanguageCode: number;        // LCID
   };
-  user: UserRef;                     // the user the XrmToolBox connection runs as
+  user: UserRef;                     // the user the XrmToolBox connection runs as; full name only —
+                                     // first and last names come from who_am_i
   devEnvironmentConfirmed: boolean;
+  devEnvironmentScope: "once" | "session" | "environment" | "always" | null;
+  readApprovalScope: "session" | "environment" | "always" | null;  // null: every Read call prompts
   settings: {
     recordQueriesEnabled: boolean;   // per connection
     publisherCreationEnabled: boolean; // per connection
@@ -460,7 +465,32 @@ interface ConnectionInfo {
 }
 ```
 
+#### `who_am_i`
+
+The connected user's identity, read from Dataverse. XrmToolBox's connection object carries the user's ID and sign-in name but not their first and last names, so the plugin runs `WhoAmIRequest` and then reads the user's `systemuser` row. The agent uses the names for WIP solution naming ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)).
+
+| Input | Type | Required | Notes |
+|---|---|---|---|
+| `connection` | string | ✓ | |
+
+```ts
+interface WhoAmIResult {
+  userId: Guid;
+  businessUnitId: Guid;
+  organizationId: Guid;
+  firstName: string | null;          // systemuser.firstname
+  lastName: string | null;           // systemuser.lastname
+  fullName: string | null;           // systemuser.fullname, in the organization's name format
+  domainName: string | null;         // systemuser.domainname — the sign-in name
+  isApplicationUser: boolean;        // true for an application (service principal) user
+  impersonating: boolean;            // true when the XrmToolBox connection impersonates another user;
+                                     // every other field then describes the impersonated user
+}
+```
+
 #### `list_publishers`
+
+*Paged* — default page size 100.
 
 | Input | Type | Required | Notes |
 |---|---|---|---|
@@ -478,11 +508,13 @@ interface ListPublishersResult {
     isReadonly: boolean;             // system publishers
     description: string | null;
   }>;
-  truncated: boolean;
+  nextCursor: string | null;
 }
 ```
 
 #### `list_solutions`
+
+*Paged* — default page size 100.
 
 Completes solution handling on the MCP side: the agent finds transport solutions, WIP solutions, and the managed solutions a first-party app installed ([§9.3](#93-a-first-party-app-joins-the-solution)) on the same connection it shapes them through.
 
@@ -512,11 +544,13 @@ interface ListSolutionsResult {
     modifiedOn: DateTime;
     description: string | null;
   }>;                                // ordered by friendlyName
-  truncated: boolean;
+  nextCursor: string | null;
 }
 ```
 
 #### `list_tables`
+
+*Paged* — default page size 250.
 
 | Input | Type | Required | Notes |
 |---|---|---|---|
@@ -537,11 +571,13 @@ interface ListTablesResult {
     isCustomizable: boolean;
     isIntersect: boolean;
   }>;
-  truncated: boolean;
+  nextCursor: string | null;
 }
 ```
 
 #### `get_table_metadata`
+
+*Paged* over columns — default page size 100. `table` and `keys` come on the first page.
 
 | Input | Type | Required | Notes |
 |---|---|---|---|
@@ -566,9 +602,9 @@ interface TableMetadataResult {
     isManaged: boolean;
     isCustomizable: boolean;
   };
-  columns?: Column[];                // present when include has "columns"
-  keys?: AlternateKey[];             // present when include has "keys"
-  truncated: boolean;
+  columns?: Column[];                // present when include has "columns"; the paged items
+  keys?: AlternateKey[];             // present when include has "keys"; first page only
+  nextCursor: string | null;
 }
 
 interface Column {
@@ -605,6 +641,8 @@ interface AlternateKey {
 
 #### `get_relationships`
 
+*Paged* — default page size 100.
+
 | Input | Type | Required | Notes |
 |---|---|---|---|
 | `connection` | string | ✓ | |
@@ -615,7 +653,7 @@ interface AlternateKey {
 interface RelationshipsResult {
   logicalName: string;
   relationships: Array<OneToManyRelationship | ManyToManyRelationship>;
-  truncated: boolean;
+  nextCursor: string | null;
 }
 
 interface OneToManyRelationship {
@@ -657,6 +695,8 @@ interface ManyToManyRelationship {
 
 #### `get_option_sets`
 
+*Paged* — default page size 50.
+
 | Input | Type | Required | Notes |
 |---|---|---|---|
 | `connection` | string | ✓ | |
@@ -675,8 +715,8 @@ interface OptionSetsResult {
     isManaged: boolean;
     options: Array<{ value: number; label: string | null }> | null;  // null when includeOptions is false
   }>;
-  notFound: string[];                // requested names that do not exist
-  truncated: boolean;
+  notFound: string[];                // requested names that do not exist; first page only
+  nextCursor: string | null;
 }
 ```
 
@@ -700,12 +740,14 @@ Both ribbon tools return:
 interface RibbonResult {
   logicalName: string | null;        // null for the application ribbon
   location: "form" | "homepageGrid" | "subGrid" | "all" | null;  // null for the application ribbon
-  ribbonXml: string;                 // decompressed: RibbonDefinitions, CommandDefinitions, RuleDefinitions
-  sizeBytes: number;
+  ribbonXml: string;                 // this page's chunk of the decompressed XML
+                                     // (RibbonDefinitions, CommandDefinitions, RuleDefinitions)
+  sizeBytes: number;                 // size of the whole document
+  nextCursor: string | null;
 }
 ```
 
-These responses are large. Over the response cap they fail with `response_too_large`; they are never cut.
+*Paged* in chunks. Ribbon XML is large: each page's `ribbonXml` is the next part of one document, split at the response cap. The agent concatenates the pages in order; the document is complete when `nextCursor` is `null`.
 
 #### `query`
 
@@ -713,17 +755,15 @@ These responses are large. Over the response cap they fail with `response_too_la
 |---|---|---|---|
 | `connection` | string | ✓ | |
 | `fetchXml` | string | ✓ | `page`, `count` and `paging-cookie` attributes are set by the server and ignored if supplied |
-| `page` | integer | | [Paging](#62-conventions); default 1 |
-| `pageSize` | integer | | Default 50 |
-| `pagingCookie` | string | | From the previous page |
 | `includeFormattedValues` | boolean | | Default `true` |
 
+*Paged* — default page size 50.
+
 ```ts
-interface QueryResult extends PageInfo {
+interface QueryResult extends Paged {
   entityName: string;                // root entity of the FetchXML
-  tier: "read" | "recordRead";       // the tier the call was approved under
+  touchesRecords: boolean;           // true when a table outside the configuration allow-list is queried
   records: Array<Record<string, Value>>;
-  truncated: boolean;
 }
 
 type Value =
@@ -743,12 +783,9 @@ interface MoneyValue   { _money: number;    formatted?: string | null }
 
 ```json
 {
-  "page": 1,
-  "pageSize": 50,
-  "moreRecords": true,
-  "pagingCookie": "<cookie>",
+  "nextCursor": "<cursor>",
   "entityName": "systemform",
-  "tier": "read",
+  "touchesRecords": false,
   "records": [
     {
       "formid": "00000000-0000-0000-0000-000000000000",
@@ -756,16 +793,15 @@ interface MoneyValue   { _money: number;    formatted?: string | null }
       "type": { "_option": 2, "label": "Main" },
       "objecttypecode": "account"
     }
-  ],
-  "truncated": false
+  ]
 }
 ```
 
 Rules:
 
-- **Paging from the first release.** Development tables are expected to be small, but every query is paged and the agent continues with `pagingCookie` only when it needs more.
+- **Paging from the first release.** Development tables are expected to be small, but every query is paged and the agent continues with `nextCursor` only when it needs more.
 - **Explicit columns.** `<all-attributes />` is rejected with `invalid_argument`; the agent must name columns.
-- **Tier by table.** The root entity and every `link-entity` are checked against the configuration allow-list. All on the list → Read tier. Anything else → Record-read tier, or `tool_disabled` when record queries are switched off for the connection.
+- **Record detection.** The root entity and every `link-entity` are checked against the configuration allow-list. Anything outside it marks the query as touching records: the approval dialog and the log say so, and the call fails with `tool_disabled` when record queries are switched off for the connection. Approval is the same single Read approval as every other read ([§7](#7-authorization-model)).
 - **Values.** Columns without a value are omitted. Aliased values (link-entity columns) are keyed by the name the platform returns (`alias.column`) and serialized by the same rules, without the `AliasedValue` wrapper. `label`, `labels`, `name` and `formatted` are present only when `includeFormattedValues` is true.
 
 Configuration allow-list (v1): `publisher`, `solution`, `solutioncomponent`, `systemform`, `savedquery`, `sitemap`, `appmodule`, `appmodulecomponent`, `webresource`, `ribboncustomization`, `organization`, `workflow`, `customcontrol`, `environmentvariabledefinition`, `connectionreference`, `pluginassembly`, `sdkmessageprocessingstep`, `customapi`, `role`, `fieldsecurityprofile`. The entries from `workflow` onwards let the agent read the subtype and name columns that the segmentation map uses ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)).
@@ -779,12 +815,11 @@ Used after every add to compare intended against actual (R1); the comparison rea
 | `connection` | string | ✓ | |
 | `solutionUniqueName` | string | ✓ | Managed or unmanaged |
 | `componentTypes` | integer[] | | Only these component type codes |
-| `page` | integer | | [Paging](#62-conventions); default 1 |
-| `pageSize` | integer | | Default 250 |
-| `pagingCookie` | string | | From the previous page |
+
+*Paged* — default page size 250.
 
 ```ts
-interface SolutionComponentsResult extends PageInfo {
+interface SolutionComponentsResult extends Paged {
   solution: {
     solutionId: Guid;
     uniqueName: string;
@@ -800,7 +835,6 @@ interface SolutionComponentsResult extends PageInfo {
     rootSolutionComponentId: Guid | null;  // set for components added under a root, e.g. a column under its table
     isMetadata: boolean;
   }>;
-  truncated: boolean;
 }
 ```
 
@@ -826,6 +860,42 @@ interface ComponentStateResult {
 ```
 
 Table and column metadata carry no comparable row version; for those, the overwrite check falls back to a PAC re-export and diff.
+
+#### `get_required_components`
+
+What the given components require, and where each requirement already lives — the check behind W6 and X5 before close-out ([§9.5](#95-transport-solutions-and-segmented-wip-solutions), [§9.6](#96-issues-common-to-every-close-out-strategy)). Runs `RetrieveRequiredComponentsRequest` for each component, then reads `solutioncomponent` for the solutions holding each required component.
+
+*Paged* — default page size 250; one item per dependency.
+
+| Input | Type | Required | Notes |
+|---|---|---|---|
+| `connection` | string | ✓ | |
+| `components` | `ComponentSelector[]` | ✓ | 1–50 entries; the selector of [`add_solution_components`](#add_solution_components) |
+
+```ts
+interface RequiredComponentsResult extends Paged {
+  dependencies: Array<{
+    dependent: {                     // one of the requested components
+      type: number;
+      id: Guid;
+      name: string | null;
+    };
+    required: {
+      componentType: ComponentType;
+      objectId: Guid;
+      name: string | null;
+      isManaged: boolean | null;     // null when the platform does not report it
+      solutions: Array<{             // solutions holding it, excluding the default solution;
+        uniqueName: string;          // empty when it is in none
+        isManaged: boolean;
+      }>;
+    };
+    dependencyType: "solutionInternal" | "published" | "unpublished";
+  }>;
+}
+```
+
+The agent judges each requirement; the plugin does not. A requirement is in place when it is managed and comes from an installed app, when one of its solutions is a transport solution earlier in the order, or when it is in a WIP of the same story for an earlier group. Anything else — above all a requirement held only by a later transport group, or by no solution — is reported to the person (W6, X5).
 
 ### 6.6 Write tools
 
@@ -967,20 +1037,47 @@ Disabled unless the user enables it for the connection. When disabled, the tool 
 
 The plugin's approval is the authoritative gate. The agent client's own tool-approval prompt is a convenience and is not relied on.
 
-| Tier | Tools | Allow once | Allow for session | Notes |
-|---|---|---|---|---|
-| **Host** | `list_connections` | — | — | No dialog; logged on every tab (R2) |
-| **Read** | Connection info, publishers, solutions, metadata, ribbons, configuration queries, component state, solution components | ✓ | ✓ (per tool) | |
-| **Record-read** | `query` touching non-configuration tables | ✓ | ✓ (per tool) | Record queries can be switched off per connection |
-| **Write** | `create_solution`, `add_solution_components`, `remove_solution_component` | ✓ | ✗ | Requires dev-environment confirmation |
-| **Publisher** | `create_publisher` | ✓ with typed confirmation | ✗ | Disabled by default (R3) |
+| Tier | Tools | Approval | Notes |
+|---|---|---|---|
+| **Host** | `list_connections` | None | No dialog; logged on every tab (R2) |
+| **Read** | Every read tool — connection info, identity, publishers, solutions, metadata, ribbons, queries (configuration and records), component state, solution components, required components | One prompt for all reads, scoped *once*, *session*, *environment* or *always* | Record queries can be switched off per connection |
+| **Write** | `create_solution`, `add_solution_components`, `remove_solution_component` | Once, per call | Requires dev-environment confirmation |
+| **Publisher** | `create_publisher` | Once, with typed confirmation | Disabled by default (R3) |
 
-Rules:
+### Read approval
 
-- **Per connection.** Each tab approves only the calls to its own connection; allowances granted in one tab never cover another connection (C8).
+A single approval covers every Read tool; there is no per-tool allowance. The dialog offers four scopes:
+
+| Scope | Covers | Ends |
+|---|---|---|
+| **Once** | This call and its continuation pages | When the call completes |
+| **Session** | Every Read call to this organization | When the host stops, or **Revoke** in that tab |
+| **Environment** | Every Read call to this organization, in this and later sessions | **Revoke** in that tab, or in settings |
+| **Always** | Every Read call to every organization, including ones bound later | Settings |
+
+> [!NOTE]
+> **Recommended:** approve reads **per environment** for development environments and **per session** for production and other non-development environments. *Always* removes the person from reads everywhere, including environments bound later; use it only with a reason.
+
+### Dev-environment confirmation
+
+The confirmation that lets Write tools run on a connection ([§5](#host)) has the same four scopes:
+
+| Scope | Applies to | Ends |
+|---|---|---|
+| **Once** | This binding | When the tab closes or changes connection |
+| **Session** | This organization | When the host stops |
+| **Environment** | This organization, in this and later sessions | Cleared in that tab or in settings |
+| **Always** | Every organization — the guard is off | Cleared in settings |
+
+*Always* is set only in settings, never from the binding prompt. It carries a warning and is shown on every tab while it is on. Write and Publisher calls still need their own per-call approval.
+
+Environment and always scopes persist between sessions in XrmToolBox's plugin settings, which record only organization IDs, friendly names and scopes — no tokens, arguments or results.
+
+### Rules
+
+- **Scoped by organization.** Session and environment scopes belong to an organization, not to a tab; a tab that rebinds to the same organization finds them in place (C8).
 - **Deny is a normal result.** The agent receives a tool error, `denied_by_user` or `denied_no_response`, and must not retry the same call without new instructions from the person.
-- **Session allowances end** when the host stops, the connection's binding ends (tab closed or connection changed), or the user clicks **Revoke all** in that tab.
-- **Arguments shown verbatim.** The dialog shows the full arguments (FetchXML pretty-printed, component lists resolved to names). The agent-supplied `reason`, if present, is shown in a separate box labelled *Agent-supplied — not verified* (R8).
+- **Arguments shown verbatim.** The dialog shows the full arguments (FetchXML pretty-printed, component lists resolved to names) and flags a query that touches records. The agent-supplied `reason`, if present, is shown in a separate box labelled *Agent-supplied — not verified* (R8).
 - **One dialog per call.** Concurrent calls to one connection queue; the queue length is visible in its tab.
 
 ---
@@ -995,10 +1092,10 @@ Each tab shows its own connection on top and the shared host below it.
 ┌─ Agent Companion MCP ─────────────────────────────────────────────┐
 │ This tab   : [ConnectionName] → [ClientName] DEV                  │
 │              https://<org>.crm.dynamics.com                       │
-│ Dev env    : [x] I confirm this is a development environment      │
+│ Dev env    : Confirmed — this environment, remembered  [Clear]    │
 │ Settings   : [x] Record queries   [ ] Publisher creation          │
-│ Session allowances: get_table_metadata, query (config)            │
-│                                                     [Revoke all]  │
+│ Reads      : Approved — this environment, remembered              │
+│                                                      [Revoke]     │
 ├─ Host — shared by all tabs ───────────────────────────────────────┤
 │ Server     : ● Running   http://127.0.0.1:47321/mcp               │
 │ Token      : ●●●●●●●●●●●●●●●●  [Copy] [Regenerate]                │
@@ -1009,10 +1106,10 @@ Each tab shows its own connection on top and the shared host below it.
 ├─ Call log — this connection ──────────────────────────────────────┤
 │ Time     Tool                     Tier     Result     Duration    │
 │ 14:02:11 list_publishers          Read     Allowed     0.3 s      │
-│ 14:02:40 get_table_metadata       Read     Session     1.1 s      │
+│ 14:02:40 get_table_metadata       Read     Env         1.1 s      │
 │ 14:03:05 create_solution          Write    Allowed     0.8 s      │
 │ 14:03:31 add_solution_components  Write    Allowed  ⚠  2.4 s      │
-│ 14:04:02 query (records)          Record   Denied        —        │
+│ 14:04:02 query (records)          Read     Denied        —        │
 ├─ Host log ────────────────────────────────────────────────────────┤
 │ 14:01:58 list_connections                  2 bound                │
 │                                                                   │
@@ -1020,7 +1117,7 @@ Each tab shows its own connection on top and the shared host below it.
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-`⚠` marks a call that returned unexpected components or was truncated. An unbound tab shows only the host section and a **Connect** prompt.
+`⚠` marks a call that returned unexpected components. An unbound tab shows only the host section and a **Connect** prompt.
 
 ### 8.2 Approval dialog
 
@@ -1045,7 +1142,7 @@ Each tab shows its own connection on top and the shared host below it.
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-For Read and Record-read calls the dialog adds **Allow for this session**. The dialog is owned by the XrmToolBox main window, so it appears whichever tab is active (C9).
+For Read calls the dialog offers **Allow once**, **Allow for this session** and **Allow for this environment**, flags a query that touches records, and shows the recommended scope for the environment ([§7](#7-authorization-model)). *Always* is set only in settings. The dialog is owned by the XrmToolBox main window, so it appears whichever tab is active (C9).
 
 ### 8.3 Publisher creation dialog
 
@@ -1082,7 +1179,7 @@ For Read and Record-read calls the dialog adds **Allow for this session**. The d
 │ Result                                                              │
 │   added 3 · unexpected 1                                            │
 │   ⚠ unexpected: Relationship [prefix]_account_contact               │
-│ Response size 2 KB · not truncated                                  │
+│ Response size 2 KB · 1 page                                         │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1151,7 +1248,7 @@ Where the project uses segmented transport solutions ([§9.5](#95-transport-solu
 
 1. Discover the components the story touches (metadata, queries, ribbon reads).
 2. Classify each with the project's segmentation map, and check whether it already has a transport home (W1, W2). Check for overlap with other open WIP solutions (W7).
-3. `create_solution` once for each transport group the story touches, named by convention (Q1) and under the destination's publisher (W3), after `list_solutions` confirms the names are free.
+3. `create_solution` once for each transport group the story touches, named `<initials>_Agent_WIP_<work item id>_<Group>` with initials from `who_am_i` ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)) and under the destination's publisher (W3), after `list_solutions` confirms the names are free.
 4. Add each component to its group's WIP — Path A or Path B per the skill — then `list_solution_components` on each WIP (R1).
 5. `pac solution export` and `pac solution unpack` for each WIP; record a baseline of `get_component_state` for every row-backed component.
 6. Edit locally; run validation scripts.
@@ -1190,20 +1287,32 @@ Projects vary — some import Security directly after Base. The fixed part is th
 
 **Segmentation map.** The project keeps a map next to its solutions in source control. It maps each component type to a transport group, and for some types it maps by subtype as well. Subtype rules route business rules and business process flows (workflow categories) to Base instead of Processes, and dashboards (form types) to Apps instead of Base. Component types whose code varies between environments (codes of 10000 and above) are mapped by name. Where a promotion pipeline is used, it validates each WIP against this map before copying it ([§9.7](#97-close-out-strategies), A). Without one, the map still governs placement.
 
-**Consequence: several WIP solutions per work item.** A WIP solution feeds exactly one transport solution (R10). A story that touches a column, a form, a web resource and a plug-in step therefore needs three WIPs — Base, Resources and Assemblies — each named for the story and its group (Q1). Only the groups the story touches get a WIP.
+**Consequence: several WIP solutions per work item.** A WIP solution feeds exactly one transport solution (R10). A story that touches a column, a form, a web resource and a plug-in step therefore needs three WIPs — Base, Resources and Assemblies — each named for the story and its group. Only the groups the story touches get a WIP.
+
+**WIP naming.** `<initials>_Agent_WIP_<work item id>_<Group>` — for example `[XY]_Agent_WIP_1234_Base`.
+
+| Part | Rule |
+|---|---|
+| `<initials>` | First letter of the first name and first letter of the last name, from `who_am_i` on the connection where the WIP is created. Uppercase ASCII: accented letters lose the accent; any other character is dropped |
+| `Agent_WIP` | Literal. Marks a WIP shaped by an agent through the plugin, as distinct from WIPs people create by hand |
+| `<work item id>` | The work item's numeric ID |
+| `<Group>` | The transport group's name in the segmentation map — `Resources`, `Base`, `Assemblies`, `Processes`, `Apps`, `Security`, or the map's name for the shared-library solution |
+| Friendly name | The unique name with each underscore replaced by a space — `[XY] Agent WIP 1234 Base` |
+
+The agent stops and asks the person for initials when `firstName` or `lastName` is empty, when `isApplicationUser` is true, or when `impersonating` is true — the WIP belongs to the person doing the work, not to the identity the connection runs as. The name must also pass `create_solution`'s rules (letters, digits and underscores, starting with a letter, at most 65 characters) and W4. Before creating, `list_solutions` confirms the name is free; a clash, such as two people with the same initials on the same work item and group, is resolved by the person.
 
 | # | WIP rule | Why |
 |---|---|---|
 | W1 | **One group per WIP.** Before adding, the agent classifies every component with the project's map, including subtype rules, and adds it to the WIP for that group | A promotion validator rejects mixed WIPs; a component in the wrong group lands in the wrong transport solution, which is costly to undo (X4) |
 | W2 | **A component already in a transport solution stays in that group**, even if the map has changed since. The agent looks for an existing transport home in `solutioncomponent` first | Each component has exactly one transport home |
 | W3 | **Same publisher as the destination.** A WIP uses the publisher of the transport solution it feeds — the project publisher, or the shared library's publisher for that solution | Promotion validation requires matching prefixes; components created while working in the WIP take its publisher's prefix |
-| W4 | **WIP names never start with a protected prefix.** A promotion pipeline can refuse WIP names that start with the project's, a partner's or the platform's prefix, so that no transport solution is promoted as if it were WIP | A transport solution promoted as WIP would be copied into another transport solution and then deleted from the build environment |
+| W4 | **WIP names never start with a protected prefix.** A promotion pipeline can refuse WIP names that start with the project's, a partner's or the platform's prefix, so that no transport solution is promoted as if it were WIP. Leading with initials makes a clash unlikely, but the agent still checks the name against the project's protected prefixes and asks the person if one matches | A transport solution promoted as WIP would be copied into another transport solution and then deleted from the build environment |
 | W5 | **Work in transport order.** Create, import and close out a story's WIPs in transport order — Resources before Base, Base before Assemblies, and so on | Each WIP excludes required components (R1), so the target must already hold what it depends on |
-| W6 | **Dependencies point down the order.** No component may require one in a later group. Where one does — for example a Base form embedding a canvas app that the map places in Apps — stop and ask the person. The fix is a placement decision, not a workaround | A dependency pointing up breaks the import of the earlier solution in every downstream environment |
+| W6 | **Dependencies point down the order.** No component may require one in a later group. Where one does — for example a Base form embedding a canvas app that the map places in Apps — stop and ask the person. `get_required_components` finds these. The fix is a placement decision, not a workaround | A dependency pointing up breaks the import of the earlier solution in every downstream environment |
 | W7 | **Check overlap with other open WIPs.** Before adding a whole-document component (form, view, sitemap, web resource, workflow, app module, table), the agent queries `solutioncomponent` for the same object in other WIP solutions and reports any overlap | Two stories editing one document ship each other's in-flight changes (X1) |
 | W8 | **Never in a WIP:** record creation and update rules and their generated cloud flows; managed tables with all subcomponents (also R1); components carrying another publisher's prefix | Known managed-deployment failures; validator rejections; layering |
 
-How the plugin supports this: `list_solutions` finds open WIPs and the transport solutions with their publishers. `query` over `solutioncomponent` finds a component's existing home and any overlapping WIPs. `query` over `systemform` and `workflow` reads the subtype columns the map uses. `create_solution` and `add_solution_components` shape one WIP per group. The map stays agent-side — the skill reads it from the project repository; the plugin does not interpret it (Q7).
+How the plugin supports this: `list_solutions` finds open WIPs and the transport solutions with their publishers. `query` over `solutioncomponent` finds a component's existing home and any overlapping WIPs. `query` over `systemform` and `workflow` reads the subtype columns the map uses. `get_required_components` checks dependencies against the order. `create_solution` and `add_solution_components` shape one WIP per group. The plugin neither reads, tracks nor enforces the segmentation map: placement is the agent's responsibility, guided by its skill.
 
 ### 9.6 Issues common to every close-out strategy
 
@@ -1213,13 +1322,15 @@ How the plugin supports this: `list_solutions` finds open WIPs and the transport
 | X2 | **A WIP isolates only what is not yet in a transport solution.** Where transport solutions are exported from the development environment (strategies B, C, and D sourced from development), a component already in one ships on the next export whatever its WIP state | The WIP holds back new components only; edits to existing ones go out with the next extract | Use a build environment as the source of transport (A) where isolation matters; otherwise treat every edit to an existing component as released at the next extract |
 | X3 | **Deletions are not carried.** A WIP carries additions and updates only. Deleting a column, view, web resource or plug-in step in development is reflected by no WIP | Deleted components survive in the build environment or transport solution and are redeployed | A deletion is a separate, person-run task in each environment that transport is extracted from, followed by the managed upgrade that removes it downstream. The plugin does not delete ([§3](#3-scope)) |
 | X4 | **Moving a component between transport solutions.** Correcting a placement means removing it from one managed solution and adding it to another | If the losing solution is upgraded first, the platform deletes the component downstream — for tables and columns, with their data | Classify right the first time (W1, W2). When a move cannot be avoided, the receiving solution must be imported before the losing one is upgraded — staged import with reverse-order apply, or a dedicated release a person plans |
-| X5 | **Required components are excluded (R1).** Everything a WIP depends on must already exist where the WIP lands | The import into the build environment, or a pipeline's preflight, fails with a missing dependency | W5 ordering; before close-out, check that each dependency sits in an earlier transport solution or an earlier WIP of the same story (Q6) |
+| X5 | **Required components are excluded (R1).** Everything a WIP depends on must already exist where the WIP lands | The import into the build environment, or a pipeline's preflight, fails with a missing dependency | W5 ordering; before close-out, `get_required_components` shows whether each dependency sits in an earlier transport solution or an earlier WIP of the same story |
 | X6 | **Table-level payload.** A table added without subcomponents still exports its table-level properties, and possibly its ribbon diff (spike S2) | An unmanaged import can overwrite the table's properties and ribbon diff with development's in-flight state | Confirm in S2; treat a table in a WIP as a whole document for W7 |
 | X7 | **Connection references and environment variables.** Each developer's flows can create their own connection reference, and environment variable current values travel with the WIP | Duplicate references downstream; development values carried forward | Reuse the project's existing connection references; deployment settings set values per environment; a promotion pipeline may consolidate references |
 | X8 | **Partial close-out.** A story's WIPs close out one at a time | A build in between carries half a story — Base without the app that uses it | Close out all of a story's WIPs together, in order; make sure no automated deployment runs between them, or accept the intermediate state knowingly |
 | X9 | **Leftover WIP solutions.** Unmanaged WIPs in development — and, for C, in source control — outlive their story | Stale WIPs distort overlap checks and clutter pipeline pickers | Delete each WIP at close-out (`pac solution delete` keeps components); `list_solutions` finds stragglers |
 
 ### 9.7 Close-out strategies
+
+**v1 support.** The v1 skills support strategies **A** and **B**. Strategies C and D are recorded here for a later assessment with teams that use them; until then their considerations are analysis, not experience-based recommendations.
 
 |  | A — Promote to a build environment | B — Add to transport solutions in development | C — Add to Git-linked solutions | D — Add to solutions deployed by Power Platform pipelines |
 |---|---|---|---|---|
@@ -1238,7 +1349,7 @@ A promotion pipeline exports a WIP unmanaged from development and validates it a
 | A1 | **The copy step is a third add path.** It runs outside the plugin and its approvals. Whether it preserves root component behaviour and never adds required components or subcomponents is confirmed in spike S7. Until then, R1's check runs after every promotion, against the build environment |
 | A2 | **Bind the build environment read-only.** The agent reads it through a second plugin tab that is never confirmed as development, so Write tools refuse there ([§5](#host)). Only the pipeline changes it |
 | A3 | **One promotion per WIP, in transport order** (W5). Each promotion commits, and the commit may trigger a build and a test deployment before the story's next WIP is promoted (X8) |
-| A4 | **Missing dependencies fail the import into build** (X5). The usual cause is a column or web resource created in development but never placed in a WIP. Check required components before requesting the promotion |
+| A4 | **Missing dependencies fail the import into build** (X5). The usual cause is a column or web resource created in development but never placed in a WIP. Check with `get_required_components` before requesting the promotion |
 | A5 | **Deletions** are made by a person in the build environment (X3); the promotion pipeline never deletes |
 | A6 | **The development WIP survives promotion.** Only the build copy is deleted; the development WIP is deleted at close-out (X9) |
 | A7 | **Promotion validation is the backstop, not the plan.** The pipeline rejects wrong groups, wrong prefixes and managed tables with all subcomponents only after the work is done. The agent applies W1–W8 while shaping the WIP so that promotion passes the first time |
@@ -1255,6 +1366,8 @@ Close-out adds the WIP's components to the transport solution in development (Pa
 
 #### C — WIP until its components are added to Git-linked solutions
 
+*Not supported by the v1 skills.*
+
 Dataverse Git integration binds either a whole environment or individual solutions to a repository folder, and commits from the maker portal in the YAML source layout[^2].
 
 | # | Consideration |
@@ -1267,6 +1380,8 @@ Dataverse Git integration binds either a whole environment or individual solutio
 | C6 | **Managed environments.** Git integration requires the development and target environments to be managed environments[^4] |
 
 #### D — WIP until its components are added to solutions deployed by Power Platform pipelines
+
+*Not supported by the v1 skills.*
 
 In-product pipelines export a solution from a source environment when a maker requests a deployment, and import that same artifact, managed, into each stage in turn[^3].
 
@@ -1301,9 +1416,10 @@ In-product pipelines export a solution from a source environment when a maker re
 |---|---|
 | Host lifecycle (first instance starts, last stops, port in use, stop/start from any instance) | Unit tests with fake instances and a fake listener |
 | Connection registry (bind, duplicate by connection ID, duplicate by organization ID, unbind on close and on change, routing, unknown connection) | Unit tests with fake instances |
-| Tier classifier (tool + FetchXML tables → tier) | Unit tests over FetchXML samples, including link-entities and aliases |
+| Record-query detector (FetchXML tables against the configuration allow-list) | Unit tests over FetchXML samples, including link-entities and aliases |
 | FetchXML rewriting (page, count, cookie; reject `all-attributes`) | Unit tests |
-| Approval policy (once, session, revoke, timeout, connection change, per-connection isolation) | Unit tests with a fake clock and fake UI |
+| Approval policy (read scopes and dev-confirmation scopes — once, session, environment, always; persistence; revoke; timeout; per-organization isolation) | Unit tests with a fake clock, fake UI and fake settings store |
+| Paging (cursor binding to connection, tool and arguments; cap-limited pages; XML chunking; snapshot consistency; expiry) | Unit tests with recorded fixtures and a fake clock |
 | Add-components guard (resolution before approval, fixed flags, stop on first failure, unexpected-component detection) | Unit tests with mocked `IOrganizationService` |
 | Serializers (records, metadata projections, ribbon decompression) | Unit tests with recorded fixtures — synthetic, never client data |
 | Tool schemas (every `inputSchema` has `connection` first and required, except `list_connections`; outputs validate against `outputSchema`) | Unit tests over `tools/list` and recorded results |
@@ -1328,26 +1444,27 @@ Short, throwaway investigations against a development environment. Each produces
 | S5 | Which of the Read tools does the Microsoft Dataverse MCP server already provide, and could it replace any of them? Requires a dated, sourced check. | Overlap table; decision recorded |
 | S6 | How does XrmToolBox host several tabs of one plugin? Is a static singleton shared across tabs (one assembly load per process)? Which hooks report a connection being set and changed, how does a plugin close its own tab, and how does it re-open the connection dialog? Is the connection ID stable across restarts, and can a dialog be owned by the main window? | Two tabs bound to different connections share one host; a duplicate is detected and both dialog actions work; closing tabs in any order leaves the registry correct |
 | S7 | Does the promotion pipeline's component copy preserve each component's root component behaviour, and does it ever add required components or subcomponents? | `list_solution_components` on the build environment before and after promoting a WIP holding a metadata-only table, a column, a form and a web resource matches what was intended |
-| S8 | With Dataverse Git integration, does environment binding commit WIP solutions as solutions in their own right, and can an unbound WIP hold objects of solutions bound under solution binding? | Documented behaviour, and the recommended binding for projects that use WIP solutions |
+| S8 | *Deferred with strategy C.* With Dataverse Git integration, does environment binding commit WIP solutions as solutions in their own right, and can an unbound WIP hold objects of solutions bound under solution binding? | Documented behaviour, and the recommended binding for projects that use WIP solutions |
 
 ### Phase 1 — Host, connections, approvals and log
 
 - Singleton host: start with the first instance, stop with the last, port-in-use handling, shared token and limits.
 - Connection registry: binding, the *Connection already active* dialog, unbinding on close and change, routing by `connection`.
 - Main panel, per-connection dev-environment confirmation and settings.
-- Approval queue and dialogs (Read and Write tiers), session allowances, revoke, timeout — per connection.
+- Approval queue and dialogs (Read and Write tiers); read-approval and dev-confirmation scopes with their persistence; revoke; timeout.
 - Call log, host log and log detail; export to a user-chosen folder.
 - Error model and result envelope ([§6.2](#62-conventions)).
-- Tools: `list_connections`, `get_connection_info`, `list_publishers`.
+- Tools: `list_connections`, `get_connection_info`, `who_am_i`, `list_publishers`.
 
-**Exit:** with two tabs on different connections, `list_connections` returns both and calls route to the right tab; a third tab on an already bound connection gets the dialog and both actions work; denial, timeout and unknown connection reach the agent as tool errors; closing or changing a tab's connection revokes its allowances.
+**Exit:** with two tabs on different connections, `list_connections` returns both and calls route to the right tab; a third tab on an already bound connection gets the dialog and both actions work; denial, timeout and unknown connection reach the agent as tool errors; a once-scoped approval ends with its call, a session scope ends with the host, and Revoke clears environment scopes.
 
 ### Phase 2 — Discovery
 
 - `list_solutions`, `list_tables`, `get_table_metadata`, `get_relationships`, `get_option_sets`.
-- `query` with paging, tier classification, response cap; Record-read tier and its per-connection switch.
+- Cursor paging for every list and XML tool, within the response cap.
+- `query` with record-query detection and its per-connection switch.
 - `get_entity_ribbon`, `get_application_ribbon`.
-- `list_solution_components`, `get_component_state`.
+- `list_solution_components`, `get_component_state`, `get_required_components`.
 
 **Exit:** an agent can find the solutions in an environment, describe `account` (columns, relationships, forms, views, ribbon) and page through a small record set, with every call approved and logged.
 
@@ -1365,7 +1482,7 @@ Agent-side work that makes the local edits safe. Skills decide between Path A an
 | Deliverable | Purpose |
 |---|---|
 | Cold-start skill | Connection choice, PAC profile match, publisher choice, base solutions, first components |
-| WIP story skill | Classify by the segmentation map, create one WIP per group, add, verify, export, baseline, edit, overwrite check, import in transport order, close-out per strategy ([§9.7](#97-close-out-strategies)) |
+| WIP story skill | Classify by the segmentation map, create one WIP per group, add, verify, export, baseline, edit, overwrite check, import in transport order, close-out by strategy A or B ([§9.7](#97-close-out-strategies)) |
 | Component-adding guidance | Path A vs Path B per type; R1 and R10 restated; W1–W8 |
 | Overlap and dependency checks | W6, W7 and X5 before close-out: overlapping open WIPs, dependencies pointing up the order, dependencies not yet placed |
 | Validation scripts | Schema check of `Customizations.xml` and entity files against the customization XSD; form checks (controls bound to existing columns, unique control IDs, GUID format); ribbon checks (referenced commands, rules and web resources exist) |
@@ -1377,7 +1494,7 @@ Agent-side work that makes the local edits safe. Skills decide between Path A an
 
 - Tooling README with installation, client configuration, tool table, the one-tab-per-connection behaviour, and settings.
 - CI workflow, NuGet package, Tool Library listing.
-- Repository updates that sit outside this plugin are listed under [Open questions](#13-open-questions); they need an editorial decision.
+- Repository updates outside this plugin: the instructions file's tooling-conventions section, the codebase map, the root README and the matrix's build-backlog row already describe the plugin as specified, not built — change them to describe it as shipped. Add the column-3 guide changes then, not before: registering the plugin's MCP endpoint in [C.3 §7](../../workflows/3-coding-assistants/c.3-project-setup.md#7-wire-up-mcp-and-finish-grounding), and the segmented WIP loop where [4.3](../../workflows/3-coding-assistants/4.3-implementation.md) covers solution changes. Adding a guide also updates the matrix, the root README table and the column README together.
 
 **Exit:** installable from the Tool Library; README matches the shipped tool surface.
 
@@ -1394,7 +1511,8 @@ Agent-side work that makes the local edits safe. Skills decide between Path A an
 | Overlap with other open WIPs | Shared whole documents are sequenced or reviewed (W7, X1) |
 | Every Write approval | Connection, solution name, component list, fixed flags shown as OFF |
 | After every add | `list_solution_components` shows nothing unexpected (R1) |
-| Record-read approval | The tables and columns are needed for the task; no more |
+| Read approval scope | Per environment only for development environments; per session for production; *always* only with a reason ([§7](#7-authorization-model)) |
+| A query that touches records | The tables and columns are needed for the task; no more |
 | Before import | The overwrite check passed or a re-export was merged |
 | After import | Components behave as intended in the app; the WIP solution contains only what the story touched |
 | Ribbon changes | Button rules and commands reviewed against the base ribbon, not only the diff |
@@ -1404,16 +1522,20 @@ Agent-side work that makes the local edits safe. Skills decide between Path A an
 
 ## 13. Open questions
 
-| # | Question |
-|---|---|
-| Q1 | WIP solution naming convention — one per story per transport group, for example `WIP_<work item id>_<Group>`, never starting with a prefix a promotion pipeline protects (W4) — and friendly-name format |
-| Q2 | Should large payloads (ribbons) optionally be written to an exchange folder and returned as a path? This breaks if the agent runs in WSL or a container |
-| Q3 | Should the dev-environment confirmation be remembered per connection, or asked each time a tab binds? |
-| Q4 | Default for record queries: enabled, or off until enabled per connection? |
-| Q5 | Repository follow-ups outside the plugin — a tooling-conventions section for this plugin in the instructions file, and whether a workflow guide or matrix entry is needed. Both change shared documents and need an editorial decision |
-| Q6 | Add a Read tool for required components (`RetrieveRequiredComponentsRequest`) so the agent can check before close-out that every dependency sits in an earlier transport solution or an earlier WIP (W6, X5)? It is small and read-only, and it turns a late import or preflight failure into an early check |
-| Q7 | Should `add_solution_components` accept the project's segmentation map and refuse components outside the WIP's group? v1 keeps the map agent-side. Enforcing it in the plugin duplicates a promotion pipeline's validation, but would also cover strategies B to D, which have none |
-| Q8 | Which close-out strategies ([§9.7](#97-close-out-strategies)) do the v1 skills support? A and B match existing deployment pipeline templates; C needs spike S8; D needs a person-planned process for component moves (X4) |
+None open.
+
+### Resolved
+
+| # | Decision | Applied in |
+|---|---|---|
+| Q1 | WIP friendly name is the unique name with each underscore replaced by a space | [§9.5](#95-transport-solutions-and-segmented-wip-solutions) |
+| Q2 | No exchange files: large payloads are always paged | [§6.2](#62-conventions) |
+| Q3 | Dev-environment confirmation scopes: once, session, environment, always | [§7](#7-authorization-model) |
+| Q4 | One approval prompt for all reads, scoped once, session, environment or always; recommended per environment for development and per session for production | [§7](#7-authorization-model) |
+| Q6 | `get_required_components` added | [§6.5](#65-read-tools) |
+| Q7 | The plugin does not enforce or track the segmentation map; the agent does, with skill guidance | [§9.5](#95-transport-solutions-and-segmented-wip-solutions) |
+| Q5 | Repository follow-ups made with the spec: a tooling-conventions section in the instructions file, the codebase map, the root README's repository map, and a build-backlog row in the matrix. Workflow guides change at release, when the plugin is usable | [Phase 5](#phase-5--release) |
+| Q8 | v1 skills support close-out strategies A and B; C and D are assessed later with teams that use them | [§9.7](#97-close-out-strategies) |
 
 ---
 
@@ -1427,4 +1549,4 @@ Agent-side work that makes the local edits safe. Skills decide between Path A an
 
 [^4]: Microsoft Learn — *Connect to Azure DevOps* (Dataverse Git integration), <https://learn.microsoft.com/power-platform/alm/git-integration/connecting-to-azure-devops> (checked 2026-10-29). Supports: development and target environments must be managed environments.
 
-SDK message names and behaviours used in this spec (`AddSolutionComponentRequest`, `RemoveSolutionComponentRequest`, `RetrieveEntityRibbonRequest`, `RetrieveApplicationRibbonRequest`, root component behaviour values, component type codes) are from working knowledge and are confirmed in spikes S2 and S3 before implementation. MCP protocol details (`outputSchema`, `structuredContent`, `isError`) are confirmed in spikes S1 and S4; XrmToolBox multi-tab and connection-handling behaviour in spike S6. The transport-solution order, segmentation map and promotion pipeline in [§9.5](#95-transport-solutions-and-segmented-wip-solutions)–[§9.7](#97-close-out-strategies) are generalized from existing delivery pipeline templates; the promotion copy step's behaviour is confirmed in spike S7.
+SDK message names and behaviours used in this spec (`WhoAmIRequest`, `RetrieveRequiredComponentsRequest`, `AddSolutionComponentRequest`, `RemoveSolutionComponentRequest`, `RetrieveEntityRibbonRequest`, `RetrieveApplicationRibbonRequest`, root component behaviour values, component type codes) are from working knowledge and are confirmed in spikes S2 and S3 before implementation. MCP protocol details (`outputSchema`, `structuredContent`, `isError`) are confirmed in spikes S1 and S4; XrmToolBox multi-tab and connection-handling behaviour in spike S6. The transport-solution order, segmentation map and promotion pipeline in [§9.5](#95-transport-solutions-and-segmented-wip-solutions)–[§9.7](#97-close-out-strategies) are generalized from existing delivery pipeline templates; the promotion copy step's behaviour is confirmed in spike S7.

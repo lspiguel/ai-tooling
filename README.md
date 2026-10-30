@@ -67,7 +67,7 @@ Categories 1 and 3 carry the developed workflows today; the rest are still in fl
 | [workflows/3-coding-assistants](workflows/3-coding-assistants/README.md) | Workflows using IDE-embedded and CLI/agentic coding AI (e.g., GitHub Copilot, Claude Code, Cursor) |
 | workflows/[2](workflows/2-desktop-automation-agents/) · [4](workflows/4-platform-embedded-copilots/) · [5](workflows/5-agent-builder-frameworks/) · [6](workflows/6-ai-augmented-specialty-tools/) | Pending: desktop automation agents, platform-embedded copilots, agent builder frameworks, AI-augmented specialty tools |
 | [docs/](docs/) | Reference documentation, including the [AI Tool Taxonomy](docs/ai-tool-taxonomy.md), architecture notes, and decision records |
-| [tooling/](tooling/) | Custom tooling, including the D365 Context Exporter |
+| [tooling/](tooling/) | Custom tooling: the [D365 Context Exporter](tooling/D365ContextExporter/README.md), and the [Agent Companion MCP](tooling/AgentCompanionMcp/SPEC.md) — a planned XrmToolBox plugin, specification only |
 | [skills/](skills/) | Reusable skills and reference guides for AI assistants |
 | [scripts/](scripts/) | Utility scripts supporting AI-assisted tasks and automation |
 | [INSTRUCTIONS.md](INSTRUCTIONS.md) | Conventions, hard rules, and working agreements for AI tools contributing to this repository |

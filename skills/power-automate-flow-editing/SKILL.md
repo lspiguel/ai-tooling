@@ -37,11 +37,13 @@ The full option landscape, including the direct path and why it exists, is in [d
 | The solution is a **WIP solution**, not the delivery solution | Ask the user | Keeps the blast radius to the flow being edited |
 | The flow is **not** in "My Flows" | Maker portal | Non-solution flows have no solution to export |
 
-If the user has no WIP solution yet, have them create one in the maker portal, then add the flow:
+If the user has no WIP solution yet, have them create one in the maker portal, then add the flow on its own:
 
 ```powershell
-pac solution add-solution-component --solutionUniqueName <wip_unique_name> --component <flow-guid> --componentType 29 --AddRequiredComponents
+pac solution add-solution-component --solutionUniqueName <wip_unique_name> --component <flow-guid> --componentType 29
 ```
+
+**Never pass `--AddRequiredComponents`.** It pulls the flow's tables, connection references and other dependencies into the WIP. Those already live in other solutions; carrying them along bloats the solution and can create layering problems downstream that cannot be undone. Where the project splits its solutions by component type, the flow's WIP feeds the solution that holds processes, so it contains flows only — plus a connection reference the flow is introducing.
 
 `29` is the Workflow component type. Other component type values are in the [solutioncomponent table reference](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/solutioncomponent).
 
