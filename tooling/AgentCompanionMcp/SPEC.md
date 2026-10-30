@@ -1565,7 +1565,7 @@ Short, throwaway investigations against a development environment. Each produces
 - Dual-era MCP layer ([§6.1](#61-protocol-surface)), including handshake sessions.
 - Connection registry: synchronous claim, binding, the *Connection already active* dialog, unbinding on close and change, routing by `connection`.
 - Main panel, per-connection dev-environment confirmation and settings.
-- Approval queue and dialogs (Read and Write tiers); read-approval and dev-confirmation scopes with their persistence; revoke; timeout.
+- Approval queue and dialogs (Read and Write tiers); read-approval and dev-confirmation scopes with their persistence; revoke; timeout. Keep every grant in one listable approval store, and build the token as one self-contained control, so that Phase 6 fits without rework ([Phase 6](#phase-6--planned-enhancements)).
 - Call log and host log in the line-pair format ([§8.6](#86-call-log-format)), log detail, and **Save as…** to a text file.
 - Error model and result envelope ([§6.2](#62-conventions)).
 - Tools: `list_connections`, `get_connection_info`, `who_am_i`, `list_publishers`.
@@ -1612,6 +1612,18 @@ Agent-side work that makes the local edits safe. Skills decide between Path A an
 - Repository updates outside this plugin: the instructions file's tooling-conventions section, the codebase map, the root README and the matrix's build-backlog row already describe the plugin as specified, not built — change them to describe it as shipped. Add the column-3 guide changes then, not before: registering the plugin's MCP endpoint in [C.3 §7](../../workflows/3-coding-assistants/c.3-project-setup.md#7-wire-up-mcp-and-finish-grounding), and the segmented WIP loop where [4.3](../../workflows/3-coding-assistants/4.3-implementation.md) covers solution changes. Adding a guide also updates the matrix, the root README table and the column README together.
 
 **Exit:** installable from the Tool Library; README matches the shipped tool surface.
+
+### Phase 6 — Planned enhancements
+
+> [!NOTE]
+> **Not to be built before release.** Phase 6 starts only after Phase 5 has shipped and feedback from real use has been reviewed, and that feedback may reshape or drop these items. They are listed now so that Phases 1 to 5 leave room for them, without building them.
+
+| Enhancement | Behaviour | What v1 does to leave room |
+|---|---|---|
+| **Active Approvals** | A button on the main panel opens one window showing every current grant across all organizations. Grants are grouped in three sections: **Session only**, **Per environment** and **Always**. Each entry shows the organization's friendly name, what the grant covers (Read approval or dev-environment confirmation, [§7](#7-authorization-model)), and when and from which tab it was given. A person can **Revoke** a single entry, use **Reset all** in one section to clear that scope, or use **Reset all approvals** to clear every section. Each reset asks for confirmation inside the window. A revocation applies from the next call, and a call that is already running finishes under its approval. *Once* scopes are not listed, because they end with their call or binding | Keep every grant in one approval store, held per organization. Each entry records its kind, scope, organization ID and friendly name, grant time and originating tab. The store can list its entries, remove one entry, and clear one scope. v1's **Revoke** in a tab, and the *always* setting, become calls on that store rather than separate paths |
+| **Token in the Active Approvals window** | The bearer token moves off the main panel into the Active Approvals window, so the credentials and grants that decide what an agent can do sit in one place. The window shows the token masked, with **Copy** and **Regenerate**. **Copy client config** stays on the main panel for setup | Build the token display, **Copy** and **Regenerate** as one self-contained control backed by the token store (D8), so it can move without change. H4 is unchanged: one host-level token, and regenerating it affects every client |
+
+**Exit:** with grants of every scope in place for two organizations, each grant is listed in its section, revoking one or resetting a section takes effect on the next call, and the main panel no longer shows the token.
 
 ---
 
