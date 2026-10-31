@@ -1,0 +1,110 @@
+name: Build and Pack D365AgentCompanionMcp
+
+# The agent-companion skills are embedded in the plugin for the setup wizard (SPEC §8.7),
+# so a skill change rebuilds the package.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tooling/D365AgentCompanionMcp/**'
+      - 'skills/agent-companion-*/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tooling/D365AgentCompanionMcp/**'
+      - 'skills/agent-companion-*/**'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    outputs:
+      nupkg-name: ${{ steps.pack.outputs.nupkg-name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+
+      - name: Restore
+        run: dotnet restore tooling/D365AgentCompanionMcp/D365AgentCompanionMcp.sln
+
+      - name: Build
+        run: >
+          dotnet build tooling/D365AgentCompanionMcp/D365AgentCompanionMcp.sln
+          --configuration Release --no-restore
+
+      - name: Test
+        run: >
+          dotnet test tooling/D365AgentCompanionMcp/D365AgentCompanionMcp.Tests/D365AgentCompanionMcp.Tests.csproj
+          --configuration Release --no-build --verbosity normal
+
+      # Windows PowerShell 5.1, as XrmToolBox users run the scripts; the schema tests skip without the schema bundle.
+      - name: Test skill scripts
+        shell: powershell
+        run: |
+          $runners = Get-ChildItem skills -Directory -Filter 'agent-companion-*' |
+            ForEach-Object { Join-Path $_.FullName 'scripts\tests\Invoke-ScriptTests.ps1' } |
+            Where-Object { Test-Path $_ }
+          $failed = 0
+          foreach ($runner in $runners) {
+            Write-Host "== $runner"
+            & powershell -NoProfile -ExecutionPolicy Bypass -File $runner
+            if ($LASTEXITCODE -ne 0) { $failed++ }
+          }
+          if ($failed -gt 0) { throw "$failed skill script test run(s) failed." }
+
+      - name: Pack
+        id: pack
+        shell: pwsh
+        run: |
+          nuget pack tooling/D365AgentCompanionMcp/D365AgentCompanionMcp/D365AgentCompanionMcp.nuspec `
+            -BasePath tooling/D365AgentCompanionMcp/D365AgentCompanionMcp `
+            -OutputDirectory nupkg
+          $name = (Get-ChildItem nupkg/*.nupkg | Select-Object -First 1).Name
+          echo "nupkg-name=$name" >> $env:GITHUB_OUTPUT
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: D365AgentCompanionMcp-nupkg
+          path: nupkg/*.nupkg
+
+  publish:
+    needs: build
+    runs-on: windows-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: D365AgentCompanionMcp-nupkg
+          path: nupkg
+
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+
+      - name: Get NuGet API key via OIDC
+        id: oidc
+        shell: pwsh
+        run: |
+          $token = Invoke-RestMethod `
+            -Uri "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=nuget.org" `
+            -Headers @{ Authorization = "bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN" } |
+            Select-Object -ExpandProperty value
+          echo "::add-mask::$token"
+          echo "api-key=$token" >> $env:GITHUB_OUTPUT
+
+      - name: Push to NuGet
+        shell: pwsh
+        run: |
+          $pkg = (Get-ChildItem nupkg/*.nupkg | Select-Object -First 1).FullName
+          nuget push $pkg `
+            -ApiKey ${{ steps.oidc.outputs.api-key }} `
+            -Source https://api.nuget.org/v3/index.json `
+            -NonInteractive

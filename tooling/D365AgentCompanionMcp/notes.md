@@ -13,9 +13,56 @@
 | [2 — Discovery](SPEC.md#phase-2--discovery) | **Done** (2026-10-31) — built, unit-tested (176 tests), and the live exit checks passed against the sandbox; four findings (L1–L4) fixed on the way. See [Phase 2 — execution](#phase-2--execution) | See spec |
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | **Done** (2026-10-31) — built, unit-tested (207 tests), and the cold-start workflow (§9.1) ran end to end on the sandbox; two findings (P1, P2) for the Phase 4 skills. See [Phase 3 — execution](#phase-3--execution) | See spec |
 | [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | **In progress** (2026-10-31) — five companion skills and their scripts built; script self-tests pass (35 + 11). Live exit checks: I31 verified; scenarios 1–4 pass; scenario 5 desk-checked; scenario 6 partial — the imported flow did not fire (E13). Findings E1–E13. See [Phase 4 — execution](#phase-4--execution) | See spec |
-| [5 — Release](SPEC.md#phase-5--release) | **In progress** (2026-10-31) — nuspec, icons and tooling README in place; package packs. Remaining: setup wizard (§8.7), GitHub workflow (specified), Tool Library install test, repository updates outside the plugin | See spec |
+| [5 — Release](SPEC.md#phase-5--release) | **In progress** (2026-10-31) — built: setup wizard (§8.7) with embedded skills and prompts, GitHub workflow, nuspec, icons, README; repository pages describe the plugin as built; 245 tests. Remaining, a person's: nuget.org trusted-publishing policy, Tool Library install, the wizard's live checks. Column-3 guide changes wait for the release. See [Phase 5 — execution](#phase-5--execution) | See spec |
 
 Status values: *Not started* · *In progress* · *Blocked* (say on what) · *Done*.
+
+---
+
+## Phase 5 — execution
+
+### What is built
+
+| Area | Where | Spec |
+|---|---|---|
+| Version gate | `Setup/SetupGate` — first run, update or nothing, from `HostSettings.SetupCompletedVersion`; **Finish**, **Done** and **Skip** record the version, nothing else | §8.7 |
+| Prompts | `Setup/Prompts/*.txt`, embedded as `Setup.Prompts.<name>.txt`; `Setup/SetupPrompts` fills `{{NAME}}` placeholders — version, previous version, endpoint, client configuration, the tab's organization URL, the export folder, the skill names | §8.7 |
+| Skills | `skills/agent-companion-*/**` embedded as `Skills\<skill>\<path>` (csproj); `Setup/SkillExporter` writes one zip per skill, holding the skill's folder | §8.7, §10 |
+| Wizard | `UI/SetupWizardControl` — the three pages and the **Plugin updated** page; `AgentCompanionControl` overlays it on the main panel, records the version on completion and closes the tab on **Cancel** | §8.7 |
+| Client configuration | `Hosting/ClientConfig` — shared by **Copy client config** and the two MCP prompts | §8.1, §8.7 |
+| CI | [build-and-pack-d365-agent-companion-mcp.yml](../../.github/workflows/build-and-pack-d365-agent-companion-mcp.yml) — the exporter's jobs, triggered also by `skills/agent-companion-*/**`, plus the skills' script self-tests in Windows PowerShell | Phase 5 |
+| Repository pages | INSTRUCTIONS.md tooling section (and a rule on the embedded skills), CLAUDE.md map, root README map, matrix build-backlog row: built, release in progress | Phase 5 |
+| Tests | 38 new: `SetupGateTests`, `SetupPromptsTests`, `SkillExporterTests` (the zips against `skills/`, byte for byte), `SetupWizardControlTests`; 245 in total | §10 |
+
+Not done here: a local `nuget pack` with the wizard build — no `nuget.exe` on this workstation; the nuspec is unchanged since the last test pack, and CI packs on every run. The INSTRUCTIONS.md change must be re-pasted into the chat-surface project configuration.
+
+### Implementation choices to review
+
+| # | Choice | Why |
+|---|---|---|
+| I37 | The wizard is a control laid over the main panel in the same tab, not a dialog. The tab binds, the host runs, and the dev-confirmation and approval dialogs appear while it is open | §8.7: the host starts as usual so the test can reach it; the test's `list_solutions` dialog must be answerable from the wizard |
+| I38 | **Copy client config** now starts with `Endpoint:` and `Bearer token:` lines | VS Code's `mcp.json` holds an input prompt, not the token; the person and the agent both need the token itself. One composer for the panel and the prompts |
+| I39 | A zip holds the skill's whole folder, `scripts/tests/` included. Existing zips of the same names are replaced only after the person confirms; a folder inside a Git working tree warns first, as **Save as…** does | The zips match `skills/` exactly, which the tests check; nothing is overwritten unasked |
+| I40 | A placeholder with no value is filled with an instruction to the agent — the tab is not connected, ask for the URLs; the zips were not exported from this page, ask for the folder — rather than left blank | The prompt still works when copied before connecting or exporting. The skills prompts name the folder exported from the same page |
+| I41 | The version recorded is the assembly version; any difference, a downgrade included, shows the update page | §8.7 says "differs" |
+| I42 | The MCP prompts ask for registration at user level (`--scope user` for Claude Code), never in a file inside a Git repository, and tell the agent not to repeat the token | The token is a secret (R7); project-scope MCP files are often committed |
+| I43 | The setup prompts ask the agent to state an install command before running it, to ask before replacing an existing skill folder, and to touch no skill outside `agent-companion-*` | HITL; the update page's "leave every other skill alone" (§8.7) |
+| I44 | No **Back** button | §8.7 names the buttons; a change in behaviour goes to the spec first |
+| I45 | The column-3 guide changes (C.3 §7, 4.3) are not made yet | Phase 5: "add the column-3 guide changes then, not before" — at release, when the plugin installs from the Tool Library |
+
+### Live exit checks — steps
+
+Exit criterion (SPEC §11 Phase 5). Use the data-free sandbox and a fresh agent profile or client where the companion skills and the endpoint are not yet installed.
+
+1. **Fresh install.** Build Release; copy only `D365AgentCompanionMcp.dll` (and `.pdb`) into XrmToolBox's `Plugins` folder. With no `SetupCompletedVersion` in the plugin's settings, open the plugin: page 1 shows.
+2. **Cancel.** **Cancel** closes the tab; open the plugin again: the wizard shows again.
+3. **Copy buttons.** On page 2 each **Copy setup prompt** puts its prompt on the clipboard, and the status line says so — for (e), with the token warning. Before connecting the tab, prompt (c) asks for the URLs; after connecting, it names the tab's organization URL.
+4. **Export skills.** **Export skills…** to a folder outside any repository writes five zips, each holding `agent-companion-*/SKILL.md`; a second export asks before replacing them; a folder inside a Git working tree warns first. Prompt (d) then names the folder.
+5. **Agent set up from the prompts alone.** Paste (b) to (e) into the fresh agent in order; then page 3's **Copy test prompt**. The agent reports all five steps as passed, and the `list_solutions` dialog appears in this tab.
+6. **Finish.** **Finish** shows the main panel with the test call in the call log; open another tab: no wizard.
+7. **Update.** Bump the version in the `.csproj` and `.nuspec` (two-file rule), rebuild and redeploy: the **Plugin updated** page names both versions, once. **Skip** records the version; set it back and repeat with **Done**. An agent following the page's prompts ends with the new skills and the endpoint registered, and no other skill changed.
+8. **Tool Library.** A person adds the nuget.org trusted-publishing policy for `Lspiguel.Xrm.D365AgentCompanionMcp`; the merge to `main` publishes; install from the Tool Library, open, uninstall — no locked file; install again.
+9. **README.** The tool table and settings match `tools/list` and the panel.
 
 ---
 
@@ -856,3 +903,4 @@ Spike solutions left in the sandbox: `AgentSpikeS2A`, `AgentSpikeS2B`, `AgentSpi
 | 2026-10-31 | Phase 5 started. Icons added by the person (`d365-agent-companion-16px.png` … `-256px.png`); nuspec `iconUrl` set to the 128 px file. Tooling README written in the Context Exporter's style — what it does, prerequisites, quickstart, then endpoint registration and the OAuth-prompt note, how it works, WIP solutions, close-out strategies, close-out, skills, tools, settings, building from source, license. It describes the setup wizard, which is not built yet. Test `nuget pack` with the real README: package holds LICENSE, readme.md and the DLL; same two warnings as before |
 | 2026-10-31 | Icons wired into the plugin: the 16 px and 32 px PNGs as base64 `SmallImageBase64` / `BigImageBase64`, as the exporter does. Release build 0 warnings, 207 tests pass. Phase 5: GitHub workflow specified after the exporter's — same jobs, triggers also on `skills/agent-companion-*/**`, plus a step for the skills' script self-tests; nuget.org trusted-publishing policy for the new package ID is a person's step |
 | 2026-10-31 | Spec §8.7: the wizard records the plugin version it was completed for; after an update a one-time **Plugin updated** page offers an optional reinstall of the skills and the MCP configuration through agent prompts (**Skip** or **Done** record the new version). Phase 5 bullet and exit updated; README gained a *Plugin upgrades* section |
+| 2026-10-31 | Phase 5 built. Setup wizard (§8.7): version gate on `SetupCompletedVersion`, three pages and the **Plugin updated** page laid over the main panel, seven prompts as text resources, the five companion skills embedded from `skills/` and exported one zip per skill; **Copy client config** shared with the MCP prompts and now names the endpoint and token. GitHub workflow `build-and-pack-d365-agent-companion-mcp.yml`, with the skills' script self-tests (11 and 31 pass locally). INSTRUCTIONS.md, CLAUDE.md, root README and matrix describe the plugin as built, release in progress; column-3 guides wait for the release. Release build 0 warnings; 245 tests pass. Choices I37–I45 recorded; live exit checks next |

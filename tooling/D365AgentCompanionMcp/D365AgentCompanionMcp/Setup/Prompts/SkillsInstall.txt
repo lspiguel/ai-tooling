@@ -1,0 +1,11 @@
+I am setting up the D365 Agent Companion MCP plugin for XrmToolBox (version {{PLUGIN_VERSION}}). Its agent skills were exported from the plugin as zip files, one per skill: {{SKILL_NAMES}}.
+
+Folder holding the zips: {{SKILLS_FOLDER}}
+
+Please:
+1. Find your client's user-level skills location (for Claude Code, `~/.claude/skills/`). Tell me the location before writing to it. If your client has no skills location, say so and stop.
+2. Unpack each zip there. Each zip holds one folder named for the skill, with its `SKILL.md` inside; keep that layout. If a folder of that name already exists, tell me and ask before replacing it.
+3. Do not change, move or delete any other skill, and do not unpack the skills into a project repository unless I ask you to.
+4. Check that each skill loads: reload skills if your client needs it, and confirm you can see each skill's name and description.
+
+Report back: the skills location, each skill installed and the folder it is in, whether each one loaded, and anything you skipped.

@@ -15,6 +15,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
     using Lspiguel.Xrm.D365AgentCompanionMcp.Approvals;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Hosting;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Logging;
+    using Lspiguel.Xrm.D365AgentCompanionMcp.Setup;
     using Lspiguel.Xrm.D365AgentCompanionMcp.UI;
     using McTools.Xrm.Connection;
     using Microsoft.Crm.Sdk.Messages;
@@ -66,7 +67,10 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
         private readonly LogView hostLogView = new LogView();
         private readonly Label countsText = UiBuilder.Text();
 
+        private readonly TableLayoutPanel mainPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1 };
+
         private BoundConnection? binding;
+        private SetupWizardControl? wizard;
         private bool attached;
         private bool closingFromDialog;
 
@@ -90,6 +94,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
             this.hostLog.Cleared += (s, e) => this.RunOnUi(this.hostLogView.ClearLines);
 
             this.BuildLayout();
+            this.ShowSetupIfNeeded();
             this.Load += (s, e) =>
             {
                 this.AttachToHost();
@@ -297,7 +302,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
                     this.hostLog.Clear();
                 }));
 
-            var table = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1 };
+            var table = this.mainPanel;
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             void Add(Control control, RowStyle style)
             {
@@ -316,6 +321,55 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
             Add(this.hostLogView, new RowStyle(SizeType.Absolute, HostLogHeight));
             Add(footer, new RowStyle(SizeType.AutoSize));
             this.Controls.Add(table);
+        }
+
+        private void ShowSetupIfNeeded()
+        {
+            // §8.7: the wizard on a first run, the Plugin updated page after an update. The host still starts as usual (H2).
+            var view = this.host.Settings.RequiredSetup(this.host.Version);
+            if (view == SetupView.None)
+            {
+                return;
+            }
+
+            this.wizard = new SetupWizardControl(view, this.host.Settings.CompletedSetupVersion(), this.host.Version, this.CurrentPromptValues);
+            this.wizard.Completed += (s, e) => this.CompleteSetup();
+            this.wizard.Cancelled += (s, e) =>
+            {
+                // Nothing is recorded, so the wizard shows again the next time the plugin opens.
+                this.closingFromDialog = true;
+                this.CloseTool();
+            };
+            this.mainPanel.Visible = false;
+            this.Controls.Add(this.wizard);
+            this.wizard.BringToFront();
+        }
+
+        private void CompleteSetup()
+        {
+            this.host.Settings.CompleteSetup(this.host.Version);
+            if (this.wizard != null)
+            {
+                this.Controls.Remove(this.wizard);
+                this.wizard.Dispose();
+                this.wizard = null;
+            }
+
+            this.mainPanel.Visible = true;
+            this.RefreshPanel();
+        }
+
+        private PromptValues CurrentPromptValues()
+        {
+            var bound = this.binding?.State == BindingState.Bound ? this.binding : null;
+            return new PromptValues
+            {
+                PluginVersion = this.host.Version,
+                Endpoint = this.host.Endpoint,
+                ClientConfig = ClientConfig.Compose(this.host.Endpoint, this.host.Tokens.Token),
+                OrganizationUrl = bound?.OrganizationUrl,
+                SkillNames = SkillExporter.SkillNames(),
+            };
         }
 
         private void AttachToHost()
@@ -512,18 +566,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
             }
         }
 
-        private void CopyClientConfig()
-        {
-            var endpoint = this.host.Endpoint;
-            var token = this.host.Tokens.Token ?? "<token>";
-            var config =
-                $"Claude Code:{Environment.NewLine}"
-                + $"claude mcp add --transport http d365-agent-companion {endpoint} --header \"Authorization: Bearer {token}\"{Environment.NewLine}{Environment.NewLine}"
-                + $"VS Code (mcp.json) — paste the token when VS Code asks for it:{Environment.NewLine}"
-                + "{ \"inputs\": [{ \"type\": \"promptString\", \"id\": \"d365-agent-companion-token\", \"description\": \"Agent Companion MCP bearer token\", \"password\": true }],"
-                + $" \"servers\": {{ \"d365-agent-companion\": {{ \"type\": \"http\", \"url\": \"{endpoint}\", \"headers\": {{ \"Authorization\": \"Bearer ${{input:d365-agent-companion-token}}\" }} }} }} }}";
-            Clipboard.SetText(config);
-        }
+        private void CopyClientConfig() => Clipboard.SetText(ClientConfig.Compose(this.host.Endpoint, this.host.Tokens.Token));
 
         private void SaveLog()
         {
@@ -627,6 +670,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
                 this.noticeText.Text = this.host.Notice;
             }
 
+            this.wizard?.ShowStatus(this.serverText.Text, bound == null ? this.connectionText.Text : $"{this.connectionText.Text}   {bound.OrganizationUrl}");
             this.RefreshCounts();
         }
 

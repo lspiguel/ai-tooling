@@ -1,0 +1,11 @@
+The D365 Agent Companion MCP plugin for XrmToolBox was updated from version {{PREVIOUS_VERSION}} to {{PLUGIN_VERSION}}. Its agent skills may have changed. The new ones were exported from the plugin as zip files, one per skill: {{SKILL_NAMES}}.
+
+Folder holding the zips: {{SKILLS_FOLDER}}
+
+Please:
+1. Find where your client has the agent-companion skills installed — folders named `agent-companion-*`. Tell me the location.
+2. Replace each installed agent-companion skill with the folder from its zip: remove the old folder, then unpack the zip so that the skill's folder and its `SKILL.md` sit where the old one did. If an old folder holds files that are not in its zip, or that look locally edited, tell me and ask before removing it. A skill in the zips that is not installed yet goes in the same location.
+3. Leave every other skill alone — any skill whose name does not start with `agent-companion-`. If an installed `agent-companion-*` skill has no zip, tell me and leave it in place.
+4. Check that the new skills load: reload skills if your client needs it, and confirm you can see each one.
+
+Report back: the location, each skill replaced or added, whether each one loaded, and anything you left in place.

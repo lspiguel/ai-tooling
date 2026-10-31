@@ -34,5 +34,11 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
 
         /// <summary>Gets or sets the persisted grants.</summary>
         public List<PersistedGrant> Grants { get; set; } = new List<PersistedGrant>();
+
+        /// <summary>
+        /// Gets or sets the plugin version the setup wizard was last completed for (SPEC §8.7), or <c>null</c> before
+        /// the first run. Nothing else about setup is kept.
+        /// </summary>
+        public string? SetupCompletedVersion { get; set; }
     }
 }

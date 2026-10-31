@@ -187,6 +187,8 @@ dotnet test    tooling/D365AgentCompanionMcp/D365AgentCompanionMcp.Tests/D365Age
 
 For local development, copy `D365AgentCompanionMcp.dll` to your XrmToolBox Plugins folder. The plugin ships no other DLL: `Newtonsoft.Json` is XrmToolBox's own copy, so do not add package references that place a DLL beside it.
 
+The agent-companion skills are embedded in the DLL at build time from [skills/](../../skills/), and the setup wizard's prompts are text resources in [Setup/Prompts/](D365AgentCompanionMcp/Setup/Prompts/). Rebuild after changing either. To see the wizard again, remove `SetupCompletedVersion` from the plugin's settings file in XrmToolBox's settings folder; set it to another version to see the *Plugin updated* page.
+
 The behaviour of the plugin and the skills is specified in [SPEC.md](SPEC.md); progress and test findings are in [notes.md](notes.md).
 
 ## License
