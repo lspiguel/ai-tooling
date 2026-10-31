@@ -33,6 +33,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
                 "list_connections", "get_connection_info", "who_am_i", "list_publishers", "list_solutions", "list_tables",
                 "get_table_metadata", "get_relationships", "get_option_sets", "get_entity_ribbon", "get_application_ribbon",
                 "query", "list_solution_components", "get_component_state", "get_required_components",
+                "create_solution", "add_solution_components", "remove_solution_component", "create_publisher",
             }));
         }
 
@@ -80,11 +81,24 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
         [Test]
         public void ReadTools_TakeAnOptionalReasonOfAtMost500Characters()
         {
-            foreach (var tool in _tools.Where(t => (string)t["name"]! != "list_connections"))
+            foreach (var tool in TestHost.Create().Dispatcher.Tools.Where(t => t.Tier == ToolTier.Read))
             {
-                var schema = tool["inputSchema"]!;
-                Assert.That((int)schema["properties"]!["reason"]!["maxLength"]!, Is.EqualTo(500));
-                Assert.That(schema["required"]!.Values<string>(), Does.Not.Contain("reason"));
+                Assert.That((int)tool.InputSchema["properties"]!["reason"]!["maxLength"]!, Is.EqualTo(500), tool.Name);
+                Assert.That(tool.InputSchema["required"]!.Values<string>(), Does.Not.Contain("reason"), tool.Name);
+            }
+        }
+
+        [Test]
+        public void WriteAndPublisherTools_RequireANonBlankReasonLast()
+        {
+            var tools = TestHost.Create().Dispatcher.Tools.Where(t => t.Tier == ToolTier.Write || t.Tier == ToolTier.Publisher).ToList();
+
+            Assert.That(tools.Select(t => t.Name), Is.EquivalentTo(new[] { "create_solution", "add_solution_components", "remove_solution_component", "create_publisher" }));
+            foreach (var tool in tools)
+            {
+                Assert.That(tool.InputSchema["required"]!.Values<string>(), Does.Contain("reason"), tool.Name);
+                Assert.That((int)tool.InputSchema["properties"]!["reason"]!["minLength"]!, Is.EqualTo(1), tool.Name);
+                Assert.That(tool.InputOrder.Last(), Is.EqualTo("reason"), tool.Name);
             }
         }
 

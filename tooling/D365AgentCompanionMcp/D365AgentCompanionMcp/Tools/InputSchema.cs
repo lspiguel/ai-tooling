@@ -84,6 +84,24 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             return this.Add(name, property, required: false);
         }
 
+        /// <summary>Adds a required integer argument within a range.</summary>
+        /// <param name="name">The argument name.</param>
+        /// <param name="description">Its description.</param>
+        /// <param name="minimum">The smallest value.</param>
+        /// <param name="maximum">The largest value.</param>
+        /// <returns>The builder.</returns>
+        public InputSchema Integer(string name, string description, int minimum, int maximum) =>
+            this.Add(name, new JObject { ["type"] = "integer", ["minimum"] = minimum, ["maximum"] = maximum, ["description"] = description }, required: true);
+
+        /// <summary>Adds a string argument matching a pattern.</summary>
+        /// <param name="name">The argument name.</param>
+        /// <param name="description">Its description.</param>
+        /// <param name="pattern">The regular expression the whole value must match.</param>
+        /// <param name="required">Whether it is required.</param>
+        /// <returns>The builder.</returns>
+        public InputSchema Pattern(string name, string description, string pattern, bool required) =>
+            this.Add(name, new JObject { ["type"] = "string", ["pattern"] = pattern, ["description"] = description }, required);
+
         /// <summary>Adds an optional Boolean argument.</summary>
         /// <param name="name">The argument name.</param>
         /// <param name="description">Its description.</param>
@@ -127,6 +145,18 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 name,
                 new JObject { ["type"] = "array", ["items"] = itemSchema, ["minItems"] = minItems, ["maxItems"] = maxItems, ["description"] = description },
                 required: true);
+
+        /// <summary>Adds a required object argument.</summary>
+        /// <param name="name">The argument name.</param>
+        /// <param name="description">Its description.</param>
+        /// <param name="schema">The object's schema.</param>
+        /// <returns>The builder.</returns>
+        public InputSchema Object(string name, string description, JObject schema)
+        {
+            var property = (JObject)schema.DeepClone();
+            property["description"] = description;
+            return this.Add(name, property, required: true);
+        }
 
         /// <summary>Adds the paging inputs <c>cursor</c> and <c>pageSize</c>.</summary>
         /// <param name="defaultPageSize">The tool's default page size.</param>

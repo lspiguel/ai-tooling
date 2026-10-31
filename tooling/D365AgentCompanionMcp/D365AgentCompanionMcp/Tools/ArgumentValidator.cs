@@ -91,6 +91,11 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                         throw ToolException.InvalidArgument(name, $"{name} must be at most {(int)schema["maxLength"]!} characters.");
                     }
 
+                    if (schema["pattern"] != null && !System.Text.RegularExpressions.Regex.IsMatch(text, (string)schema["pattern"]!))
+                    {
+                        throw ToolException.InvalidArgument(name, $"{name} does not have the required form. {(string?)schema["description"]}");
+                    }
+
                     if (schema["enum"] is JArray allowed && !allowed.Values<string>().Contains(text))
                     {
                         throw ToolException.InvalidArgument(name, $"{name} must be one of: {string.Join(", ", allowed.Values<string>())}.");
@@ -106,6 +111,11 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                     if (schema["minimum"] != null && (long)value < (long)schema["minimum"]!)
                     {
                         throw ToolException.InvalidArgument(name, $"{name} must be at least {(long)schema["minimum"]!}.");
+                    }
+
+                    if (schema["maximum"] != null && (long)value > (long)schema["maximum"]!)
+                    {
+                        throw ToolException.InvalidArgument(name, $"{name} must be at most {(long)schema["maximum"]!}.");
                     }
 
                     break;

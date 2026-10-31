@@ -27,6 +27,12 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Approvals
         /// <summary>Gets the arguments, verbatim and pretty-printed, without <c>reason</c>.</summary>
         public string Arguments { get; init; } = string.Empty;
 
+        /// <summary>Gets what the call will do, resolved to names — empty for tools that do not prepare.</summary>
+        public string Summary { get; init; } = string.Empty;
+
+        /// <summary>Gets the text the person must type to approve — the prefix of a new publisher (SPEC §8.3) — or <c>null</c>.</summary>
+        public string? Confirmation { get; init; }
+
         /// <summary>Gets the agent's reason, or <c>null</c>. Unverified agent text (R8).</summary>
         public string? Reason { get; init; }
 

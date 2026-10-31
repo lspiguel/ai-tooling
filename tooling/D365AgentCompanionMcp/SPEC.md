@@ -997,7 +997,7 @@ type ComponentSelector =
   | { type: 10; schemaName: string };                   // relationship
 ```
 
-Component type codes accepted in v1 (confirmed against the `solutioncomponent` type option set in spike S2): table `1`, column `2`, global option set `9`, relationship `10`, view `26`, form `60`, web resource `61`, sitemap `62`, app module `80`, application ribbon customization (code to confirm).
+Component type codes accepted in v1 (confirmed against the `solutioncomponent` type option set in spike S2): table `1`, column `2`, global option set `9`, relationship `10`, view `26`, form `60`, web resource `61`, sitemap `62`, app module `80`. Any other type fails with `invalid_argument` naming the entry. The application ribbon customization is not accepted until its type code is confirmed live; S2 did not settle it.
 
 ```ts
 interface AddComponentsResult {
@@ -1026,8 +1026,10 @@ Sequence:
 1. **Resolve** every selector to an ID. Any failure fails the whole call with `not_found`; nothing is added. Resolution comes first so the approval dialog shows names, not bare IDs.
 2. **Approve** — Write tier, one dialog for the whole list.
 3. **Snapshot** the solution's components.
-4. **Add** in request order with the fixed behaviour below. The first failure stops the run; later entries are `notAttempted`.
-5. **Read back** and compute `unexpected` = components present now − snapshot − requested. Each unexpected component is also raised as a warning in the call log. One addition is expected, not unexpected: when a column, form or view is added without its table, the platform adds the table as a shell (root behaviour 2) to hold it (spike S2). Such a parent shell is reported in `results` with status `added` and `name` noting it was added as the parent, and is not counted in `unexpected` — unless it arrives with any behaviour other than 2.
+4. **Add** in request order with the fixed behaviour below. A component already in the solution is `alreadyPresent` and is not added again — a second add could change how the platform holds it. The first failure stops the run; later entries are `notAttempted`.
+5. **Read back** and compute `unexpected` = components present now − snapshot − requested. Each unexpected component is also raised as a warning in the call log. One addition is expected, not unexpected: when a column, form or view is added without its table, the platform adds the table as a shell (root behaviour 2) to hold it (spike S2). Such a parent shell is reported in `results` with status `added`, the `index` of the column, form or view it holds, and `name` noting it was added as the parent. It is not counted in `unexpected` or in `addedCount` — unless it arrives with any behaviour other than 2, or for a table none of the added entries belongs to, when it is unexpected.
+
+Steps 1 and 2 run before the dialog, inside the connection's queue: a solution that does not exist or is managed, and any selector that does not resolve, fail before the person is asked. `create_solution` resolves its publisher, and `remove_solution_component` its component, the same way.
 
 Fixed behaviour, not exposed to the caller:
 

@@ -84,20 +84,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             return result;
         }
 
-        private static ToolException DataverseError(Exception ex)
-        {
-            if (ex is FaultException<OrganizationServiceFault> fault)
-            {
-                return new ToolException(ToolErrorCodes.DataverseError, fault.Detail.Message, new JObject
-                {
-                    ["errorCode"] = $"0x{fault.Detail.ErrorCode:x8}",
-                    ["message"] = fault.Detail.Message,
-                });
-            }
-
-            var message = ex.GetBaseException().Message;
-            return new ToolException(ToolErrorCodes.DataverseError, message, new JObject { ["message"] = message });
-        }
+        private static ToolException DataverseError(Exception ex) => ToolException.FromDataverse(ex);
 
         private static ToolException Stopping() =>
             new ToolException(ToolErrorCodes.ServerStopping, "The host is stopping; the call did not run. Wait for the person.");
@@ -105,6 +92,22 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         private static ApprovalDecision[] OptionsFor(ToolTier tier) => tier == ToolTier.Read
             ? new[] { ApprovalDecision.AllowOnce, ApprovalDecision.AllowSession, ApprovalDecision.AllowEnvironment }
             : new[] { ApprovalDecision.AllowOnce };
+
+        private static async Task<PreparedCall> PrepareAsync(ToolDefinition tool, ToolExecution execution)
+        {
+            try
+            {
+                return await Task.Run(() => tool.Prepare!(execution)).ConfigureAwait(false);
+            }
+            catch (ToolException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw DataverseError(ex);
+            }
+        }
 
         private async Task<JObject> RunAsync(CallState state)
         {
@@ -162,13 +165,19 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
 
                     try
                     {
+                        if (continuation == null && tool.Prepare != null)
+                        {
+                            // Resolution runs in the queue, before the dialog, so the dialog shows names (SPEC §6.6).
+                            state.Prepared = await PrepareAsync(tool, new ToolExecution(this.host, binding, arguments)).ConfigureAwait(false);
+                        }
+
                         state.Approval = continuation != null ? "page" : await this.AuthorizeAsync(state, binding, waiting.Token).ConfigureAwait(false);
                         binding.EndPending();
                         pendingEnded = true;
                         binding.BeginRunning();
                         try
                         {
-                            return await this.ExecuteAsync(tool, binding, arguments, continuation, cursor).ConfigureAwait(false);
+                            return await this.ExecuteAsync(tool, binding, arguments, continuation, cursor, state.Prepared).ConfigureAwait(false);
                         }
                         finally
                         {
@@ -215,12 +224,6 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         private async Task<string> AuthorizeAsync(CallState state, BoundConnection binding, CancellationToken waiting)
         {
             var tool = state.Tool;
-            if (tool.Tier == ToolTier.Publisher)
-            {
-                // The typed-confirmation dialog of SPEC §8.3 arrives with create_publisher in Phase 3.
-                throw new ToolException(ToolErrorCodes.ToolDisabled, "Publisher creation is not available in this version.");
-            }
-
             if (tool.Tier == ToolTier.Read)
             {
                 var grant = this.host.Approvals.Find(ApprovalKind.ReadApproval, binding.OrganizationId);
@@ -261,6 +264,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 Arguments = arguments.ToString(Formatting.Indented),
                 Reason = state.Call.Arguments[InputSchema.Reason]?.Type == JTokenType.String ? (string)state.Call.Arguments[InputSchema.Reason]! : null,
                 TouchesRecords = state.Inspection.TouchesRecords,
+                Summary = state.Prepared?.Summary ?? string.Empty,
+                Confirmation = state.Prepared?.Confirmation,
                 Recommendation = state.Tool.Tier != ToolTier.Read
                     ? string.Empty
                     : devConfirmed
@@ -288,9 +293,9 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             }
         }
 
-        private async Task<JObject> ExecuteAsync(ToolDefinition tool, BoundConnection binding, JObject arguments, Pager? continuation, string? cursor)
+        private async Task<JObject> ExecuteAsync(ToolDefinition tool, BoundConnection binding, JObject arguments, Pager? continuation, string? cursor, PreparedCall? prepared)
         {
-            var execution = new ToolExecution(this.host, binding, arguments);
+            var execution = new ToolExecution(this.host, binding, arguments, prepared);
             try
             {
                 if (!tool.IsPaged)
@@ -360,7 +365,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 state.Approval,
                 callLine,
                 outcomeLine,
-                Array.Empty<string>(),
+                !result.IsError && state.Tool.Warnings != null ? state.Tool.Warnings(result.Payload) : Array.Empty<string>(),
                 call.Arguments?.ToString(Formatting.Indented) ?? "(arguments were not a JSON object)",
                 result.Payload.ToString(Formatting.Indented));
 
@@ -398,6 +403,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             public string Approval { get; set; } = CallLogFormatter.NotRun;
 
             public CallInspection Inspection { get; set; } = CallInspection.None;
+
+            public PreparedCall? Prepared { get; set; }
         }
     }
 }

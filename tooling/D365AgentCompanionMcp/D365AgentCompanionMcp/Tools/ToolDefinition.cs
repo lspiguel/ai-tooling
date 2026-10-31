@@ -84,6 +84,15 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         /// </summary>
         public Func<BoundConnection, JObject, CallInspection>? Inspect { get; private set; }
 
+        /// <summary>
+        /// Gets the Dataverse reads a tool runs before its dialog, in the connection's queue — resolving names and
+        /// refusing calls that cannot run. Throws <see cref="ToolException"/> to refuse.
+        /// </summary>
+        public Func<ToolExecution, PreparedCall>? Prepare { get; private set; }
+
+        /// <summary>Gets the warning lines a successful result adds below its outcome line, such as unexpected components (R1).</summary>
+        public Func<JObject, IReadOnlyList<string>>? Warnings { get; private set; }
+
         /// <summary>Defines the host tool.</summary>
         /// <param name="name">The name.</param>
         /// <param name="description">The description.</param>
@@ -167,6 +176,24 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         {
             var required = (JArray)this.OutputSchema["required"]!;
             required.Where(r => (string?)r == this.ItemsName).ToList().ForEach(r => r.Remove());
+            return this;
+        }
+
+        /// <summary>Adds the reads a tool runs before its dialog.</summary>
+        /// <param name="prepare">The preparation.</param>
+        /// <returns>This definition.</returns>
+        public ToolDefinition WithPreparation(Func<ToolExecution, PreparedCall> prepare)
+        {
+            this.Prepare = prepare;
+            return this;
+        }
+
+        /// <summary>Adds the warning lines a successful result writes to the log.</summary>
+        /// <param name="warnings">Computes the lines from the result.</param>
+        /// <returns>This definition.</returns>
+        public ToolDefinition WithWarnings(Func<JObject, IReadOnlyList<string>> warnings)
+        {
+            this.Warnings = warnings;
             return this;
         }
 

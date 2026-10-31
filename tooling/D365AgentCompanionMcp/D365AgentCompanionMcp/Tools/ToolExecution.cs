@@ -16,12 +16,17 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         /// <param name="host">The host.</param>
         /// <param name="binding">The connection the call names.</param>
         /// <param name="arguments">The validated arguments.</param>
-        public ToolExecution(CompanionHost host, BoundConnection binding, JObject arguments)
+        /// <param name="prepared">What the tool resolved before its dialog, if it prepares.</param>
+        public ToolExecution(CompanionHost host, BoundConnection binding, JObject arguments, PreparedCall? prepared = null)
         {
             this.Host = host;
             this.Binding = binding;
             this.Arguments = arguments;
+            this.Prepared = prepared;
         }
+
+        /// <summary>Gets what the tool resolved before its dialog, or <c>null</c>.</summary>
+        public PreparedCall? Prepared { get; }
 
         /// <summary>Gets the host.</summary>
         public CompanionHost Host { get; }

@@ -11,11 +11,56 @@
 | [0 — Spikes](SPEC.md#phase-0--spikes) | **Done for v1** (2026-10-30). S7 in cold storage (no build environment); S8 deferred with strategy C. Sandbox and workstation cleaned up | Every v1 spike has a written finding, and the spec is updated |
 | [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | **Done** (2026-10-30) — built, unit-tested, and all twelve live exit checks passed in XrmToolBox. See [Phase 1 — execution](#phase-1--execution) | See spec |
 | [2 — Discovery](SPEC.md#phase-2--discovery) | **Done** (2026-10-31) — built, unit-tested (176 tests), and the live exit checks passed against the sandbox; four findings (L1–L4) fixed on the way. See [Phase 2 — execution](#phase-2--execution) | See spec |
-| [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | Not started | See spec |
+| [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | **In progress** (2026-10-31) — built and unit-tested; live exit check (cold start, §9.1) not yet run. See [Phase 3 — execution](#phase-3--execution) | See spec |
 | [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | Not started | See spec |
 | [5 — Release](SPEC.md#phase-5--release) | Not started | See spec |
 
 Status values: *Not started* · *In progress* · *Blocked* (say on what) · *Done*.
+
+---
+
+## Phase 3 — execution
+
+### What is built
+
+The Write tools of SPEC §6.6 and the Publisher tool of §6.7, listed last in §6.3 order. Everything is in [D365AgentCompanionMcp/](D365AgentCompanionMcp/).
+
+| Area | Where | Spec |
+|---|---|---|
+| Preparation before the dialog | `ToolDefinition.Prepare` → `PreparedCall` (summary, resolved state, confirmation). Runs in the connection's queue after the gates; refusals (`not_found`, `managed_solution`, `already_exists`) come before any dialog. `ToolExecution.Prepared` hands the resolution to the run | §6.6 step 1 |
+| Dialog | `ApprovalForm` shows the resolved summary above the verbatim arguments; with a confirmation it becomes the §8.3 publisher dialog — warning, existing publishers, ⚠ on a shared prefix or option prefix, the prefix to type; a wrong one denies | §8.2, §8.3 |
+| Dispatcher | Publisher tier now prompts (I8 retired): once only, never for a session (R3). `Warnings` adds `⚠ unexpected` lines below the outcome line | §8.6, R1 |
+| `create_solution`, `add_solution_components`, `remove_solution_component` | `Tools/SolutionShapingTools` — fixed flags in `AddRequest`; snapshot, add in order, read back; parent shells recognised by table (S2) | §6.6, R1 |
+| `create_publisher` | `Tools/PublisherTools` | §6.7, R3 |
+| Arguments | `pattern` and `maximum` checks; `Integer`, `Pattern`, `Object` inputs | §6.2 |
+| Tests | 31 new: `ShapingToolsTests` against `ShapingData`, a stateful fake whose solution changes with each add and remove; catalog checks for the Write and Publisher schemas. 207 in total | §10 |
+
+### Implementation choices to review
+
+| # | Choice | Why |
+|---|---|---|
+| I21 | Argument-only checks (selector shape, accepted types, patterns) run before the queue; Dataverse checks run in the queue before the dialog | Bad arguments never wait behind another call; reads never bypass the connection's serialization |
+| I22 | A parent shell's result takes the `index` of the entry it holds; `addedCount` counts requested entries only | The spec gives the shell no index of its own; SPEC §6.6 updated |
+| I23 | `alreadyPresent` entries are not added again | A second add could change the root behaviour of a table already there; SPEC §6.6 updated |
+| I24 | The application ribbon customization type is not accepted | Its code was never confirmed (S2); SPEC §6.6 updated |
+| I25 | Publisher unique names must match `^[A-Za-z_][A-Za-z0-9_]*$`; prefixes may not start with `mscrm` in any case | The spec sets the prefix rule; the name rule is the platform's |
+| I26 | The typed confirmation is compared exactly, after trimming | A prefix is case-sensitive as stored |
+
+### Live exit checks — steps
+
+Exit criterion (SPEC §11 Phase 3): the cold-start workflow (§9.1) runs end to end on a clean development environment, and `list_solution_components` shows exactly the intended components; a Write or Publisher call with no reason, or a blank one, fails with `invalid_argument` and raises no dialog. Use the data-free sandbox and its existing publisher (R3).
+
+1. Deploy the Release DLL; connect the tab; confirm it as development; leave publisher creation off.
+2. `list_connections`, `get_connection_info`; compare `organization.url` with `pac org who`.
+3. `list_publishers`: the person picks the sandbox's publisher. `create_publisher` with publisher creation off → `tool_disabled`, no dialog. Then switch it on and call again: check the §8.3 dialog, type a **wrong** prefix → `denied_by_user`; switch it off again. No publisher is created.
+4. `create_solution` with no `reason`, and with `"reason": " "` → `invalid_argument`, no dialog (R12).
+5. `list_solutions`: the name is free. `create_solution`: the dialog shows the publisher's prefix; approve.
+6. `add_solution_components` with `account` (metadata), one `account` column, an active `account` main form and a view of another table alone (to see a parent shell): the dialog lists names and the fixed flags; approve. Expect four `added`, one parent shell, `unexpected` empty.
+7. `list_solution_components`: exactly the requested components plus the parent shell.
+8. `remove_solution_component` on the view; `list_solution_components` again.
+9. `pac solution export` and `pac solution unpack` (XML layout, R5) of the WIP; inspect the components; `pac solution pack` and `pac solution import --publish-changes`; `list_solution_components` again — unchanged.
+10. Clean up: `pac solution delete` the WIP (its components stay).
+11. Every call shows as a line pair in the tab's log.
 
 ---
 
@@ -148,7 +193,7 @@ Choices the spec leaves open, made while building. None changes specified behavi
 | I5 | Record queries (on) and publisher creation (off) are held with the binding and reset when a tab binds again; they are not persisted | §7 lists what the settings hold; the panel mock shows record queries on |
 | I6 | Each tab keeps its own copy of the host log from when it opened. **Clear** empties that tab's call log and host-log copy | §8.6 keeps logs "for the life of the tab" |
 | I7 | An unexpected exception inside a call is reported as `dataverse_error` | Every call still gets its line pair (R13) |
-| I8 | Until Phase 3 builds the typed-confirmation dialog, the dispatcher refuses Publisher-tier calls with `tool_disabled` | R3; no Publisher tool is listed yet |
+| I8 | Until Phase 3 builds the typed-confirmation dialog, the dispatcher refuses Publisher-tier calls with `tool_disabled` — **retired in Phase 3** | R3; no Publisher tool is listed yet |
 | I9 | `SA1011` is suppressed in `GlobalSuppressions.cs` | StyleCop 1.1.118 reports the null-forgiving operator after an indexer (`token["x"]!`) as a spacing error |
 | I10 | Version `1.2026.10.1` is set in the `.csproj` only. The `.nuspec` and the CI workflow come with Phase 5 packaging, at the same version | Two-file rule from the first package on |
 
