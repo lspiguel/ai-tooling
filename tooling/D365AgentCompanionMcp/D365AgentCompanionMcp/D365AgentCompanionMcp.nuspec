@@ -13,7 +13,7 @@ nuget.exe pack tooling\D365AgentCompanionMcp\D365AgentCompanionMcp\D365AgentComp
     <authors>Luciano Spiguel</authors>
     <owners>Luciano Spiguel</owners>
     <projectUrl>https://github.com/lspiguel/ai-tooling</projectUrl>
-    <iconUrl>https://raw.githubusercontent.com/lspiguel/ai-tooling/refs/heads/main/tooling/D365AgentCompanionMcp/D365AgentCompanionMcp/d365-agent-companion-icon-128px-transparent.png</iconUrl>
+    <iconUrl>https://raw.githubusercontent.com/lspiguel/ai-tooling/refs/heads/main/tooling/D365AgentCompanionMcp/D365AgentCompanionMcp/d365-agent-companion-128px.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>XrmToolBox plugin that gives a local coding agent person-approved Dataverse operations over MCP</summary>
     <description>
