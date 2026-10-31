@@ -141,7 +141,7 @@ Both are specified so the choice can be made per component type in the skills, o
 | | Path A — MCP `add_solution_components` | Path B — PAC `add-solution-component` |
 |---|---|---|
 | Required components | Forced off, cannot be overridden | Off unless `--AddRequiredComponents` is passed — **never pass it** |
-| Table subcomponents | Forced off (table added as metadata-only or shell) | **No switch exists** in the PAC reference[^1], and spike S3 showed PAC adds a table with **all its subcomponents** (root behaviour 0). **Tables must never be added through PAC.** Columns, forms and views added through PAC on their own are safe: the platform adds their table as a shell (behaviour 2), exactly as the SDK does |
+| Table subcomponents | Forced off (table added as metadata-only or shell) | **No switch exists** in the PAC reference[^1], and spike S3 showed PAC adds a table with **all its subcomponents** (root behaviour 0). **Tables must never be added through PAC.** Columns, forms and views added through PAC on their own are safe: the platform adds their table as a shell (behaviour 2), exactly as the SDK does. Global choices, relationships and sitemaps through PAC give the same rows as the SDK; PAC 2.14.1 cannot add a model-driven app (Phase 4 live check, E1–E4 in [notes](notes.md#live-run--i31-add-paths-2026-10-31)) |
 | Authorization | Plugin approval dialog per call | Agent client's own terminal-command approval |
 | Batch | One call, one approval, a list of components | One command per component |
 | Visible in plugin log | Yes | No |
@@ -1036,6 +1036,8 @@ Sequence:
 4. **Add** in request order with the fixed behaviour below. A component already in the solution is `alreadyPresent` and is not added again — a second add could change how the platform holds it. The first failure stops the run; later entries are `notAttempted`.
 5. **Read back** and compute `unexpected` = components present now − snapshot − requested. Each unexpected component is also raised as a warning in the call log. One addition is expected, not unexpected: when a column, form or view is added without its table, the platform adds the table as a shell (root behaviour 2) to hold it (spike S2). Such a parent shell is reported in `results` with status `added`, the `index` of the column, form or view it holds, and `name` noting it was added as the parent. It is not counted in `unexpected` or in `addedCount` — unless it arrives with any behaviour other than 2, or for a table none of the added entries belongs to, when it is unexpected.
 
+   A **relationship** brings parents the same way (Phase 4 live check, E2): for a 1:N, the referencing table as a shell with the lookup column under it; for an N:N, the first table as a shell. These are expected and are reported like a column's parent shell, with the relationship's `index` (Q12). *Not yet built — until it is, the tool reports them as `unexpected`.* Unless the change customizes them, the agent removes these auto-added components afterwards and reads the WIP back to check the relationship is still held; when in doubt it asks the person.
+
 Steps 1 and 2 run before the dialog, inside the connection's queue: a solution that does not exist or is managed, and any selector that does not resolve, fail before the person is asked. `create_solution` resolves its publisher, and `remove_solution_component` its component, the same way.
 
 Fixed behaviour, not exposed to the caller:
@@ -1313,6 +1315,35 @@ After an `add_solution_components` outcome line, one `⚠ unexpected <type> <nam
 - Lines do not wrap. The log uses a monospaced font and scrolls both ways. It is kept in memory for the life of the tab, and **Clear** empties it.
 - **Save as…** opens a standard Windows save dialog. The default name is `AgentCompanion-[ConnectionName]-yyyyMMdd-HHmmss.txt`. The plugin writes a UTF-8 text file holding a header line (connection name, organization friendly name and save time), then this tab's call log, then the host log under a `Host log` heading. Lines are written exactly as shown, truncation included. If the chosen folder is inside a Git working tree, meaning it or a parent folder contains `.git`, the plugin warns and asks the person to confirm (R7). The log is written to disk only through **Save as…**.
 
+### 8.7 First-run setup wizard
+
+The first time the plugin opens in an XrmToolBox installation, the tab shows a setup wizard before the main panel. It has three pages. Each page has **Next** and **Cancel**; the last page has **Finish** instead of **Next**. **Cancel** closes the plugin tab, and the wizard shows again the next time the plugin opens. **Finish** records in the plugin settings that setup was completed — nothing else — and shows the main panel. The host starts as usual while the wizard is open (H2), so the test on the last page can reach it.
+
+| Page | Shows | Buttons |
+|---|---|---|
+| **1 · Introduction** | One or two paragraphs on what the plugin is for: it gives a local coding agent a small set of person-approved Dataverse operations PAC CLI cannot perform, so the agent can discover components and shape small work-in-progress solutions; every call is approved in this tab and logged; solution export, edit and import stay with PAC CLI and the agent's skills | Next · Cancel |
+| **2 · Preconditions** | The five things a working setup needs, each with its own buttons — table below | Next · Cancel |
+| **3 · Test** | What the test checks, the host status and whether this tab is bound to a connection, and the button below | Finish · Cancel |
+
+**Page 2 — preconditions**
+
+| # | Precondition | Button |
+|---|---|---|
+| a | **A local agent** — GitHub Copilot, Cursor or Claude Code, at the minimum versions in the README | — |
+| b | **PAC CLI installed** | **Copy setup prompt** — a prompt asking the agent to check for PAC CLI, install or update it, and confirm with `pac` that it runs |
+| c | **A working `pac auth` profile for each environment to be used** | **Copy setup prompt** — a prompt asking the agent to list the profiles, create one with `pac auth create` for each environment the person names (this tab's organization URL is included when the tab is bound), and confirm with `pac org who` |
+| d | **The agent-companion skills installed for the agent** | **Export skills…** — opens a folder picker and writes each `agent-companion-*` skill as its own zip file there. **Copy setup prompt** — a prompt asking the agent to unpack those zips into its client's skills location and confirm that the skills load |
+| e | **The plugin's MCP endpoint registered with the agent** | **Copy setup prompt** — a prompt asking the agent to register the endpoint, holding the client configuration that **Copy client config** produces (URL and bearer token), and to restart or reload the client so the tools appear |
+
+**Page 3 — test.** **Copy test prompt** copies a prompt that directs the agent to: confirm the agent-companion skills are in place; run `pac org who`; call `list_connections` and `get_connection_info` and compare `organization.url` with PAC's organization URL ([§4](#keeping-pac-cli-on-the-same-environment)); then call `list_solutions` as a test. The person approves that call in this tab and sees it in the call log.
+
+| Rule | Detail |
+|---|---|
+| Prompts are text resources | Each prompt is an embedded text resource, so its wording can be revised without code. Prompts are plain text, addressed to the agent, and name what to report back |
+| Only the MCP prompt holds a secret | The page-2 (e) prompt holds the bearer token, as **Copy client config** does. The page says so: paste it only into the local agent |
+| Skills ship inside the plugin | The companion skills are embedded as resources at build time from `skills/agent-companion-*`, so the exported zips always match the plugin version. No extra DLL (§10) |
+| Nothing else reaches disk | The wizard writes only the skill zips, to the folder the person picks; if that folder is inside a Git working tree, it warns as **Save as…** does |
+
 ---
 
 ## 9. Workflows
@@ -1428,7 +1459,7 @@ The agent stops and asks the person for initials when `firstName` or `lastName` 
 | W9 | **Route per component, lifetime per WIP.** Each component is routed when it is classified: *placement* when it has no transport home yet, *in place* when it already has one (W2). A WIP holding any placement component lives until close-out. A WIP holding only in-place components ends as soon as its edit has reached the transport source ([§9.9](#99-routes--placing-a-component-or-editing-it-in-place)) | The route decides what close-out has to do. Deciding it per component lets one story mix new and existing components without forcing one onto the other's lifetime |
 | W10 | **Re-check before ending an in-place WIP.** After import, run `list_solution_components` on the WIP. Every component in it must already have a transport home. A component authored locally during the edit, such as a new column or web resource, has none, so the WIP becomes a placement WIP | Deleting the WIP would leave that component in development with no transport home. It never ships, and the next downstream import that needs it fails (X5) |
 | W11 | **Changing route never changes the group.** Switching a component between placement and in place, or moving it between a story's WIPs, keeps it in the group its transport home and the map give it | W1 and W2 fix placement; a route sets only a lifetime (X4) |
-| W12 | **A second WIP for one group is the person's choice.** The person may want part of a group's work to end before the rest — typically in-place edits that should reach the transport source now while new components wait. The story then gets a second WIP for that group, named with a suffix. A component is in at most one of a story's WIPs | Keeps R10 and W7 intact and lets the person decide when each part ends |
+| W12 | **A second WIP for one group is the person's choice.** The person may want part of a group's work to end before the rest — typically in-place edits that should reach the transport source now while new components wait. The story then gets a second WIP for that group, named with a suffix. A component is in at most one of a story's WIPs — except a table, which the platform adds as a parent shell to every WIP holding one of its columns, forms or views. Each such WIP then carries the table's ribbon diff (X6), so ribbon and table-property edits go in only one of them, and the others export it unchanged (finding E9 in [notes](notes.md#live-run--exit-scenarios-2026-10-31)) | Keeps R10 and W7 intact and lets the person decide when each part ends |
 | W13 | **Remove orphaned parent shells.** After removing a column, form or view from a WIP, read the WIP back. If nothing else in the WIP needs the table shell the platform added for it, remove the shell | The platform keeps the shell, and with it the table's ribbon diff (X6) — finding P1 in [notes](notes.md#phase-3--execution) |
 
 How the plugin supports this: `list_solutions` finds open WIPs and the transport solutions with their publishers. `query` over `solutioncomponent` finds a component's existing home and any overlapping WIPs. `query` over `systemform` and `workflow` reads the subtype columns the map uses. `get_required_components` checks dependencies against the order. `create_solution` and `add_solution_components` shape one WIP per group. Where transport is extracted from a build environment, the agent reads `solutioncomponent` there through the build environment's read-only tab (A2, T4). The plugin neither reads, tracks nor enforces the segmentation map: placement is the agent's responsibility, guided by its skill.
@@ -1750,6 +1781,9 @@ Agent-side work that helps an agent use the plugin safely. Skills decide between
 |---|---|
 | Validation scripts | Schema check of `Customizations.xml` and entity files against the customization XSD; form checks (controls bound to existing columns, unique control IDs, GUID format); ribbon checks (referenced commands, rules and web resources exist) |
 | Baseline and overwrite-check script | Records and compares `get_component_state` results; for table and column metadata, re-exports and diffs |
+| WIP naming script | Builds WIP names from the naming rule: initials without accents, length, characters, protected prefixes |
+| Edit-loop driver | Runs each PAC and validation step of the loop with paths built from the work folder and WIP name, so no step depends on hand-quoted paths |
+| Tool-call helper | Calls a plugin tool over the same MCP endpoint when the agent client has not loaded the tools; the plugin still approves and logs every call |
 
 Scripts ship inside the skill that uses them. A companion skill may call a script from a repository skill when that skill is installed, and works without it.
 
@@ -1765,11 +1799,12 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 ### Phase 5 — Release
 
 - Tooling README with installation, client configuration (snippets in [Spikes/README.md](https://github.com/lspiguel/ai-tooling/blob/643fe93/tooling/AgentCompanionMcp/Spikes/README.md#client-registration-s4)), minimum client versions, what to do when a client shows an OAuth prompt, tool table, the one-tab-per-connection behaviour, settings, and the companion skills in [skills/](../../skills/) with how to install them for an agent client.
+- First-run setup wizard ([§8.7](#87-first-run-setup-wizard)): introduction, preconditions with copy-prompt and skill-export buttons, and a test prompt; the companion skills embedded as resources for export.
 - Tool Library install and uninstall from the NuGet package — the part of S1's exit criterion the spike could not cover.
-- CI workflow, NuGet package, Tool Library listing.
+- CI workflow, NuGet package, Tool Library listing. The package manifest, [D365AgentCompanionMcp.nuspec](D365AgentCompanionMcp/D365AgentCompanionMcp.nuspec), follows the Context Exporter's — the format the Tool Library accepts: `lib\net472\Plugins` target, `XrmToolBox` dependency and tag, `iconUrl`, MIT licence expression, readme and licence at the package root, no loose DLLs. A test `nuget pack` built it (with a placeholder readme) with the exporter's two warnings, NU5128 and NU5048. Still needed before release: the tooling README the manifest packs, the icon file its `iconUrl` points at (with the plugin's `SmallImageBase64` / `BigImageBase64`, null today), and the CI workflow modelled on the exporter's.
 - Repository updates outside this plugin: the instructions file's tooling-conventions section, the codebase map, the root README and the matrix's build-backlog row already describe the plugin as specified, not built — change them to describe it as shipped. Add the column-3 guide changes then, not before: registering the plugin's MCP endpoint in [C.3 §7](../../workflows/3-coding-assistants/c.3-project-setup.md#7-wire-up-mcp-and-finish-grounding), and the segmented WIP loop where [4.3](../../workflows/3-coding-assistants/4.3-implementation.md) covers solution changes. Adding a guide also updates the matrix, the root README table and the column README together.
 
-**Exit:** installable from the Tool Library; README matches the shipped tool surface.
+**Exit:** installable from the Tool Library; README matches the shipped tool surface. On a fresh install the wizard shows; **Cancel** closes the tab and the wizard returns on the next open; every copy button puts its prompt on the clipboard; **Export skills…** writes one zip per companion skill; and an agent set up from the prompts alone passes the test prompt.
 
 ### Phase 6 — Planned enhancements
 
@@ -1780,8 +1815,9 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 |---|---|---|
 | **Active Approvals** | A button on the main panel opens one window showing every current grant across all organizations. Grants are grouped in three sections: **Session only**, **Per environment** and **Always**. Each entry shows the organization's friendly name, what the grant covers (Read approval or dev-environment confirmation, [§7](#7-authorization-model)), and when and from which tab it was given. A person can **Revoke** a single entry, use **Reset all** in one section to clear that scope, or use **Reset all approvals** to clear every section. Each reset asks for confirmation inside the window. A revocation applies from the next call, and a call that is already running finishes under its approval. *Once* scopes are not listed, because they end with their call or binding | Keep every grant in one approval store, held per organization. Each entry records its kind, scope, organization ID and friendly name, grant time and originating tab. The store can list its entries, remove one entry, and clear one scope. v1's **Revoke** in a tab, and the *always* setting, become calls on that store rather than separate paths |
 | **Token in the Active Approvals window** | The bearer token moves off the main panel into the Active Approvals window, so the credentials and grants that decide what an agent can do sit in one place. The window shows the token masked, with **Copy** and **Regenerate**. **Copy client config** stays on the main panel for setup | Build the token display, **Copy** and **Regenerate** as one self-contained control backed by the token store (D8), so it can move without change. H4 is unchanged: one host-level token, and regenerating it affects every client |
+| **Scoped approvals for every tier but Publisher** | Every approval dialog except publisher creation offers the same four scopes: **Once**, **Session only**, **Per environment** and **Always** — Write calls included, and *Always* offered in the dialog rather than only in settings. Publisher creation stays once, with typed confirmation, and never for a session (R3). A scoped Write grant still leaves every Write call subject to the dev-environment confirmation, a non-blank reason (R12) and the fixed add flags (R1), and every call is still logged (R13). Grants are listed in Active Approvals with their tier | Keep the approval store keyed by tier as well as scope and organization, and route every dialog's choice through one scope selector, so Write grants become store entries rather than a new path. A scope other than *Once* authorizes later Write calls in advance — and that remains a person's decision, made in the dialog for one organization or, with *Always*, for all. It stays within R2 the way read scopes do today; when this is built, R2 and the instructions file's fixed safety behaviour are reworded to name scoped Write approvals explicitly |
 
-**Exit:** with grants of every scope in place for two organizations, each grant is listed in its section, revoking one or resetting a section takes effect on the next call, and the main panel no longer shows the token.
+**Exit:** with grants of every scope in place for two organizations, each grant is listed in its section, revoking one or resetting a section takes effect on the next call, and the main panel no longer shows the token. A Write call approved *Per environment* runs the next Write to that organization without a dialog but with its log line pair; a publisher creation still prompts every time.
 
 ---
 
@@ -1812,7 +1848,9 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 
 ## 13. Open questions
 
-None open.
+| # | Question | Raised by |
+|---|---|---|
+| Q13 | A model-driven app in a WIP exports with an empty `AppModuleComponents` even when the app has components. What does importing that WIP do to the app's component list? To be tested on a test app, never a real one | E4 |
 
 ### Resolved
 
@@ -1829,6 +1867,7 @@ None open.
 | Q9 | The close-out strategy is chosen per WIP from where its destination is extracted from, not once per project; A and B can coexist in one project. Delivery facts the agent cannot derive are asked with a recommendation, and the steps are confirmed before acting. Confirmed facts are recorded in `<client>-Context/` where it exists. Pipeline runs, commits and pushes are a person's (T6) | [§9.7](#97-close-out-strategies), [§9.8](#98-delivery-context) |
 | Q10 | Two routes per component — placement and in place — mixed freely. An in-place WIP is deleted once its edit has reached the transport source; a transport solution is never the edit vehicle, though under A it may be imported unmanaged from build to align development (A8); no managed project solution is ever imported into development (R16) | [§9.9](#99-routes--placing-a-component-or-editing-it-in-place), R14 |
 | Q11 | Phase 4 skills are new `agent-companion-*` skills in `skills/`, whose frontmatter states they are used with this plugin; they are split by concern, apply on conditions rather than project phases, and share one delivery context and WIP ledger. Existing skills keep their procedures and are not made to depend on the plugin | [Phase 4](#phase-4--agent-skills-and-scripts) |
+| Q12 | A relationship's parent table shells, and a 1:N's referencing lookup column, are expected platform additions: the tool reports them as the relationship's parents rather than as unexpected (plugin change, not yet built). Unless the change customizes them, the agent removes them afterwards; when in doubt it asks the person | [§6.6](#add_solution_components) step 5; shaping skill |
 
 ---
 

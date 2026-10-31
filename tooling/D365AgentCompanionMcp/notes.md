@@ -12,7 +12,7 @@
 | [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | **Done** (2026-10-30) — built, unit-tested, and all twelve live exit checks passed in XrmToolBox. See [Phase 1 — execution](#phase-1--execution) | See spec |
 | [2 — Discovery](SPEC.md#phase-2--discovery) | **Done** (2026-10-31) — built, unit-tested (176 tests), and the live exit checks passed against the sandbox; four findings (L1–L4) fixed on the way. See [Phase 2 — execution](#phase-2--execution) | See spec |
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | **Done** (2026-10-31) — built, unit-tested (207 tests), and the cold-start workflow (§9.1) ran end to end on the sandbox; two findings (P1, P2) for the Phase 4 skills. See [Phase 3 — execution](#phase-3--execution) | See spec |
-| [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | **In progress** (2026-10-31) — five companion skills and their scripts built; script self-tests pass (32 + 11), including the schema check against Microsoft's XSD bundle. Live exit checks not run yet. See [Phase 4 — execution](#phase-4--execution) | See spec |
+| [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | **In progress** (2026-10-31) — five companion skills and their scripts built; script self-tests pass (35 + 11). Live exit checks: I31 verified; scenarios 1–4 pass; scenario 5 desk-checked; scenario 6 partial — the imported flow did not fire (E13). Findings E1–E13. See [Phase 4 — execution](#phase-4--execution) | See spec |
 | [5 — Release](SPEC.md#phase-5--release) | Not started | See spec |
 
 Status values: *Not started* · *In progress* · *Blocked* (say on what) · *Done*.
@@ -27,10 +27,10 @@ Five skills in [skills/](../../skills/), each a folder with `SKILL.md`, `referen
 
 | Skill | Owns | References and scripts |
 |---|---|---|
-| [agent-companion-context](../../skills/agent-companion-context/SKILL.md) | Delivery context, steps (T3), ledger shape; R15, R16 detection, T1–T6 | `rules.md` (rule index by ID), `delivery-facts.md` (where each fact is found; recording format), `wip-ledger.md` (context, steps, components, WIPs, states, reconcile) |
+| [agent-companion-context](../../skills/agent-companion-context/SKILL.md) | Delivery context, steps (T3), ledger shape; R15, R16 detection, T1–T6 | `rules.md` (rule index by ID), `delivery-facts.md` (where each fact is found; recording format), `wip-ledger.md` (context, steps, components, WIPs, states, reconcile); `Invoke-CompanionTool.ps1` |
 | [agent-companion-transport-bootstrap](../../skills/agent-companion-transport-bootstrap/SKILL.md) | Missing transport solutions, publisher choice (R3), first-party apps (§9.3) | — |
-| [agent-companion-wip-shaping](../../skills/agent-companion-wip-shaping/SKILL.md) | Classification, transport home, routes, naming, create, add (Path A/B), read-back, removal with shell cleanup, overlap and dependency checks | `component-types.md`, `queries.md`; `Get-WipName.ps1` |
-| [agent-companion-wip-edit-loop](../../skills/agent-companion-wip-edit-loop/SKILL.md) | Export, baseline, edit, validate, pack, overwrite check, import order and flags | `Test-UnpackedSolution.ps1`, `Test-CustomizationsSchema.ps1`, `Compare-ComponentState.ps1`, `Compare-SolutionExport.ps1` |
+| [agent-companion-wip-shaping](../../skills/agent-companion-wip-shaping/SKILL.md) | Classification, transport home, routes, naming, create, add (Path A/B), read-back, removal with shell cleanup, overlap and dependency checks | `component-types.md`, `queries.md`, `platform-behaviour.md`; `Get-WipName.ps1` |
+| [agent-companion-wip-edit-loop](../../skills/agent-companion-wip-edit-loop/SKILL.md) | Export, baseline, edit, validate, pack, overwrite check, import order and flags | `platform-behaviour.md`; `Invoke-EditLoopStep.ps1`, `Test-UnpackedSolution.ps1`, `Test-CustomizationsSchema.ps1`, `Compare-ComponentState.ps1`, `Compare-SolutionExport.ps1` |
 | [agent-companion-wip-close-out](../../skills/agent-companion-wip-close-out/SKILL.md) | Ending WIPs by route and strategy, W10, close-out A and B, A8 alignment, stragglers | `strategies.md` |
 
 Existing skills (K7): one optional sentence each in [power-automate-flow-editing](../../skills/power-automate-flow-editing/SKILL.md) (an MCP can create the WIP) and [d365ce-planning](../../skills/d365ce-planning/SKILL.md) (an MCP with environment read access can check a component's absence). Neither depends on the plugin.
@@ -45,9 +45,11 @@ Script tests: `scripts/tests/Invoke-ScriptTests.ps1` in the edit-loop and shapin
 | I28 | `Test-UnpackedSolution.ps1` reports a reference outside the tree as an **Error** when evidence is passed (columns, web resources, base ribbon) and a **Warning** saying *not verified* when it is not | A WIP holds only part of each table; without evidence the script cannot tell missing from absent-from-the-WIP |
 | I29 | WIP naming is a script (`Get-WipName.ps1`): accent stripping, length, characters, protected prefixes. A first letter with no ASCII form (for example `Ø`) stops and asks for initials | Deterministic rules are not left to the model. The spec's "any other character is dropped" could leave one initial; asking is the safer reading |
 | I30 | The overwrite check re-exports and compares the **whole** tree whenever the WIP holds anything without a row version — in practice always, since nearly every WIP holds a table shell | `get_component_state` does not cover tables, columns, flows or steps, and X6 makes every table's ribbon diff a whole document |
-| I31 | Global choices, relationships, sitemaps and apps (9, 10, 62, 80) are added through MCP only | S3 verified PAC for columns, forms, views and web resources only |
+| I31 | ~~Global choices, relationships, sitemaps and apps (9, 10, 62, 80) are added through MCP only~~ **Verified live (E1–E4):** 9, 10 and 62 through MCP or PAC; 80 through MCP only | S3 verified PAC for columns, forms, views and web resources only; the live check below covers the rest |
 | I32 | The rule index lives in `agent-companion-context/references/rules.md`; the other skills cite IDs and name the context skill as their precondition | One place to keep in step with the spec (K3) |
 | I33 | Under strategy A, the bootstrap prepares the transport solutions for a person to create in build, and development receives them by alignment (A8) | The build tab is read-only (A2) |
+| I35 | The scratchpad helpers used in the live run (`mcp.py`, `loop.py`) ship as PowerShell: `Invoke-CompanionTool.ps1` in the context skill, `Invoke-EditLoopStep.ps1` in the edit-loop skill | Matches the skills' other scripts and Windows PowerShell 5.1, which XrmToolBox already requires; no Python dependency. The token comes from `-Token` or `AGENT_COMPANION_TOKEN`, never from a client's configuration file |
+| I36 | `Invoke-CompanionTool.ps1` live-tested: `list_connections`, `-All` paging (9 tables from pages of 2), ribbon chunks joined to `sizeBytes`, a tool error (exit 1), a wrong token (401, exit 2), JSON-string arguments. `Invoke-EditLoopStep.ps1` live-tested for Export, Validate, Pack, Schema and Recheck, and its refusal of a work folder inside a Git working tree; **Import and Verify not run** through it — they wrap the same `pac` commands the live run used | No second WIP was imported for the test, to avoid an unconfirmed import in a client environment |
 | I34 | The transport-home query joins `solutioncomponent` to `solution` and also asks for the table's `metadataId`, so a child at home under an include-all table is found | A component under a table with root behaviour 0 has no row of its own (S3) |
 
 ### Live exit checks — steps
@@ -62,6 +64,120 @@ Exit criterion (SPEC §11 Phase 4): six scenarios on the sandbox, without a buil
 6. **Context gaps.** Withhold the segmentation map, then the transport source: the agent asks with a recommendation, and states the steps before its first Write call and again before close-out. Describe a build environment and a promotion pipeline: the agent writes the A steps — promotion order, R1 on the build tab, promotion of the in-place WIP — and runs nothing.
 7. **Coexistence.** With all six skills loaded, edit a cloud flow inside a story's Processes WIP: shaping supplies the WIP (Path B, type 29), the flow skill's import flags apply, the edit loop's overwrite check runs before and the read-back after. No step gets two instructions. With the plugin closed, `power-automate-flow-editing` still works alone.
 8. Every plugin call shows as a line pair in the tab's log; no file from the loop lands in a repository.
+
+### Live run — I31 add paths, 2026-10-31
+
+Against a client R&D environment (not the data-free sandbox; nothing from it recorded here, R7), one tab bound and confirmed as development, reads approved per environment, each Write approved by the person. Calls over HTTP (2026-07-28) from a helper in the session scratchpad; PAC CLI 2.14.1. Publisher: the environment's default publisher (prefix `new`), reused (R3). Steps stated and confirmed before the first Write (T3).
+
+Two empty unmanaged test solutions; the same managed out-of-box components added to each — one global choice, a 1:N and an N:N relationship of `competitor`, a sitemap and a model-driven app — through `add_solution_components` into one and `pac solution add-solution-component` (no `--AddRequiredComponents`) into the other. Both read back, exported and unpacked, compared, then deleted with `pac solution delete`. Nothing was imported.
+
+| Type | MCP | PAC | Export |
+|---|---|---|---|
+| 9 global choice | Root, behaviour 0, nothing else | Same row | `OptionSets\<name>.xml` |
+| 10 relationship | Added; the platform also added the referencing table as a shell with the lookup column under it (1:N), and the first table as a shell (N:N). The tool reported all three as `unexpected` | Same rows | The 1:N in `Other\Relationships.xml`, and the lookup column's whole definition in the referencing table's `Entity.xml`. The N:N: **not exported** |
+| 62 sitemap | Root, behaviour 0 | Same row | `AppModuleSiteMaps\<name>\AppModuleSiteMap.xml` |
+| 80 model-driven app | Root, behaviour 0 | **Fails**: type `80` "not known"; the name `AppModule` resolves to an invalid code, `Model-driven App` to a table | `AppModules\<name>\AppModule.xml` with an **empty** `AppModuleComponents`, while `appmodulecomponent` held 8 rows for the app (7 tables, 1 sitemap) |
+
+Apart from the app, the two solutions' rows and unpacked files were identical. No required component appeared on either path (R1).
+
+Findings:
+
+| # | Finding | Action |
+|---|---|---|
+| E1 | Global choices and sitemaps behave the same through MCP and PAC | Skills: MCP or PAC for 9 and 62 — applied |
+| E2 | A relationship brings parent table shells, and for a 1:N the referencing lookup column, on both paths. `add_solution_components` counts them as `unexpected`, because its parent-shell rule covers only columns, forms and views. The 1:N export carries the lookup column's full definition — on import, a whole document like X6 | Skills: MCP or PAC for 10; the read-back names these to the person — applied. **Decided (SPEC Q12):** they are expected platform behaviour; the tool is to report them as the relationship's parents (plugin change, not yet built), and unless the change customizes them the agent removes them afterwards, asking when in doubt — shaping and close-out skills, `platform-behaviour.md` |
+| E3 | An out-of-box N:N whose intersect table is not customizable is held by the solution but not exported. Adding the intersect table as a shell fails (not customizable) | Skills note it. A custom N:N is untested |
+| E4 | PAC 2.14.1 cannot add a model-driven app. An app's export lists no app components even when it has them; an import could replace the app's component list | Skills: MCP only for 80; compare `AppModuleComponents` with `appmodulecomponent` before importing a WIP holding an app — applied. **Open (SPEC Q13):** confirm on a test app what an import does |
+
+### Live run — exit scenarios, 2026-10-31
+
+Same environment, connection and approvals as the I31 run. The environment's out-of-box tables sit in a client's managed solutions, so editing them would leave unmanaged layers over managed components; at the person's choice the scenarios use a **disposable custom table** the person created in the maker portal (`new_agentp4test`, publisher prefix `new`), and test transport solutions `AgentP4Resources`, `AgentP4Base`, `AgentP4Apps`. Delivery context recorded in a scratchpad ledger in the `agent-companion-context` shape: strategy B, no build environment, no pipelines, not shared (person), segmentation map in the scratchpad standing in for `<client>-d365/`. Work items 9001–9004 are invented.
+
+**Setup.** `AgentP4Base` and `AgentP4Apps` created; the table (metadata), its main form and its Active view added to `AgentP4Base` as their transport home. `AgentP4Resources` deliberately missing.
+
+**Scenario 1 — placement story (9001): pass.** Steps stated and confirmed before the first Write (T3), and restated once (E8).
+
+| Step | Result |
+|---|---|
+| Classify | Transport-home query: table, form, view at home in `AgentP4Base` → in place; new column and web resource → placement. Overlap check flagged the environment's *Common Data Services Default Solution* (E5) |
+| Bootstrap | Only `AgentP4Resources` created; read back empty |
+| Shape | `Get-WipName.ps1` → `LS_Agent_WIP_9001_Resources`, `LS_Agent_WIP_9001_Base`; names free; Base WIP: table (metadata), form, view — read back exact |
+| Edit | Column authored into `Entity.xml`; form: field, library, onload handler; view: column; ribbon: a form button, command, enable rule, label; web resource authored into the Resources WIP |
+| Validate | `Test-UnpackedSolution.ps1` with evidence (33 columns from `get_table_metadata`, the 218 KB base form ribbon reassembled from `get_entity_ribbon`, the web resource name): 0 errors, 0 warnings. Blast radius: exactly the four edited files, plus the web resource |
+| Schema | One new error in Base — `AutoNumberFormat` — which Microsoft's own untouched export also fails (E6). Resolved by matching kinds against a reference export; Resources 0 new |
+| Overwrite check | Versions unchanged; whole-tree re-export identical |
+| Import | Resources **failed**: the web resource was not in the package (E7). The Base import was then run as well and failed on the missing dependency — the agent should have stopped (skill already says so; now stressed). Both failures rolled back. After the fix: Resources 3 min 22 s, Base 4 min 22 s, each publishing all customizations |
+| Read back | Resources WIP: the web resource. Base WIP: table, form, view and the new column — expected |
+| Validate in app | The person confirmed the view column, the field, the onload notification and the ribbon button |
+| Close-out B | `get_required_components`: form and view need the new column (this story's Base WIP) and the web resource (this story's Resources WIP, earlier group); five columns in no solution (E8). Web resource → `AgentP4Resources`; new column and primary name column → `AgentP4Base`; each transport solution gained exactly those components against its snapshot (R1, B3). Both WIPs deleted; no WIP left |
+
+**Scenario 2 — in-place change (9002): pass.** `LS_Agent_WIP_9002_Base` with the main form alone; the platform added the table as a shell, which the tool reported as the form's parent shell, not as unexpected. The shell's export carried the table's ribbon diff, including 9001's button (X6). Label edited; validation, schema, version and tree checks clean; import 3 min 57 s. W10: table and form both at home in `AgentP4Base`. The person confirmed the new label; the WIP was deleted with no close-out add.
+
+**Scenario 3 — both routes, split (9003): pass.** The person chose to end the in-place part first (W12): `LS_Agent_WIP_9003_Base` (table as metadata, new column `new_agentp4score` authored into it) and `LS_Agent_WIP_9003_Base_2` (the Active view; the platform added the table as its shell). The overlap check showed the table in both WIPs (E9). Both validated, packed, schema-checked and overwrite-checked; imported `_Base` then `_Base_2`. The person confirmed the widened view column; `_Base_2` (W10: table and view at home) was deleted at once. `_Base` closed out by B: no dependencies, the column added to `AgentP4Base` — the only new row against the snapshot — then deleted.
+
+**Scenario 4 — route change (9004): pass.** `LS_Agent_WIP_9004_Base` started in place — table as metadata (description edit) and the main form. During the edit a new column `new_agentp4flag` was authored and put on the form; the edit-loop skill marks it placement at that point. After import (2 min 33 s) the W10 read-back found it with no transport home and stopped the in-place deletion. The person confirmed the field; close-out B added it to `AgentP4Base` (the only new row); the WIP was deleted. The form's dependencies now resolve to `AgentP4Base` and `AgentP4Resources`, including the primary name column placed under E8.
+
+**Scenario 6 — flow coexistence (9005): partial.** The person created a cloud flow (Dataverse *row added* on the test table, one Compose action) in a hand-made solution `LSManualP4Processes`, with a new Dataverse connection reference. Processes group added to the test map.
+
+| Step | Result |
+|---|---|
+| Classify | Flow: workflow category 5 → Processes. The second component showed as `ComponentType10049`; not in the `componenttype` choice (E10); found by ID in `connectionreference`. Both placement. Overlap check: both held only by `LSManualP4Processes` — another open WIP (W7), reported; the person chose to delete it after the agent's WIP held both |
+| Bootstrap | `AgentP4Processes` created — the bootstrap's second run, for a group first needed mid-project |
+| Shape | `LS_Agent_WIP_9005_Processes`; PAC added the flow (type 29) at once; the connection reference failed as `10049` and as `Connection Reference`, and was added as `connectionreference` (E11). Read back: exactly the two |
+| Coexistence | Loading `power-automate-flow-editing` showed the **installed** copy differs from the repository's: it still passes `--AddRequiredComponents` (E12). The add step had already run under the companion skill without the flag, so it did not bite; reported (K8) |
+| Edit | The flow skill owned the edit (K7): one line, the Compose input to a whole-value `@concat`. Its `Test-FlowDefinition.ps1` (repository copy): 0 findings. Blast radius: the flow JSON only. Schema: 0 new |
+| Overwrite check | Whole-tree re-export identical — flows have no row version in `get_component_state` |
+| Import | The flow skill's flags (`--activate-plugins --publish-changes --force-overwrite`), 2 min 3 s. Flow still Activated; a re-export matched the edit byte for byte |
+| Runtime | **The flow did not run** on a new record — nor after the person turned it off and on. Its connection reference is bound and Active; `flowrun` holds no rows. The flow was never run before the import, so the cause — environment or import — is not established |
+| Close-out | **Not done**: not validated at runtime, so the WIP stays open (`LS_Agent_WIP_9005_Processes`); the person deferred cleanup (the sandbox will be overwritten) |
+
+| # | Finding | Action |
+|---|---|---|
+| E10 | Component type codes of 10000 and above are not in the `componenttype` choice (90 values here); `list_solution_components` names them `ComponentType<code>` | `component-types.md`: identify by querying the candidate table by ID — applied |
+| E11 | PAC 2.14.1 refuses such a code as a number and resolves a display name to the wrong type; the table's logical name works | Shaping skill and `component-types.md` — applied |
+| E12 | The user-level installed `power-automate-flow-editing` is an older copy than the repository's and passes `--AddRequiredComponents`, against R1 | **Resolved** (2026-10-31): the person reinstalled the user-level skill from the repository. No repository change: the repository copy was right |
+| E13 | A Dataverse-triggered flow imported through the loop did not fire in this environment; cause not isolated | Judged by the person to be an issue of this environment. **Not carried into the skills.** Re-test in another environment, with a run before the import as the control |
+
+**Scenario 5 — gaps in the delivery context: desk check, pass.** T3 was exercised live in every scenario above — steps confirmed before the first Write call, and restated when E8 changed them. With the map and the transport source withheld, `agent-companion-context` produces, per `delivery-facts.md`:
+
+```
+1. Segmentation map. None found next to the solutions. Three transport solutions exist —
+   AgentP4Resources (1 web resource), AgentP4Base (1 table, 3 columns, 1 form, 1 view) and
+   AgentP4Apps (empty). Recommendation: write their current placement down as the map —
+   web resources to Resources; tables, columns, forms and views to Base; apps and sitemaps to
+   Apps. Until you confirm, I classify only components that already have a home (W2).
+2. Transport source. No extraction pipeline in the repository and no build environment bound.
+   Recommendation: treat all three as extracted from development (strategy B): close-out adds
+   new components there, and edits to components already in them ship at the next extract.
+   If they are extracted from a build environment instead (A), close-out is a promotion per
+   WIP and the build environment should be bound in a second tab, left unconfirmed.
+```
+
+Given a described build environment (`[ClientName] BUILD`, bound read-only) and a promotion pipeline taking the WIP name and the destination, the steps for a story with a placement WIP and an in-place WIP:
+
+```
+1. get_required_components for both WIPs (A4, W6, X5); names checked against protected prefixes (W4).
+2. You run the promotion pipeline for the placement WIP — WIP <name>, destination AgentP4Base — and
+   then for the in-place WIP; one at a time, in transport order (A3). Its commit triggers no
+   deployment between the two runs (X8) — please confirm.
+3. After each run, on the BUILD tab: list_solution_components on AgentP4Base — the WIP's
+   components with the behaviours they had, nothing else new (A1); list_solutions — the WIP is
+   gone from build.
+4. Then pac solution delete of each WIP in development (A6). The in-place WIP ends only now,
+   after its promotion — not at import (W10).
+I run no pipeline, commit or push (T6).
+```
+
+
+Findings:
+
+| # | Finding | Action |
+|---|---|---|
+| E5 | Every maker-portal component is also in the environment's *Common Data Services Default Solution* (unmanaged, unique name `Cr…`, behaviour 0). The overlap check counted it as another WIP | `queries.md`: ignore it, found once by friendly name — applied |
+| E6 | The schema bundle (9.0.0.2090) fails current platform exports: `AutoNumberFormat` on columns, `CascadeArchive` on relationships, `EnableCollapsibleGroups` on sitemaps, `OptimizedFor` on apps, and the root's version attributes. A newly authored column is a *new* finding against a WIP export that held none | `Test-CustomizationsSchema.ps1`: findings matched by kind (message before the expected-elements list) against any number of baselines; skill passes a reference export holding the same kinds — applied, test added |
+| E7 | A component of a type the export did not hold has no anchor node in `Other\Customizations.xml`; `pac solution pack` then silently leaves it out (the file is zipped, the definition is not), and the import fails with *"Cannot add a Root Component … not in the target system"* | Edit-loop skill documents the anchor; `Test-UnpackedSolution.ps1` reports `PackagerAnchorMissing` (Error for web resources, verified; Warning for workflows, choices, apps, sitemaps, not verified) — applied, tests added |
+| E9 | Splitting a group's work (W12) puts the table in both of the story's WIPs — metadata in one, the platform's parent shell in the other — so both carry its ribbon diff (X6). W12's "a component is in at most one of a story's WIPs" cannot hold for the table | SPEC W12 amended first: the parent table shell is the exception; ribbon and table-property edits go in only one WIP. Shaping skill and rule index updated — applied |
+| E8 | A metadata-only table exports no columns. A custom table placed that way would reach a new environment without its primary name column; its system columns are created with it. `get_required_components` lists only direct solution rows, so columns held through an include-all table show as in no solution | Shaping and close-out skills: place a new custom table's primary name column (and project columns) explicitly; system columns and columns under an include-all table are in place — applied. Downstream import of the result untested (no second environment) |
 
 ---
 
@@ -735,3 +851,5 @@ Spike solutions left in the sandbox: `AgentSpikeS2A`, `AgentSpikeS2B`, `AgentSpi
 | 2026-10-31 | Phase 3 live run: the cold-start workflow (§9.1) ran end to end on the sandbox under its default publisher — refusals without reason and with publisher creation off, create, add with a parent shell and nothing unexpected, read-back, remove, PAC export/unpack/pack/import with contents unchanged, delete. Publisher dialog with a wrong typed prefix denied, nothing created; dialog content and log confirmed by the person. Findings P1 (a remove leaves the parent shell) and P2 (`--publish-changes` publishes everything) passed to Phase 4. Phase 3 done; scratchpad emptied |
 | 2026-10-31 | Phase 4 prepared in the spec: two routes per component, placement and in place (§9.9, W9–W13); delivery context derived or asked, with steps confirmed before acting (§9.8, R15, T1–T6); close-out strategy chosen per WIP, A and B mixable (§9.7); transport solution never the edit vehicle, with an unmanaged alignment import from build allowed under A (R14, A8); no managed project solution imported into development (R16); pipeline runs, commits and pushes are a person's (T6); delivery facts recorded in `<client>-Context/` where it exists (T5); P1 and P2 carried as W13 and X11. Phase 4 skills are new `agent-companion-*` skills in `skills/`, frontmatter stating they need the plugin, split by concern, with coexistence rules K1–K8; repository skills keep their procedures |
 | 2026-10-31 | Phase 4 started. Five `agent-companion-*` skills written in `skills/` (context, transport bootstrap, WIP shaping, edit loop, close-out) with references; scripts `Get-WipName.ps1`, `Test-UnpackedSolution.ps1`, `Test-CustomizationsSchema.ps1`, `Compare-ComponentState.ps1`, `Compare-SolutionExport.ps1`; self-tests pass (11 and 32, the schema tests against Microsoft's XSD bundle). Optional MCP notes added to `power-automate-flow-editing` and `d365ce-planning`. Choices I27–I34 recorded. Live exit checks next |
+| 2026-10-31 | Phase 4 live run recorded (I31, scenarios 1–6, E1–E13); E13 judged an environment issue, kept out of the skills. Q12 decided: relationship parents are expected; the agent removes them unless customized (spec §6.6, shaping and close-out skills). Platform behaviour registered in `platform-behaviour.md` for the shaping and edit-loop skills. Helpers ported to PowerShell and shipped: `Invoke-CompanionTool.ps1`, `Invoke-EditLoopStep.ps1` (I35, I36). Spec: first-run setup wizard (§8.7) added to Phase 5; scoped approvals for every tier but Publisher added to Phase 6, with the R2 amendment it requires |
+| 2026-10-31 | E12 resolved: the user-level flow-editing skill was reinstalled from the repository. Cleanup deferred by the person: the test environment is a sandbox for deployment tests and will be overwritten, taking with it the AgentP4 transport solutions, `LS_Agent_WIP_9005_Processes`, the test table, web resource, flow and connection reference. Phase 6 scoped Write approvals reworded as a person's decision within R2. Phase 5: `D365AgentCompanionMcp.nuspec` written after the Context Exporter's; a test `nuget pack` (placeholder readme, output in the scratchpad) produced the package with the DLL in `lib/net472/Plugins` and the exporter's two warnings |

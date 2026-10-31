@@ -8,13 +8,15 @@ Confirmed against the `solutioncomponent` type option set in the plugin's spikes
 |---|---|---|---|---|
 | 1 | Table | `{ "type": 1, "logicalName": "account" }` | MCP only | `tableBehavior` `shell` (behaviour 2, an empty shell) or `metadata` (behaviour 1, the table's own properties). Both export the table's whole unmanaged ribbon diff (X6). PAC adds a table with all subcomponents — never |
 | 2 | Column | `{ "type": 2, "table": "account", "logicalName": "new_rating" }` | MCP or PAC | Added alone, its table arrives as a shell |
-| 9 | Global choice | `{ "type": 9, "name": "new_priority" }` | MCP | |
-| 10 | Relationship | `{ "type": 10, "schemaName": "new_account_contact" }` | MCP | |
+| 9 | Global choice | `{ "type": 9, "name": "new_priority" }` | MCP or PAC | Root, behaviour 0, nothing else added |
+| 10 | Relationship | `{ "type": 10, "schemaName": "new_account_contact" }` | MCP or PAC | Parent table shells added — the referencing table and its lookup column for a 1:N, the first table for an N:N — reported as unexpected. A 1:N exports the lookup column's whole definition. An out-of-box N:N with a non-customizable intersect table is held but not exported |
 | 26 | View | `{ "type": 26, "id": "<savedqueryid>" }` | MCP or PAC | Table arrives as a shell |
 | 60 | Form or dashboard | `{ "type": 60, "id": "<formid>" }` | MCP or PAC | Inactive forms do not export (X10) |
 | 61 | Web resource | `{ "type": 61, "id": "<webresourceid>" }` | MCP or PAC | |
-| 62 | Sitemap | `{ "type": 62, "id": "<sitemapid>" }` | MCP | |
-| 80 | Model-driven app | `{ "type": 80, "id": "<appmoduleid>" }` | MCP | |
+| 62 | Sitemap | `{ "type": 62, "id": "<sitemapid>" }` | MCP or PAC | Root, behaviour 0 |
+| 80 | Model-driven app | `{ "type": 80, "id": "<appmoduleid>" }` | MCP only | PAC 2.14.1 does not know the type. The export's `AppModuleComponents` can be empty while the app has components; compare before importing |
+
+Paths for 9, 10, 62 and 80 were verified live on 2026-10-31 (plugin notes, Phase 4).
 
 `get_component_state` accepts the row-backed types 26, 60, 61, 62 and 80.
 
@@ -22,7 +24,9 @@ The application ribbon customization is not accepted until its code is confirmed
 
 ## Other types — PAC only
 
-The plugin refuses them, so they are added with `pac solution add-solution-component`, one per command, never with `--AddRequiredComponents`, and read back after each (R1). The codes below are working knowledge; confirm a code before using it with `get_option_sets` and `names: ["componenttype"]` — or, if that choice is not global in the environment, `get_table_metadata` on `solutioncomponent`. Codes of 10000 and above vary between environments and are always looked up by name.
+The plugin refuses them, so they are added with `pac solution add-solution-component`, one per command, never with `--AddRequiredComponents`, and read back after each (R1). The codes below are working knowledge; confirm one under 10000 with `get_option_sets` and `names: ["componenttype"]`.
+
+**Codes of 10000 and above** vary between environments and are **not** in that choice. `list_solution_components` shows them as `ComponentType<code>`; identify the component by querying its candidate table by ID (`connectionreference`, `customapi`, `environmentvariabledefinition`, …). PAC 2.14.1 refuses such a code as a number; pass the table's **logical name** instead — `--componentType connectionreference`. A display name such as `Connection Reference` resolves to the wrong type.
 
 | Code | Component | Typical group |
 |---|---|---|

@@ -31,7 +31,15 @@ Rules are cited by the IDs of the plugin specification. [rules.md](./references/
 
 ## 1. The plugin is there
 
-1. **Call `list_connections`.** If the agent has no such tool, stop and say: *this needs the Agent Companion MCP plugin running in XrmToolBox and registered with the agent client.* Do not fall back to another route. If the list is empty, ask the person to open the plugin and connect a tab.
+1. **Call `list_connections`.** If the agent's client has not loaded the plugin's tools — for example the server was registered after the session began — call the same endpoint with [Invoke-CompanionTool.ps1](./scripts/Invoke-CompanionTool.ps1). It sends the same MCP request, so the plugin still asks the person to approve and logs every call; it needs the bearer token from the plugin panel or the client configuration, passed with `-Token` or set in `AGENT_COMPANION_TOKEN` (never written to a file). If the endpoint does not answer either, stop and say: *this needs the Agent Companion MCP plugin running in XrmToolBox and registered with the agent client.* Do not fall back to any route that bypasses the plugin. If the list is empty, ask the person to open the plugin and connect a tab.
+
+   ```powershell
+   .\scripts\Invoke-CompanionTool.ps1 -Tool list_connections
+   .\scripts\Invoke-CompanionTool.ps1 -Tool list_solution_components -All -OutFile <work>\wip.json `
+       -Arguments @{ connection = '<connectionId>'; solutionUniqueName = '<wip>' }
+   ```
+
+   `-All` follows the paging cursor and merges the pages, joining ribbon XML chunks in order. The script returns the tool's structured result; exit code 1 is a tool error (`denied_by_user`, `not_found`, …), 2 an HTTP or protocol error.
 2. **Choose the connection.** With one bound connection, use it and name it to the person. With several, ask which one. Never switch connection within a task without saying so.
 3. **`get_connection_info`.** Note `devEnvironmentConfirmed`. Write tools refuse on an unconfirmed connection; only the person can confirm it, in the plugin tab. A build environment is bound and deliberately left unconfirmed (A2).
 4. **Match PAC.** Run `pac org who` and compare its organization URL with `organization.url`. If they differ, stop; the person selects the right profile (`pac auth list`, `pac auth select`). Repeat this check whenever another skill is about to run PAC after a connection change.

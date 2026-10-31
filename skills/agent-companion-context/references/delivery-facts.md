@@ -32,6 +32,7 @@ Typical order, imported downstream first to last: shared libraries (their own pu
 - In `<client>-d365/`, each unpacked solution's `Other/Solution.xml` gives `UniqueName`, the publisher and `Managed`.
 - Compare the two lists and report any difference — a transport solution in the repository but missing from the environment, or the reverse.
 - A **managed** solution whose publisher is a project transport publisher, found in development, stops the task (R16).
+- Not transport solutions, whatever their publisher: `Default`, `Active`, the environment's *Common Data Services Default Solution* (unique name `Cr…`, which collects everything made in the maker portal), and unmanaged solutions people make by hand for their own work — those are open WIPs for the overlap check, not transport.
 
 ## Transport source of each transport solution
 

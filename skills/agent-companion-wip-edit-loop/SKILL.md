@@ -49,6 +49,25 @@ git -C <folder> rev-parse --is-inside-work-tree   # must fail
   state-now.json      get_component_state just before import
 ```
 
+### Running the steps
+
+[Invoke-EditLoopStep.ps1](./scripts/Invoke-EditLoopStep.ps1) runs each PAC and validation step below with every path built from the work folder and the WIP name. Prefer it to composing paths in shell commands: a quoting slip once sent two WIPs' exports to one literal folder. It refuses a work folder inside a Git working tree, shows each script's findings, and says *stop* after a failed import or a changed recheck.
+
+| Step below | `-Step` |
+|---|---|
+| 1 Export and unpack | `Export` |
+| 4 Validate | `Validate` (with `-KnownColumnsPath`, `-KnownWebResources`, `-BaseRibbonPath`) |
+| 5 Pack, schema | `Pack`, then `Schema` (with `-SchemaPath`, `-ReferencePackagePath`) |
+| 6 Overwrite check | `CompareState` (after saving `state-now.json`), `Recheck` |
+| 7 Import | `Import` (flags in `-ImportArguments`) |
+| 8 What landed | `Verify` |
+
+```powershell
+.\scripts\Invoke-EditLoopStep.ps1 -Step Export -Wip <wip> -WorkFolder <work>
+```
+
+The plugin calls in between — `get_component_state` for the baseline and the recheck, `list_solution_components` for the read-back — stay the agent's. Platform behaviour met along the way, and the import messages and what they mean, are in [platform-behaviour.md](./references/platform-behaviour.md).
+
 ---
 
 ## The loop
@@ -84,6 +103,11 @@ Edit in `src\` only, and only the components the change needs.
 
 **Anything new authored here** — a column added to `Entity.xml`, a new web resource — is a new component with no transport home. Add it to the ledger as **placement**: the WIP can no longer end as in place (W10), and the next read-back after import will show it. Tell the person.
 
+Authoring a new component:
+
+- **A column** goes into `<attributes>` of a table the WIP holds as `metadata`; a shell exports no `EntityInfo` to add it to.
+- **A component of a type the export did not hold** — the first web resource in a WIP, say — needs its folder (`WebResources\…` with the file and its `.data.xml`), a `RootComponent` in `Other\Solution.xml`, **and the empty anchor node in `Other\Customizations.xml`** (`<WebResources />`, in schema order: after `<optionsets />`, before `<CustomControls />`). Without the anchor, `pac solution pack` silently leaves the component out and the import fails with *"Cannot add a Root Component … not in the target system"*. `Test-UnpackedSolution.ps1` reports a missing anchor.
+
 A table in the WIP — even a shell — carries its whole unmanaged ribbon diff and imports it over development's (X6). Leave a diff you are not changing exactly as exported.
 
 ### 4. Validate offline
@@ -109,7 +133,14 @@ pac solution pack --zipfile <work>\<wip>\updated.zip --folder <work>\<wip>\src -
 .\scripts\Test-CustomizationsSchema.ps1 -PackagePath <work>\<wip>\updated.zip -SchemaPath <schemas> -BaselinePackagePath <work>\<wip>\export.zip
 ```
 
-The schema check needs Microsoft's customization schema bundle (CustomizationsSolution.xsd and the files it includes)[^1] — not shipped here. Ask the person where it is kept; if there is none, say the schema check was skipped. The bundle is older than the platform, so only findings the edit **introduced** — absent from the untouched `export.zip` — fail the check.
+The schema check needs Microsoft's customization schema bundle (CustomizationsSolution.xsd and the files it includes)[^1] — not shipped here. Ask the person where it is kept; if there is none, say the schema check was skipped.
+
+The bundle is older than the platform: an untouched export already fails it on elements the platform writes today — `AutoNumberFormat` on every column, `CascadeArchive` on relationships, and more. So only findings of a **kind** absent from every baseline fail the check. The untouched `export.zip` covers what the WIP held; when the edit adds kinds of element it did not hold — a new column in a WIP that exported none — also pass an unmanaged export that holds them, such as the destination transport solution's (`pac solution export` is read-only):
+
+```powershell
+.\scripts\Test-CustomizationsSchema.ps1 -PackagePath <work>\<wip>\updated.zip -SchemaPath <schemas> `
+    -BaselinePackagePath <work>\<wip>\export.zip, <work>\reference.zip
+```
 
 ### 6. Overwrite check — just before import
 
@@ -143,7 +174,7 @@ On any difference: stop, tell the person what changed and who changed it (`modif
 pac solution import --path <work>\<wip>\updated.zip --publish-changes
 ```
 
-Add `--async --max-async-wait-time 20` for a large WIP, and do not run it on a short command timeout. An import failure leaves the environment unchanged: read the error, fix `src\`, and go back to step 4.
+Add `--async --max-async-wait-time 20` for a large WIP, and do not run it on a short command timeout — with publishing, a small WIP took three to four minutes. Run each import on its own and read its result before the next. An import failure leaves the environment unchanged: **stop**, read the error, fix `src\`, and go back to step 4. Never go on to the next WIP in the order after a failure; it depends on this one. The common messages and their causes are in [platform-behaviour.md](./references/platform-behaviour.md#import).
 
 ### 8. Read back and verify
 

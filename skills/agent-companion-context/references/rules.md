@@ -37,7 +37,7 @@ The rules of the Agent Companion MCP specification (`tooling/D365AgentCompanionM
 | W9 | Route per component (placement when it has no transport home, in place when it has one); lifetime per WIP | shaping |
 | W10 | Before ending an in-place WIP, read it back: every component must already have a transport home | close-out |
 | W11 | Changing route never changes a component's group | shaping |
-| W12 | A second WIP for one group of a story only by the person's choice; a component is in at most one of a story's WIPs | shaping |
+| W12 | A second WIP for one group of a story only by the person's choice; a component is in at most one of a story's WIPs, except the table shell the platform adds to each — ribbon and table edits then go in only one | shaping |
 | W13 | After removing a column, form or view, remove the orphaned parent table shell when nothing else needs it | shaping |
 
 ## Issues common to every close-out (X)

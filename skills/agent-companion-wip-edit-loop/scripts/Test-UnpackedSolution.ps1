@@ -8,6 +8,9 @@
     a broken form at run time:
 
       - Every .xml file parses
+      - A component folder (WebResources, Workflows, ...) has its anchor node in
+        Other\Customizations.xml; without it the packager silently leaves the
+        components out
       - Forms: formid is a GUID and matches the file name; tab, section, cell and
         control ids are unique within the form; uniqueid and classid are GUIDs; tab
         and section names are unique; every control's datafieldname is a column of
@@ -232,6 +235,32 @@ function Test-UniqueValue {
         }
         if (-not $seen.Add($value)) {
             Add-Finding -Severity $Severity -Rule 'DuplicateId' -Location $Location -Message "$Kind $Attribute '$value' appears more than once."
+        }
+    }
+}
+
+# --- Packager anchors ------------------------------------------------------------
+
+# The packager merges a component folder into Other\Customizations.xml only where the
+# matching node exists. An export that held no component of a type has no node for it,
+# so a component of that type authored locally is silently left out of the package and
+# the import fails ("Cannot add a Root Component ... not in the target system").
+$customizationsEntry = $documents | Where-Object { $_.Relative -ieq 'Other\Customizations.xml' } | Select-Object -First 1
+if ($null -ne $customizationsEntry) {
+    $anchors = @(
+        @{ Folder = 'WebResources'; Node = 'WebResources'; Severity = 'Error' },
+        @{ Folder = 'Workflows'; Node = 'Workflows'; Severity = 'Warning' },
+        @{ Folder = 'OptionSets'; Node = 'optionsets'; Severity = 'Warning' },
+        @{ Folder = 'AppModules'; Node = 'AppModules'; Severity = 'Warning' },
+        @{ Folder = 'AppModuleSiteMaps'; Node = 'AppModuleSiteMaps'; Severity = 'Warning' }
+    )
+    foreach ($anchor in $anchors) {
+        $folder = Join-Path $root $anchor.Folder
+        if (-not (Test-Path -LiteralPath $folder -PathType Container)) { continue }
+        if (-not (Get-ChildItem -LiteralPath $folder -Recurse -File | Select-Object -First 1)) { continue }
+        if ($null -eq $customizationsEntry.Doc.SelectSingleNode("/ImportExportXml/$($anchor.Node)")) {
+            $script:CurrentFile = $customizationsEntry.Relative
+            Add-Finding -Severity $anchor.Severity -Rule 'PackagerAnchorMissing' -Location $anchor.Node -Message "The tree has a $($anchor.Folder) folder but Other\Customizations.xml has no <$($anchor.Node)> node; the packager leaves those components out. Add the empty node in schema order."
         }
     }
 }

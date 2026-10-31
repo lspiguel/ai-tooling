@@ -44,6 +44,7 @@ Read each row's `s.uniquename` against the delivery context:
 | A transport solution, holding the table with behaviour 1 or 2 only | Not a home for the child |
 | Managed (`s.ismanaged` true) | An installed app or the system — not a home, not an overlap |
 | This task's own WIP | Ignore |
+| The environment's *Common Data Services Default Solution* — an unmanaged solution whose unique name varies (`Cr` and a few characters); find it once with `list_solutions` by its friendly name | Ignore. The maker portal puts every component made there into it, with behaviour 0; it is not a WIP |
 | Any other unmanaged solution | An overlap to report (W7) — another WIP, whether agent-made (`_Agent_WIP_`) or made by hand. For a table, any behaviour counts: its ribbon diff travels with it (X6) |
 
 Under strategy A, run the query on the build environment's tab for the home (T4), and on development for the overlap.

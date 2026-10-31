@@ -44,7 +44,9 @@ For each placement WIP of the story, in transport order (W5, X8):
    pac solution add-solution-component --solutionUniqueName <transport> --component <id or name> --componentType <code>
    ```
 
-   Components already in the transport solution come back `alreadyPresent` — nothing to do.
+   For a code of 10000 and above — a connection reference, say — `--componentType` takes the table's logical name (`connectionreference`), not the number. A relationship added to the transport solution brings the same parent shells and lookup column as in the WIP; remove the ones the change does not customize, and ask when in doubt (shaping skill, step 8).
+
+   Components already in the transport solution come back `alreadyPresent` — nothing to do. A **new custom table** is placed with its primary name column and every column the project made, each added explicitly: as metadata the table exports no columns, and its system columns are created with it.
 3. **Verify the transport solution (R1, B3).** `list_solution_components` on it, every page, against the snapshot taken before step 2: only the components added — and parent shells as described in shaping — are new. Anything unexpected would go straight into the next extract; stop.
 4. **Delete the WIP** once the whole story's WIPs are done.
 5. **Release.** The next extract from development ships the work. If the extraction pipeline runs by hand, prepare the run for the person (T6). Remind them that every edit to components already in transport ships with that extract too (X2).

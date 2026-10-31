@@ -181,6 +181,15 @@ try {
     $result = Invoke-Script 'Test-UnpackedSolution.ps1' @{ Path = (Join-Path $work 'malformed') }
     Assert ($result.ExitCode -eq 1 -and (Get-Rules $result 'Error') -contains 'XmlParse') 'malformed XML is an error'
 
+    $customizations = '<ImportExportXml><Entities /><optionsets />{0}<CustomControls /><Languages><Language>1033</Language></Languages></ImportExportXml>'
+    $null = Write-Fixture 'anchor\Other\Customizations.xml' ($customizations -f '')
+    $null = Write-Fixture 'anchor\WebResources\new_\sample\form.js.data.xml' '<WebResource><WebResourceId>{88888888-8888-8888-8888-888888888883}</WebResourceId><Name>new_/sample/form.js</Name></WebResource>'
+    $result = Invoke-Script 'Test-UnpackedSolution.ps1' @{ Path = (Join-Path $work 'anchor') }
+    Assert ($result.ExitCode -eq 1 -and (Get-Rules $result 'Error') -contains 'PackagerAnchorMissing') 'web resources without a WebResources node are an error'
+    $null = Write-Fixture 'anchor\Other\Customizations.xml' ($customizations -f '<WebResources />')
+    $result = Invoke-Script 'Test-UnpackedSolution.ps1' @{ Path = (Join-Path $work 'anchor') }
+    Assert ($result.ExitCode -eq 0) 'the WebResources node satisfies the anchor check'
+
     $result = Invoke-Script 'Test-UnpackedSolution.ps1' @{ Path = (Join-Path $work 'no-such-folder') }
     Assert ($result.ExitCode -eq 2) 'missing folder exits 2'
 
@@ -243,6 +252,10 @@ try {
         Assert ($result.ExitCode -eq 0) 'zip identical to its baseline has no new errors'
         $result = Invoke-Script 'Test-CustomizationsSchema.ps1' @{ PackagePath = $editedXml; SchemaPath = $SchemaPath; BaselinePackagePath = $zip }
         Assert ($result.ExitCode -eq 1 -and @($result.Output | Where-Object { $_.New -and $_.Severity -eq 'Error' }).Count -ge 1) 'an invalid element is a new error'
+        $referenceXml = Write-Fixture 'schema\reference\customizations.xml' ($document -f '<NotAnElement />')
+        $twiceXml = Write-Fixture 'schema\twice\customizations.xml' ($document -f '<NotAnElement /><NotAnElement />')
+        $result = Invoke-Script 'Test-CustomizationsSchema.ps1' @{ PackagePath = $twiceXml; SchemaPath = $SchemaPath; BaselinePackagePath = @($zip, $referenceXml) }
+        Assert ($result.ExitCode -eq 0 -and @($result.Output | Where-Object { $_.New }).Count -eq 0) 'a kind found in any baseline is not new, however often it occurs'
         $result = Invoke-Script 'Test-CustomizationsSchema.ps1' @{ PackagePath = $editedXml; SchemaPath = (Join-Path $work 'no-schemas') }
         Assert ($result.ExitCode -eq 2) 'missing schema folder exits 2'
     }

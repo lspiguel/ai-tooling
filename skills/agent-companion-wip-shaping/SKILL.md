@@ -30,10 +30,12 @@ Changing a component's route never changes its group (W11). A component is in at
 |---|---|---|---|
 | Table | 1 | **MCP only** — `add_solution_components` with `tableBehavior` | **Never through PAC**: PAC adds a table with all its subcomponents |
 | Column, view, form (and dashboard), web resource | 2, 26, 60, 61 | MCP (preferred) or PAC | Added alone, the platform adds the table as a shell to hold it |
-| Global choice, relationship, sitemap, model-driven app | 9, 10, 62, 80 | MCP | PAC behaviour for these is not verified; do not use it |
+| Global choice, sitemap | 9, 62 | MCP (preferred) or PAC | Root with nothing else; both paths give the same rows |
+| Relationship | 10 | MCP (preferred) or PAC | The platform adds parent table shells — and for a 1:N the referencing lookup column — which the read-back shows as unexpected (see step 8). An out-of-box N:N whose intersect table is not customizable is held but **not exported** |
+| Model-driven app | 80 | **MCP only** | PAC cannot add it. Its export can list no app components even when the app has some — see step 8 |
 | Anything else — workflows and cloud flows, plug-in assemblies and steps, security roles, environment variables, custom APIs, connection references, canvas apps, charts | other | PAC, one command per component | The plugin refuses these types. Never pass `--AddRequiredComponents` |
 
-MCP is preferred where it is accepted: one approval for a list, required components and subcomponents forced off, parent shells recognized, and every call in the plugin's log. Type codes and the subtype rules the map uses are in [component-types.md](./references/component-types.md).
+MCP is preferred where it is accepted: one approval for a list, required components and subcomponents forced off, parent shells recognized, and every call in the plugin's log. Type codes and the subtype rules the map uses are in [component-types.md](./references/component-types.md). What the platform and PAC actually do when components are added, removed and read back — parent shells, silent PAC messages, unnamed components — is in [platform-behaviour.md](./references/platform-behaviour.md).
 
 Whichever path, **every add is followed by a read-back** (R1, step 8).
 
@@ -66,12 +68,12 @@ Stop and ask the person when any of these finds something:
 | Never in a WIP | Record creation and update rules and the flows they generated; a managed table with all subcomponents; a custom component carrying a prefix other than its WIP's publisher's — typically one created by mistake under the environment's default publisher (`new_`, `cr<…>_`) or a partner's. Out-of-box and installed-app components are not affected; the shared-library WIP uses the library's publisher (W3) | W8 |
 | Inactive form | `formactivationstate` is 0. It will not export, so there is nothing to edit; the person activates it or picks another form | X10 |
 | Overlap with other open WIPs | For every whole document — form, view, sitemap, web resource, workflow, app module, **and every table, for its ribbon** — the same `solutioncomponent` query: any other unmanaged solution that is neither a transport solution nor this task's WIP. Report it; the person sequences or reviews | W7, X1, X6 |
-| Dependencies against the order | `get_required_components` for the components. A requirement is in place when it is managed and from an installed app, in a transport solution of the same or an earlier group, or in this story's WIP for the same or an earlier group. Held only by a later group → stop for a placement decision. Held by no solution → it needs placing too (X5) | W6, X5 |
+| Dependencies against the order | `get_required_components` for the components. A requirement is in place when it is managed and from an installed app, in a transport solution of the same or an earlier group, or in this story's WIP for the same or an earlier group. Held only by a later group → stop for a placement decision. Held by no solution → it needs placing too (X5) — with two exceptions the tool cannot see: a column of a table held in such a solution with `includeSubcomponents` (the tool lists only direct rows), and the system columns a custom table gets when it is created (`<table>id`, `ownerid`, `statecode`, `statuscode`, `createdon` and the like). A custom table's **primary name column is not** one of them: a metadata-only table exports no columns, so place it explicitly with the table | W6, X5 |
 
 ### 4. Decide the WIPs
 
 - One WIP per group the change touches (R10).
-- A group holding both routes shares one WIP by default; that WIP lives until close-out. When the person wants the in-place part to end first, propose a second WIP for the group, named with a suffix (W12).
+- A group holding both routes shares one WIP by default; that WIP lives until close-out. When the person wants the in-place part to end first, propose a second WIP for the group, named with a suffix (W12). Each WIP holding a column, form or view of a table also holds that table — as metadata or as the platform's shell — and so its whole ribbon diff (X6). Put ribbon and table-property edits in only one of them; the overlap check will show the table in both, and that is expected.
 - The WIP's publisher is the publisher of the transport solution it feeds (W3) — from the delivery context.
 
 Hand the list — WIP, group, route, publisher, components — to the steps for the person to confirm before the first Write call (T3, owned by `agent-companion-context`).
@@ -107,7 +109,7 @@ Read the result: `failed` stops the run; `notAttempted` entries follow the first
 pac solution add-solution-component --solutionUniqueName <wip> --component <id or name> --componentType <code>
 ```
 
-Check the PAC profile matches the connection first (`agent-companion-context`, section 1).
+For a code of 10000 and above, `--componentType` takes the table's logical name (for example `connectionreference`), not the number ([component-types.md](./references/component-types.md#other-types--pac-only)). Check the PAC profile matches the connection first (`agent-companion-context`, section 1).
 
 ### 8. Read back (R1)
 
@@ -116,7 +118,12 @@ Check the PAC profile matches the connection first (`agent-companion-context`, s
 - the components requested, under their tables;
 - plus, for a column, form or view added without its table, that table as a shell (`includeAsShellOnly`).
 
-Anything else — a table with `includeSubcomponents`, a required component nobody asked for, a shell for a table no added entry belongs to — stops the work until the person reviews it. A new table the person created inside the WIP in the maker portal also arrives with all subcomponents; it was not added by the agent, so report it and let the person decide.
+Anything else — a table with `includeSubcomponents`, a required component nobody asked for, a shell for a table no added entry belongs to — stops the work until the person reviews it.
+
+Two platform additions are known:
+
+- **A relationship** brings parents — for a 1:N the referencing table as a shell with the lookup column under it, for an N:N the first table as a shell. They are expected platform behaviour (SPEC Q12), but this plugin version still reports them as unexpected, so name them to the person as the relationship's parents. **Unless the change customizes them, remove them** (`remove_solution_component`), then read the WIP back: the relationship must still be there. If removing one would take the relationship with it, or you are not sure whether the change touches it, ask the person. Left in, the lookup column's whole definition travels with the WIP.
+- **A model-driven app** may export with an empty component list even when the app has components. Before any WIP holding an app is imported, compare `AppModuleComponents` in the unpack with `appmodulecomponent` rows from `query`; if they differ, stop — the import could replace the app's component list. A new table the person created inside the WIP in the maker portal also arrives with all subcomponents; it was not added by the agent, so report it and let the person decide.
 
 ### 9. Remove
 
