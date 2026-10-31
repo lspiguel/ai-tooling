@@ -46,8 +46,15 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 Check(argument.Name, argument.Value, schema);
             }
 
+            // A continuation page needs only connection and cursor: other arguments are ignored (SPEC §6.2 Paging).
+            var continuation = tool.IsPaged && arguments[InputSchema.Cursor]?.Type == JTokenType.String;
             foreach (var name in tool.InputSchema["required"]!.Values<string>())
             {
+                if (continuation && name != InputSchema.Connection)
+                {
+                    continue;
+                }
+
                 if (arguments[name!] == null || arguments[name!]!.Type == JTokenType.Null)
                 {
                     var message = name == InputSchema.Connection
@@ -106,6 +113,43 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                     if (value.Type != JTokenType.Boolean)
                     {
                         throw ToolException.InvalidArgument(name, $"{name} must be true or false.");
+                    }
+
+                    break;
+                case "object":
+                    if (value.Type != JTokenType.Object)
+                    {
+                        throw ToolException.InvalidArgument(name, $"{name} must be an object.");
+                    }
+
+                    break;
+                case "array":
+                    if (!(value is JArray array))
+                    {
+                        throw ToolException.InvalidArgument(name, $"{name} must be an array.");
+                    }
+
+                    if (schema["minItems"] != null && array.Count < (int)schema["minItems"]!)
+                    {
+                        throw ToolException.InvalidArgument(name, $"{name} must have at least {(int)schema["minItems"]!} entries.");
+                    }
+
+                    if (schema["maxItems"] != null && array.Count > (int)schema["maxItems"]!)
+                    {
+                        throw ToolException.InvalidArgument(name, $"{name} must have at most {(int)schema["maxItems"]!} entries.");
+                    }
+
+                    if (schema["items"] is JObject itemSchema)
+                    {
+                        for (var i = 0; i < array.Count; i++)
+                        {
+                            if (array[i].Type == JTokenType.Null)
+                            {
+                                throw ToolException.InvalidArgument(name, $"{name}[{i}] must not be null.");
+                            }
+
+                            Check($"{name}[{i}]", array[i], itemSchema);
+                        }
                     }
 
                     break;

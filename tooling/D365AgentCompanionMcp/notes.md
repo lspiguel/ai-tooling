@@ -10,12 +10,68 @@
 |---|---|---|
 | [0 — Spikes](SPEC.md#phase-0--spikes) | **Done for v1** (2026-10-30). S7 in cold storage (no build environment); S8 deferred with strategy C. Sandbox and workstation cleaned up | Every v1 spike has a written finding, and the spec is updated |
 | [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | **Done** (2026-10-30) — built, unit-tested, and all twelve live exit checks passed in XrmToolBox. See [Phase 1 — execution](#phase-1--execution) | See spec |
-| [2 — Discovery](SPEC.md#phase-2--discovery) | Not started | See spec |
+| [2 — Discovery](SPEC.md#phase-2--discovery) | **In progress** (2026-10-31) — built and unit-tested; live exit checks against the sandbox not yet run. See [Phase 2 — execution](#phase-2--execution) | See spec |
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | Not started | See spec |
 | [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | Not started | See spec |
 | [5 — Release](SPEC.md#phase-5--release) | Not started | See spec |
 
 Status values: *Not started* · *In progress* · *Blocked* (say on what) · *Done*.
+
+---
+
+## Phase 2 — execution
+
+### What is built
+
+The eleven discovery tools of SPEC §6.5, listed in §6.3 order after the Phase 1 tools. Everything is in [D365AgentCompanionMcp/](D365AgentCompanionMcp/).
+
+| Area | Where | Spec |
+|---|---|---|
+| Paging, extended | `Paging/IPageFields` — fields beside the items, on every page or the first only; `SnapshotPageSource` — metadata and XML read once and held for the cursor; `FetchXmlPageSource` — FetchXML with paging cookies; `TextChunker` — XML split by JSON-escaped length; `Pager.PagesTaken` | §6.2 |
+| Definitions | `ToolDefinition.Paged` takes `PageField`s; `Chunked` for XML payloads; `WithOptionalItems`; `WithInspection` — a check run before the dialog | §6.2, §8.2 |
+| Dispatcher | Runs the inspection on the first call only, after the gates and before the dialog; passes `TouchesRecords` to the dialog; `pageSize` ignored for chunked tools | §6.5 `query`, C8 |
+| Arguments | Enum, Boolean and array inputs; arrays checked for type, enum items, `minItems` and `maxItems` | §6.2 |
+| `list_solutions`, `list_solution_components`, `get_component_state`, `get_required_components` | `Tools/SolutionTools`; names through `ComponentNames`, selectors through `ComponentSelector` (shared with Phase 3) | §6.5 |
+| `list_tables`, `get_table_metadata`, `get_relationships`, `get_option_sets` | `Tools/MetadataTools`, `MetadataHelpers` — labels in the base language, `RetrieveEntityRequest` (F16) | §6.5 |
+| `get_entity_ribbon`, `get_application_ribbon` | `Tools/RibbonTools` — unzipped, chunked within the cap | §6.5 |
+| `query` | `Tools/QueryTool`, `FetchXmlQuery` — `top` (F15) and `<all-attributes />` refused, record detection against the allow-list; `RecordValues` — the typed value wrappers | §6.5 |
+| Component types | `Common/ComponentTypes` — codes and names | §6.2 |
+| Tests | 38 new: `DiscoveryToolsTests` against the synthetic environment in `DiscoveryData`, `SerializationTests`; 175 in total | §10 |
+
+**Fixed on the way:** a continuation call with only `connection` and `cursor` failed the required-argument check for tools with required arguments (`get_table_metadata`, `query`). Phase 1's only paged tool had none. Continuations now need only `connection` and `cursor`, as SPEC §6.2 says.
+
+### Implementation choices to review
+
+Continues the Phase 1 list.
+
+| # | Choice | Why |
+|---|---|---|
+| I11 | Result fields beside the items come first: every-page fields, then first-page fields, then the items, then `nextCursor`. First-page-only fields are left out of later pages rather than sent as `null` | Matches the field order in the §6.5 examples; a missing field is clearer than a null one that could be read as "none" |
+| I12 | `get_table_metadata` asks for `EntityFilters.All` when keys are wanted, `Entity \| Attributes` otherwise | Alternate keys are not expected with the narrower filter — **check live** |
+| I13 | Columns are named `table.column` in `list_solution_components` and `get_required_components`; relationships and types not listed in §6.5 stay `null` | A column's logical name alone is ambiguous across tables |
+| I14 | `get_required_components` always reports `required.isManaged` as `null`; each holding solution carries its own `isManaged` | `dependency` rows do not carry it; the spec allows `null` |
+| I15 | Metadata not-found is detected from fault code `0x80040217` or a "Could not find" / "does not exist" message | The fault codes for `RetrieveEntity`, `RetrieveAttribute`, `RetrieveOptionSet` and `RetrieveRelationship` are not documented — **check live** and narrow |
+| I16 | `dependencyType` is `null` for a value other than 1, 2 or 4 | The spec's enum has no "none"; better a visible gap than a wrong label |
+| I17 | A ribbon chunk is at most the cap less 1,000 characters, measured JSON-escaped | Leaves room for `logicalName`, `location`, `sizeBytes` and the cursor |
+| I18 | `get_entity_ribbon` reads the table's metadata first | A wrong name then fails with `not_found` instead of a ribbon fault |
+| I19 | The approval dialog shows `fetchXml` inside the JSON arguments, not as pretty-printed XML | §8.2 asks for pretty-printed FetchXML — **gap**, to close with the dialog work or Phase 3 |
+| I20 | `get_component_state` checks its entries' types before the dialog, through the inspection hook, and names every bad entry | §6.5 asks for the entries to be named; nobody should approve a call that cannot run |
+
+### Live exit checks — steps
+
+Exit criterion (SPEC §11 Phase 2): an agent can find the solutions in an environment, describe `account` (columns, relationships, forms, views, ribbon) and page through a small record set, with every call approved and logged. Needs the data-free sandbox and one client; record findings here without client data (R7).
+
+1. Build Release; copy only `D365AgentCompanionMcp.dll` (and `.pdb`) into XrmToolBox's `Plugins` folder, as in Phase 1 step 2.
+2. Connect one tab to the sandbox. Set the page size and cap to their defaults.
+3. `list_solutions`, then again with `includeHidden: true` and `managed: "managed"`: hidden and managed solutions appear only when asked for.
+4. `list_tables` with `nameContains: "account"`; `get_table_metadata` for `account` with `pageSize: 50` — follow `nextCursor` to the end; `table` and `keys` come on page 1 only. Check that alternate keys are returned (I12).
+5. `get_relationships` and `get_option_sets` for `account`'s global choices; a self-referencing relationship appears as both kinds.
+6. `query` over `systemform` and `savedquery` for `account` (forms and views): `touchesRecords` is `false`, no warning in the dialog.
+7. `get_entity_ribbon` for `account`: several chunks; the concatenation parses as XML; no page is saved to disk by the client (stays under 50,000 characters).
+8. `query` over `account` with `pageSize: 2`: the dialog warns that it reads records; page through to the end. Switch record queries off in the panel: the same query fails with `tool_disabled` and no dialog.
+9. `get_table_metadata` with a wrong table name, and `get_required_components` with a wrong option set name: both `not_found` (I15 — note the fault codes seen).
+10. `list_solution_components` and `get_component_state` on a sandbox solution; `get_required_components` for one of its forms.
+11. Every call above shows as a line pair in the tab's log.
 
 ---
 

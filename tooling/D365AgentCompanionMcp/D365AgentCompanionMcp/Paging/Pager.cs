@@ -35,6 +35,12 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Paging
         /// <summary>Gets the page size.</summary>
         public int PageSize { get; }
 
+        /// <summary>Gets where the items come from.</summary>
+        public IPageSource Source => this.source;
+
+        /// <summary>Gets the number of pages taken so far.</summary>
+        public int PagesTaken { get; private set; }
+
         /// <summary>Gets a value indicating whether another page follows.</summary>
         public bool HasMore => this.buffer.Count > 0 || !this.source.Exhausted;
 
@@ -69,6 +75,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Paging
                 await this.FillAsync().ConfigureAwait(false);
             }
 
+            this.PagesTaken++;
             return items;
         }
 

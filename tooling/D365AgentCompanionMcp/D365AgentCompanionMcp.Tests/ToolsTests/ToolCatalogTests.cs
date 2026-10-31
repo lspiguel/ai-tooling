@@ -28,7 +28,12 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
         [Test]
         public void ToolsList_IsInTheFixedOrder()
         {
-            Assert.That(_tools.Select(t => (string)t["name"]!), Is.EqualTo(new[] { "list_connections", "get_connection_info", "who_am_i", "list_publishers" }));
+            Assert.That(_tools.Select(t => (string)t["name"]!), Is.EqualTo(new[]
+            {
+                "list_connections", "get_connection_info", "who_am_i", "list_publishers", "list_solutions", "list_tables",
+                "get_table_metadata", "get_relationships", "get_option_sets", "get_entity_ribbon", "get_application_ribbon",
+                "query", "list_solution_components", "get_component_state", "get_required_components",
+            }));
         }
 
         [Test]

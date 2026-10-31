@@ -142,6 +142,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             else
             {
                 this.CheckGates(tool, binding, arguments);
+                state.Inspection = tool.Inspect?.Invoke(binding, arguments) ?? CallInspection.None;
             }
 
             binding.BeginPending();
@@ -191,7 +192,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
 
         private void CheckGates(ToolDefinition tool, BoundConnection binding, JObject arguments)
         {
-            if (tool.IsPaged && arguments[InputSchema.PageSize] != null)
+            if (tool.IsPaged && !tool.FixedPageSize && arguments[InputSchema.PageSize] != null)
             {
                 var maxPageSize = this.host.Settings.Read(s => s.MaxPageSize);
                 if ((long)arguments[InputSchema.PageSize]! > maxPageSize)
@@ -259,6 +260,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 OrganizationName = binding.OrganizationFriendlyName,
                 Arguments = arguments.ToString(Formatting.Indented),
                 Reason = state.Call.Arguments[InputSchema.Reason]?.Type == JTokenType.String ? (string)state.Call.Arguments[InputSchema.Reason]! : null,
+                TouchesRecords = state.Inspection.TouchesRecords,
                 Recommendation = state.Tool.Tier != ToolTier.Read
                     ? string.Empty
                     : devConfirmed
@@ -298,8 +300,11 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
 
                 var pager = continuation ?? new Pager(
                     await Task.Run(() => tool.OpenPages!(execution)).ConfigureAwait(false),
-                    arguments[InputSchema.PageSize] != null ? (int)arguments[InputSchema.PageSize]! : tool.DefaultPageSize!.Value);
-                var items = await pager.NextPageAsync(this.host.Settings.Read(s => s.ResponseCapCharacters), tool.BuildPage!).ConfigureAwait(false);
+                    arguments[InputSchema.PageSize] != null && !tool.FixedPageSize ? (int)arguments[InputSchema.PageSize]! : tool.DefaultPageSize!.Value);
+                var firstPage = pager.PagesTaken == 0;
+                var fields = pager.Source as IPageFields;
+                JObject Build(JArray page, string? next) => tool.BuildPage!(page, next, fields, firstPage);
+                var items = await pager.NextPageAsync(this.host.Settings.Read(s => s.ResponseCapCharacters), Build).ConfigureAwait(false);
 
                 string? next = null;
                 if (pager.HasMore)
@@ -311,7 +316,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                     this.host.Cursors.Close(cursor);
                 }
 
-                return tool.BuildPage!(items, next);
+                return Build(items, next);
             }
             catch (ToolException)
             {
@@ -391,6 +396,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             public BoundConnection? Binding { get; set; }
 
             public string Approval { get; set; } = CallLogFormatter.NotRun;
+
+            public CallInspection Inspection { get; set; } = CallInspection.None;
         }
     }
 }

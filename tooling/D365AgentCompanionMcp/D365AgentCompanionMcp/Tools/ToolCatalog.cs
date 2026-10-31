@@ -9,8 +9,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
     using Lspiguel.Xrm.D365AgentCompanionMcp.Hosting;
 
     /// <summary>
-    /// The tools <c>tools/list</c> returns, in the fixed order of SPEC §6.3. Phase 1 lists the tools it implements;
-    /// later phases insert theirs at their place in that order.
+    /// The tools <c>tools/list</c> returns, in the fixed order of SPEC §6.3. Each phase lists the tools it implements
+    /// (I1); Phase 3 inserts the Write and Publisher tools at their place in that order.
     /// </summary>
     internal static class ToolCatalog
     {
@@ -23,6 +23,17 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             ConnectionTools.GetConnectionInfoTool(),
             ConnectionTools.WhoAmITool(),
             PublisherTools.ListPublishersTool(),
+            SolutionTools.ListSolutionsTool(),
+            MetadataTools.ListTablesTool(),
+            MetadataTools.GetTableMetadataTool(),
+            MetadataTools.GetRelationshipsTool(),
+            MetadataTools.GetOptionSetsTool(),
+            RibbonTools.GetEntityRibbonTool(),
+            RibbonTools.GetApplicationRibbonTool(),
+            QueryTool.QueryToolDefinition(),
+            SolutionTools.ListSolutionComponentsTool(),
+            SolutionTools.GetComponentStateTool(),
+            SolutionTools.GetRequiredComponentsTool(),
         };
     }
 }

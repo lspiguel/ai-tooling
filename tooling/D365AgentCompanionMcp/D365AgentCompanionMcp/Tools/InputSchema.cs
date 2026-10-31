@@ -67,6 +67,67 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             return this.Add(name, property, required);
         }
 
+        /// <summary>Adds a string argument limited to the given values.</summary>
+        /// <param name="name">The argument name.</param>
+        /// <param name="description">Its description.</param>
+        /// <param name="values">The allowed values.</param>
+        /// <param name="defaultValue">The default, if any.</param>
+        /// <returns>The builder.</returns>
+        public InputSchema Enum(string name, string description, string[] values, string? defaultValue = null)
+        {
+            var property = new JObject { ["type"] = "string", ["enum"] = new JArray(values), ["description"] = description };
+            if (defaultValue != null)
+            {
+                property["default"] = defaultValue;
+            }
+
+            return this.Add(name, property, required: false);
+        }
+
+        /// <summary>Adds an optional Boolean argument.</summary>
+        /// <param name="name">The argument name.</param>
+        /// <param name="description">Its description.</param>
+        /// <param name="defaultValue">The default.</param>
+        /// <returns>The builder.</returns>
+        public InputSchema Boolean(string name, string description, bool defaultValue) =>
+            this.Add(name, new JObject { ["type"] = "boolean", ["default"] = defaultValue, ["description"] = description }, required: false);
+
+        /// <summary>Adds an array of strings, optionally limited to the given values.</summary>
+        /// <param name="name">The argument name.</param>
+        /// <param name="description">Its description.</param>
+        /// <param name="values">The allowed values, or <c>null</c> for any string.</param>
+        /// <returns>The builder.</returns>
+        public InputSchema StringArray(string name, string description, string[]? values = null)
+        {
+            var items = new JObject { ["type"] = "string" };
+            if (values != null)
+            {
+                items["enum"] = new JArray(values);
+            }
+
+            return this.Add(name, new JObject { ["type"] = "array", ["items"] = items, ["description"] = description }, required: false);
+        }
+
+        /// <summary>Adds an optional array of integers.</summary>
+        /// <param name="name">The argument name.</param>
+        /// <param name="description">Its description.</param>
+        /// <returns>The builder.</returns>
+        public InputSchema IntegerArray(string name, string description) =>
+            this.Add(name, new JObject { ["type"] = "array", ["items"] = new JObject { ["type"] = "integer" }, ["description"] = description }, required: false);
+
+        /// <summary>Adds a required array of objects.</summary>
+        /// <param name="name">The argument name.</param>
+        /// <param name="description">Its description.</param>
+        /// <param name="itemSchema">The schema of one entry.</param>
+        /// <param name="minItems">The fewest entries.</param>
+        /// <param name="maxItems">The most entries.</param>
+        /// <returns>The builder.</returns>
+        public InputSchema ObjectArray(string name, string description, JObject itemSchema, int minItems, int maxItems) =>
+            this.Add(
+                name,
+                new JObject { ["type"] = "array", ["items"] = itemSchema, ["minItems"] = minItems, ["maxItems"] = maxItems, ["description"] = description },
+                required: true);
+
         /// <summary>Adds the paging inputs <c>cursor</c> and <c>pageSize</c>.</summary>
         /// <param name="defaultPageSize">The tool's default page size.</param>
         /// <returns>The builder.</returns>
