@@ -1553,7 +1553,7 @@ Short, throwaway investigations against a development environment. Each produces
 
 ### Phase 1 — Host, connections, approvals and log
 
-**Status (2026-10-30): built and unit-tested; the live exit checks in XrmToolBox with Claude Code and VS Code are pending.** Code, implementation choices and the exit-criteria status are in [notes.md](notes.md#phase-1--execution). Cancellation is decided (D9).
+**Status (2026-10-30): done.** Built and unit-tested, and all twelve live exit checks passed in XrmToolBox. Code, implementation choices and the exit-criteria status are in [notes.md](notes.md#phase-1--execution). Cancellation is decided (D9).
 
 **Carried from Phase 0.** The spikes settled these points; Phase 1 builds on them rather than re-deciding them. Details and evidence are in [notes.md](notes.md#phase-0-outcome--handover-to-phase-1).
 

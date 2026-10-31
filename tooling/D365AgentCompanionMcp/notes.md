@@ -9,7 +9,7 @@
 | Phase | Status | Exit criterion |
 |---|---|---|
 | [0 — Spikes](SPEC.md#phase-0--spikes) | **Done for v1** (2026-10-30). S7 in cold storage (no build environment); S8 deferred with strategy C. Sandbox and workstation cleaned up | Every v1 spike has a written finding, and the spec is updated |
-| [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | **In progress** (2026-10-30) — built and unit-tested; the live exit checks in XrmToolBox with Claude Code and VS Code are pending. See [Phase 1 — execution](#phase-1--execution) | See spec |
+| [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | **Done** (2026-10-30) — built, unit-tested, and all twelve live exit checks passed in XrmToolBox. See [Phase 1 — execution](#phase-1--execution) | See spec |
 | [2 — Discovery](SPEC.md#phase-2--discovery) | Not started | See spec |
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | Not started | See spec |
 | [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | Not started | See spec |
@@ -67,16 +67,18 @@ Choices the spec leaves open, made while building. None changes specified behavi
 
 | Criterion (SPEC §11 Phase 1) | Status | Evidence |
 |---|---|---|
-| Two tabs on different connections: `list_connections` returns both and calls route to the right tab | Unit-tested; **live pending** | `ToolDispatcherTests` — `ListConnections_…`, `ReadCall_IsApprovedAndLoggedInTheTabBoundToItsConnection` |
-| A third tab on a bound connection gets the dialog, and both actions work | Registry unit-tested; **dialog live pending** | `ConnectionRegistryTests` |
-| A toolbar connect applied to several tabs binds the first in XrmToolBox's order | Claim order unit-tested; **live pending** | `ToolbarConnectToSeveralTabs_FirstInHookOrderWins…` |
+| Two tabs on different connections: `list_connections` returns both and calls route to the right tab | Unit-tested; **verified live** (steps 1–12) | `ToolDispatcherTests` — `ListConnections_…`, `ReadCall_IsApprovedAndLoggedInTheTabBoundToItsConnection` |
+| A third tab on a bound connection gets the dialog, and both actions work | Registry unit-tested; **dialog verified live** (steps 6–7) | `ConnectionRegistryTests` |
+| A toolbar connect applied to several tabs binds the first in XrmToolBox's order | Claim order unit-tested; **verified live** (step 7) | `ToolbarConnectToSeveralTabs_FirstInHookOrderWins…` |
 | Denial, timeout and unknown connection reach the agent as tool errors | Unit-tested | `Deny_…`, `NoAnswer_…`, `UnknownConnection_…` |
-| Each of those calls is a line pair in the right log and survives **Save as…** unchanged | Log and file content unit-tested; **panel and save dialog live pending** | `CallLogFormatterTests`, `LogFileWriterTests`, dispatcher log assertions |
+| Each of those calls is a line pair in the right log and survives **Save as…** unchanged | Log and file content unit-tested; **panel and save dialog verified live** (step 8) | `CallLogFormatterTests`, `LogFileWriterTests`, dispatcher log assertions |
 | A once-scoped approval ends with its call, a session scope ends with the host, Revoke clears environment scopes | Unit-tested | `AllowOnce_…`, `AllowSession_…`, `AllowEnvironment_…` |
-| Claude Code (2026-07-28) and VS Code (handshake fallback) both call a tool, and still connect after an XrmToolBox restart without reconfiguration | **Live pending.** Both eras unit-tested; the thirty-one checks pass over HTTP against the console harness; token persistence unit-tested | `McpProtocolTests`, `TokenStoreTests`, `Invoke-ProtocolChecks.ps1` |
-| Cancellation (D9): a client that goes away withdraws its pending call | Unit-tested over a real `HttpListener`; checked by hand against the harness — an abandoned `wait` was cancelled at the next keep-alive write. **Dialog withdrawal live pending** | `McpHttpServerTests.ClientDisconnectsWhileWaiting_CallIsCancelled`, `ClientGoesAway_WhileAwaitingApproval_…` |
+| Claude Code (2026-07-28) and VS Code (handshake fallback) both call a tool, and still connect after an XrmToolBox restart without reconfiguration | **Verified live** (steps 4–5, 11). Both eras unit-tested; the thirty-one checks pass over HTTP against the console harness; token persistence unit-tested | `McpProtocolTests`, `TokenStoreTests`, `Invoke-ProtocolChecks.ps1` |
+| Cancellation (D9): a client that goes away withdraws its pending call | Unit-tested over a real `HttpListener`; checked by hand against the harness — an abandoned `wait` was cancelled at the next keep-alive write. **Dialog withdrawal verified live** (step 10) | `McpHttpServerTests.ClientDisconnectsWhileWaiting_CallIsCancelled`, `ClientGoesAway_WhileAwaitingApproval_…` |
 
 ### Live exit checks — steps
+
+**Completed 2026-10-30: all twelve steps passed**, as reported by the person who ran them. No deviations or new findings were reported.
 
 Needs the data-free sandbox, Claude Code 2.1.312 (2026-07-28) and 2.1.72 or VS Code 1.144.0 (handshake). Record findings here without client data (R7).
 
@@ -521,3 +523,4 @@ Spike solutions left in the sandbox: `AgentSpikeS2A`, `AgentSpikeS2B`, `AgentSpi
 | 2026-10-30 | S4 done: VS Code 1.144.0 connects through the handshake fallback and calls a spike tool in XrmToolBox. Token caching across host restarts caused 401s and an OAuth prompt in VS Code; D8 raised. Phase 0 done for v1 apart from S7 and S8 (deferred) |
 | 2026-10-30 | D8 applied to the spec. S7 moved to cold storage. Sandbox cleaned (test button and seven spike solutions removed) and workstation cleaned (plugin DLL, client registrations, scratch files). Phase 0 handover written; Phase 1 ready to start |
 | 2026-10-30 | Phase 1 started. D9 decided (whitespace keep-alive for cancellation) and applied to the spec first. Plugin, tests and console harness built: no build warnings; 137 unit tests pass; the thirty-one protocol checks pass over HTTP against the harness; an abandoned call was cancelled at the next keep-alive write. `Spikes/` deleted and its links repointed to `643fe93`. Live exit checks in XrmToolBox with the clients pending |
+| 2026-10-30 | Phase 1 live exit checks: all twelve steps passed (two tabs, duplicate dialog, toolbar connect, denial/timeout/unknown connection, scopes, cancellation, restart without reconfiguration). Phase 1 done |
