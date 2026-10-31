@@ -48,7 +48,7 @@ A useful corollary: when JavaScript exists both in a source folder and inside th
 
 A component registered in the environment but never added to a solution has no XML in the extract. Searching and finding nothing therefore means one of two things - it does not exist, or it exists and is unsolutioned - and those have opposite consequences.
 
-**Never state that a component is missing. State that it is not in the extract and ask the user to confirm.** An unsolutioned component is also a finding worth reporting: it means the behaviour has never promoted past the environment it was registered in, which is usually news to the business.
+**Never state that a component is missing. State that it is not in the extract and ask the user to confirm.** If an MCP server with read access to the environment is connected — such as the Agent Companion MCP — use it to check, and say what it showed; it does not replace the user's confirmation. An unsolutioned component is also a finding worth reporting: it means the behaviour has never promoted past the environment it was registered in, which is usually news to the business.
 
 ### 3. Confirm which component is actually in use
 

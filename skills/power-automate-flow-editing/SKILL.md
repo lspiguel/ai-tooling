@@ -37,7 +37,7 @@ The full option landscape, including the direct path and why it exists, is in [d
 | The solution is a **WIP solution**, not the delivery solution | Ask the user | Keeps the blast radius to the flow being edited |
 | The flow is **not** in "My Flows" | Maker portal | Non-solution flows have no solution to export |
 
-If the user has no WIP solution yet, have them create one in the maker portal, then add the flow on its own:
+If the user has no WIP solution yet, have them create one in the maker portal, then add the flow on its own. If an MCP server that shapes solutions is connected — such as the Agent Companion MCP with its `agent-companion-wip-shaping` skill — it can create and name the WIP instead; this skill does not need it:
 
 ```powershell
 pac solution add-solution-component --solutionUniqueName <wip_unique_name> --component <flow-guid> --componentType 29

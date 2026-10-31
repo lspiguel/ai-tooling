@@ -1695,6 +1695,8 @@ Short, throwaway investigations against a development environment. Each produces
 
 ### Phase 4 — Agent skills and scripts
 
+**Status (2026-10-31): built; live exit checks pending.** The five skills and their scripts are in [skills/](../../skills/); the scripts' self-tests pass. Implementation choices and the exit-check steps are in [notes.md](notes.md#phase-4--execution).
+
 Agent-side work that helps an agent use the plugin safely. Skills decide between Path A and Path B per component type using the S2 and S3 findings, and carry the Phase 3 findings P1 and P2 (W13, X11).
 
 **Companion skills, separate from the existing ones.** The Phase 4 skills live in [skills/](../../skills/) with the repository's other skills, one folder each, in the layout the instructions file sets (`SKILL.md` with `name` and `description`, plus `references/` and `scripts/`). They are new skills that help an agent use this plugin. The existing skills are not rebuilt around it (K7). Every companion skill's frontmatter says so plainly:

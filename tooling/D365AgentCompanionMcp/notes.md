@@ -12,10 +12,56 @@
 | [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | **Done** (2026-10-30) — built, unit-tested, and all twelve live exit checks passed in XrmToolBox. See [Phase 1 — execution](#phase-1--execution) | See spec |
 | [2 — Discovery](SPEC.md#phase-2--discovery) | **Done** (2026-10-31) — built, unit-tested (176 tests), and the live exit checks passed against the sandbox; four findings (L1–L4) fixed on the way. See [Phase 2 — execution](#phase-2--execution) | See spec |
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | **Done** (2026-10-31) — built, unit-tested (207 tests), and the cold-start workflow (§9.1) ran end to end on the sandbox; two findings (P1, P2) for the Phase 4 skills. See [Phase 3 — execution](#phase-3--execution) | See spec |
-| [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | Not started | See spec |
+| [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | **In progress** (2026-10-31) — five companion skills and their scripts built; script self-tests pass (32 + 11), including the schema check against Microsoft's XSD bundle. Live exit checks not run yet. See [Phase 4 — execution](#phase-4--execution) | See spec |
 | [5 — Release](SPEC.md#phase-5--release) | Not started | See spec |
 
 Status values: *Not started* · *In progress* · *Blocked* (say on what) · *Done*.
+
+---
+
+## Phase 4 — execution
+
+### What is built
+
+Five skills in [skills/](../../skills/), each a folder with `SKILL.md`, `references/` and, where needed, `scripts/`. Every `name` starts with `agent-companion-`, and every `description` opens by saying the skill is used together with the Agent Companion MCP and needs a bound plugin tab (SPEC §11 Phase 4).
+
+| Skill | Owns | References and scripts |
+|---|---|---|
+| [agent-companion-context](../../skills/agent-companion-context/SKILL.md) | Delivery context, steps (T3), ledger shape; R15, R16 detection, T1–T6 | `rules.md` (rule index by ID), `delivery-facts.md` (where each fact is found; recording format), `wip-ledger.md` (context, steps, components, WIPs, states, reconcile) |
+| [agent-companion-transport-bootstrap](../../skills/agent-companion-transport-bootstrap/SKILL.md) | Missing transport solutions, publisher choice (R3), first-party apps (§9.3) | — |
+| [agent-companion-wip-shaping](../../skills/agent-companion-wip-shaping/SKILL.md) | Classification, transport home, routes, naming, create, add (Path A/B), read-back, removal with shell cleanup, overlap and dependency checks | `component-types.md`, `queries.md`; `Get-WipName.ps1` |
+| [agent-companion-wip-edit-loop](../../skills/agent-companion-wip-edit-loop/SKILL.md) | Export, baseline, edit, validate, pack, overwrite check, import order and flags | `Test-UnpackedSolution.ps1`, `Test-CustomizationsSchema.ps1`, `Compare-ComponentState.ps1`, `Compare-SolutionExport.ps1` |
+| [agent-companion-wip-close-out](../../skills/agent-companion-wip-close-out/SKILL.md) | Ending WIPs by route and strategy, W10, close-out A and B, A8 alignment, stragglers | `strategies.md` |
+
+Existing skills (K7): one optional sentence each in [power-automate-flow-editing](../../skills/power-automate-flow-editing/SKILL.md) (an MCP can create the WIP) and [d365ce-planning](../../skills/d365ce-planning/SKILL.md) (an MCP with environment read access can check a component's absence). Neither depends on the plugin.
+
+Script tests: `scripts/tests/Invoke-ScriptTests.ps1` in the edit-loop and shaping skills — plain runners for Windows PowerShell 5.1, no Pester, fixtures synthetic and built in a temp folder. The edit-loop runner takes `-SchemaPath` for the schema tests; it passed against Microsoft's schema bundle (9.0.0.2090), downloaded to the session scratchpad and not committed.
+
+### Implementation choices to review
+
+| # | Choice | Why |
+|---|---|---|
+| I27 | The schema check runs on the **packed** zip and fails only on findings absent from the untouched export (`-BaselinePackagePath`) | `pac solution unpack` splits `customizations.xml`, and the published XSD bundle is older than the platform, so an untouched export can already report findings |
+| I28 | `Test-UnpackedSolution.ps1` reports a reference outside the tree as an **Error** when evidence is passed (columns, web resources, base ribbon) and a **Warning** saying *not verified* when it is not | A WIP holds only part of each table; without evidence the script cannot tell missing from absent-from-the-WIP |
+| I29 | WIP naming is a script (`Get-WipName.ps1`): accent stripping, length, characters, protected prefixes. A first letter with no ASCII form (for example `Ø`) stops and asks for initials | Deterministic rules are not left to the model. The spec's "any other character is dropped" could leave one initial; asking is the safer reading |
+| I30 | The overwrite check re-exports and compares the **whole** tree whenever the WIP holds anything without a row version — in practice always, since nearly every WIP holds a table shell | `get_component_state` does not cover tables, columns, flows or steps, and X6 makes every table's ribbon diff a whole document |
+| I31 | Global choices, relationships, sitemaps and apps (9, 10, 62, 80) are added through MCP only | S3 verified PAC for columns, forms, views and web resources only |
+| I32 | The rule index lives in `agent-companion-context/references/rules.md`; the other skills cite IDs and name the context skill as their precondition | One place to keep in step with the spec (K3) |
+| I33 | Under strategy A, the bootstrap prepares the transport solutions for a person to create in build, and development receives them by alignment (A8) | The build tab is read-only (A2) |
+| I34 | The transport-home query joins `solutioncomponent` to `solution` and also asks for the table's `metadataId`, so a child at home under an include-all table is found | A component under a table with root behaviour 0 has no row of its own (S3) |
+
+### Live exit checks — steps
+
+Exit criterion (SPEC §11 Phase 4): six scenarios on the sandbox, without a build environment. Use the data-free sandbox, its default publisher (R3) and invented work item IDs. Install the five skills in the agent client, plus `power-automate-flow-editing`.
+
+1. **Setup.** Two transport solutions exist under the sandbox publisher — Base and Apps, say — and **Resources does not**. Delivery facts: transport extracted from development (B), no build environment, not shared.
+2. **Placement story.** A story touching a new column, an `account` form, a view, a web resource and a ribbon button. Expect: the bootstrap creates only Resources; shaping creates two WIPs (Resources, Base), the steps are stated before the first Write call; edit, validate, overwrite check, import Resources then Base; close-out B adds to both transport solutions in order; read-backs show nothing unexpected; both WIPs deleted.
+3. **In-place change.** Edit a form already in Base. Expect one in-place WIP; import, W10 read-back, the person confirms; deleted with no close-out add.
+4. **Both routes.** A story adds a column and edits a form already in Base. The person asks to split: `_Base` and `_Base_2`; the in-place one ends at import while the other waits for close-out.
+5. **Route change.** In an in-place WIP, author a new column in `Entity.xml` during the edit. Expect W10 to stop the deletion and the WIP to be closed out as placement.
+6. **Context gaps.** Withhold the segmentation map, then the transport source: the agent asks with a recommendation, and states the steps before its first Write call and again before close-out. Describe a build environment and a promotion pipeline: the agent writes the A steps — promotion order, R1 on the build tab, promotion of the in-place WIP — and runs nothing.
+7. **Coexistence.** With all six skills loaded, edit a cloud flow inside a story's Processes WIP: shaping supplies the WIP (Path B, type 29), the flow skill's import flags apply, the edit loop's overwrite check runs before and the read-back after. No step gets two instructions. With the plugin closed, `power-automate-flow-editing` still works alone.
+8. Every plugin call shows as a line pair in the tab's log; no file from the loop lands in a repository.
 
 ---
 
@@ -688,3 +734,4 @@ Spike solutions left in the sandbox: `AgentSpikeS2A`, `AgentSpikeS2B`, `AgentSpi
 | 2026-10-31 | Phase 3 started. Preparation step added: Write and Publisher tools resolve names and refuse (`not_found`, `managed_solution`, `already_exists`) in the connection's queue before the dialog; the dialog shows the resolved summary, and the §8.3 publisher dialog asks for the typed prefix. `create_solution`, `add_solution_components` (fixed flags, snapshot, read-back, parent shells, `⚠ unexpected` log lines), `remove_solution_component` and `create_publisher` built; I8 retired. SPEC §6.6 updated for `alreadyPresent`, parent-shell index and the unconfirmed application ribbon type. No build warnings; 207 unit tests pass. Choices I21–I26 recorded |
 | 2026-10-31 | Phase 3 live run: the cold-start workflow (§9.1) ran end to end on the sandbox under its default publisher — refusals without reason and with publisher creation off, create, add with a parent shell and nothing unexpected, read-back, remove, PAC export/unpack/pack/import with contents unchanged, delete. Publisher dialog with a wrong typed prefix denied, nothing created; dialog content and log confirmed by the person. Findings P1 (a remove leaves the parent shell) and P2 (`--publish-changes` publishes everything) passed to Phase 4. Phase 3 done; scratchpad emptied |
 | 2026-10-31 | Phase 4 prepared in the spec: two routes per component, placement and in place (§9.9, W9–W13); delivery context derived or asked, with steps confirmed before acting (§9.8, R15, T1–T6); close-out strategy chosen per WIP, A and B mixable (§9.7); transport solution never the edit vehicle, with an unmanaged alignment import from build allowed under A (R14, A8); no managed project solution imported into development (R16); pipeline runs, commits and pushes are a person's (T6); delivery facts recorded in `<client>-Context/` where it exists (T5); P1 and P2 carried as W13 and X11. Phase 4 skills are new `agent-companion-*` skills in `skills/`, frontmatter stating they need the plugin, split by concern, with coexistence rules K1–K8; repository skills keep their procedures |
+| 2026-10-31 | Phase 4 started. Five `agent-companion-*` skills written in `skills/` (context, transport bootstrap, WIP shaping, edit loop, close-out) with references; scripts `Get-WipName.ps1`, `Test-UnpackedSolution.ps1`, `Test-CustomizationsSchema.ps1`, `Compare-ComponentState.ps1`, `Compare-SolutionExport.ps1`; self-tests pass (11 and 32, the schema tests against Microsoft's XSD bundle). Optional MCP notes added to `power-automate-flow-editing` and `d365ce-planning`. Choices I27–I34 recorded. Live exit checks next |
