@@ -11,7 +11,7 @@
 | [0 — Spikes](SPEC.md#phase-0--spikes) | **Done for v1** (2026-10-30). S7 in cold storage (no build environment); S8 deferred with strategy C. Sandbox and workstation cleaned up | Every v1 spike has a written finding, and the spec is updated |
 | [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | **Done** (2026-10-30) — built, unit-tested, and all twelve live exit checks passed in XrmToolBox. See [Phase 1 — execution](#phase-1--execution) | See spec |
 | [2 — Discovery](SPEC.md#phase-2--discovery) | **Done** (2026-10-31) — built, unit-tested (176 tests), and the live exit checks passed against the sandbox; four findings (L1–L4) fixed on the way. See [Phase 2 — execution](#phase-2--execution) | See spec |
-| [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | **In progress** (2026-10-31) — built and unit-tested; live exit check (cold start, §9.1) not yet run. See [Phase 3 — execution](#phase-3--execution) | See spec |
+| [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | **Done** (2026-10-31) — built, unit-tested (207 tests), and the cold-start workflow (§9.1) ran end to end on the sandbox; two findings (P1, P2) for the Phase 4 skills. See [Phase 3 — execution](#phase-3--execution) | See spec |
 | [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | Not started | See spec |
 | [5 — Release](SPEC.md#phase-5--release) | Not started | See spec |
 
@@ -61,6 +61,30 @@ Exit criterion (SPEC §11 Phase 3): the cold-start workflow (§9.1) runs end to 
 9. `pac solution export` and `pac solution unpack` (XML layout, R5) of the WIP; inspect the components; `pac solution pack` and `pac solution import --publish-changes`; `list_solution_components` again — unchanged.
 10. Clean up: `pac solution delete` the WIP (its components stay).
 11. Every call shows as a line pair in the tab's log.
+
+### Live run — 2026-10-31
+
+Against the data-free sandbox, one tab bound and confirmed as development, reads approved for the session, Write calls approved once each. Calls over HTTP (2026-07-28) from a helper in the session scratchpad; PAC CLI 2.14.1 for the round trip, files in the scratchpad (R7). Publisher: the sandbox's default publisher (prefix `new`), reused as the Phase 0 notes direct (R3).
+
+| Step | Result |
+|---|---|
+| 2 environment | **Pass.** `organization.url` and unique name match `pac org who` |
+| 3 publisher | **Pass.** With creation off → `tool_disabled`, no dialog. With it on, the §8.3 dialog for prefix `agchk` and option prefix `10000` (the default publisher's, to raise the warning); the person typed a wrong prefix → `denied_by_user`; `list_publishers` finds no new publisher. The person confirmed the dialog showed the second-publisher warning, the existing publishers, ⚠ on the shared option prefix and none on the prefix |
+| 4 reason | **Pass.** `create_solution` without `reason`, and with a blank one → `invalid_argument` (`argument: reason`), at once, no dialog (R12) |
+| 5 create | **Pass.** Name free per `list_solutions`; the dialog showed the publisher and prefix; `create_solution` returned the solution under it |
+| 6 add | **Pass.** `account` (metadata), `account.telephone1`, the active `account` main form and a `contact` view alone: four `added`, `contact` reported as the parent shell of the view, `unexpected` empty |
+| 7 read-back | **Pass.** `list_solution_components`: exactly those five — `account` behaviour 1, `contact` behaviour 2, the column, form and view under their tables. No required components (R1) |
+| 8 remove | **Pass.** The view removed; **the `contact` shell stayed** (P1); removing the table as well worked, leaving the three intended components |
+| 9 PAC round trip | **Pass.** Export and unpack (XML layout): root component `account` with `behavior="1"`, only `Telephone1` among its attributes, the main form, the table's `RibbonDiff.xml` (F13). Pack and import with `--publish-changes`; components unchanged afterwards. Import reported *Publishing All Customizations* (P2) |
+| 10 cleanup | **Pass.** `pac solution delete`; the solution is gone, its components stay |
+| 11 log | **Pass**, as confirmed by the person: every call, refusals and the denial included, shows as a line pair in the tab's log |
+
+Findings:
+
+| # | Finding | Action |
+|---|---|---|
+| P1 | Removing a column, form or view does not remove the parent shell the platform added for it; the table stays in the WIP, and with it the table's ribbon diff (F13) | For the Phase 4 skills: after removing a child, read the solution back and remove an orphaned parent shell. No change to the tool — it removes what it is asked to |
+| P2 | `pac solution import --publish-changes` publishes **all** customizations in the environment, not only the imported solution's | For the Phase 4 skills and the shared-environment notes: an import publishes other people's pending changes too |
 
 ---
 
