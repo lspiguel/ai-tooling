@@ -1317,7 +1317,7 @@ After an `add_solution_components` outcome line, one `⚠ unexpected <type> <nam
 
 ### 8.7 First-run setup wizard
 
-The first time the plugin opens in an XrmToolBox installation, the tab shows a setup wizard before the main panel. It has three pages. Each page has **Next** and **Cancel**; the last page has **Finish** instead of **Next**. **Cancel** closes the plugin tab, and the wizard shows again the next time the plugin opens. **Finish** records in the plugin settings that setup was completed — nothing else — and shows the main panel. The host starts as usual while the wizard is open (H2), so the test on the last page can reach it.
+The first time the plugin opens in an XrmToolBox installation, the tab shows a setup wizard before the main panel. It has three pages. Each page has **Next** and **Cancel**; the last page has **Finish** instead of **Next**. **Cancel** closes the plugin tab, and the wizard shows again the next time the plugin opens. **Finish** records in the plugin settings the plugin version setup was completed for — nothing else — and shows the main panel. The host starts as usual while the wizard is open (H2), so the test on the last page can reach it.
 
 | Page | Shows | Buttons |
 |---|---|---|
@@ -1340,9 +1340,19 @@ The first time the plugin opens in an XrmToolBox installation, the tab shows a s
 | Rule | Detail |
 |---|---|
 | Prompts are text resources | Each prompt is an embedded text resource, so its wording can be revised without code. Prompts are plain text, addressed to the agent, and name what to report back |
-| Only the MCP prompt holds a secret | The page-2 (e) prompt holds the bearer token, as **Copy client config** does. The page says so: paste it only into the local agent |
+| Only the MCP prompts hold a secret | The page-2 (e) prompt and the update page's MCP prompt hold the bearer token, as **Copy client config** does. The page says so: paste it only into the local agent |
 | Skills ship inside the plugin | The companion skills are embedded as resources at build time from `skills/agent-companion-*`, so the exported zips always match the plugin version. No extra DLL (§10) |
 | Nothing else reaches disk | The wizard writes only the skill zips, to the folder the person picks; if that folder is inside a Git working tree, it warns as **Save as…** does |
+
+**After an update.** When the plugin opens and its version differs from the one setup was last completed for, the tab shows a single **Plugin updated** page before the main panel. It names the previous and the new version, and says that the agent-companion skills and the MCP client configuration may have changed. The reinstall is optional:
+
+| Item | Buttons |
+|---|---|
+| Skills | **Export skills…** — writes the new version's `agent-companion-*` zips, as on page 2. **Copy update prompt** — asks the agent to replace its installed agent-companion skills with the new zips, leave every other skill alone, and confirm the new ones load |
+| MCP configuration | **Copy update prompt** — asks the agent to check its registration of the endpoint against the client configuration the prompt holds (URL and bearer token), update it if it differs, and reload the client |
+| Check | **Copy test prompt** — the page-3 test prompt |
+
+**Done** and **Skip** both record the new version and show the main panel, so the page appears once per update; **Skip** reinstalls nothing. A first run — no version recorded — always gets the full wizard instead.
 
 ---
 
@@ -1799,7 +1809,7 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 ### Phase 5 — Release
 
 - Tooling README with installation, client configuration (snippets in [Spikes/README.md](https://github.com/lspiguel/ai-tooling/blob/643fe93/tooling/AgentCompanionMcp/Spikes/README.md#client-registration-s4)), minimum client versions, what to do when a client shows an OAuth prompt, tool table, the one-tab-per-connection behaviour, settings, and the companion skills in [skills/](../../skills/) with how to install them for an agent client.
-- First-run setup wizard ([§8.7](#87-first-run-setup-wizard)): introduction, preconditions with copy-prompt and skill-export buttons, and a test prompt; the companion skills embedded as resources for export.
+- First-run setup wizard ([§8.7](#87-first-run-setup-wizard)): introduction, preconditions with copy-prompt and skill-export buttons, and a test prompt; the companion skills embedded as resources for export. After an update, a **Plugin updated** page offers the optional reinstall of the skills and the MCP configuration through agent prompts.
 - Tool Library install and uninstall from the NuGet package — the part of S1's exit criterion the spike could not cover.
 - CI workflow, NuGet package, Tool Library listing. The package manifest, [D365AgentCompanionMcp.nuspec](D365AgentCompanionMcp/D365AgentCompanionMcp.nuspec), follows the Context Exporter's — the format the Tool Library accepts: `lib\net472\Plugins` target, `XrmToolBox` dependency and tag, `iconUrl`, MIT licence expression, readme and licence at the package root, no loose DLLs. A test `nuget pack` built it (with a placeholder readme) with the exporter's two warnings, NU5128 and NU5048. The [tooling README](README.md) and the icons (`d365-agent-companion-16px.png` to `-256px.png`, `iconUrl` pointing at the 128 px one) are in place, and the package packs with them. The 16 px and 32 px icons are embedded as the plugin's `SmallImageBase64` and `BigImageBase64`, as the exporter does. Still needed before release: the GitHub workflow below, and the setup wizard, which the README already describes.
 - GitHub workflow `.github/workflows/build-and-pack-d365-agent-companion-mcp.yml`, following [build-and-pack-d365-context-exporter.yml](../../.github/workflows/build-and-pack-d365-context-exporter.yml) job for job:
@@ -1813,7 +1823,7 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
   The two-file version rule (csproj and nuspec identical) holds for every push that publishes: nuget.org refuses a version it already has.
 - Repository updates outside this plugin: the instructions file's tooling-conventions section, the codebase map, the root README and the matrix's build-backlog row already describe the plugin as specified, not built — change them to describe it as shipped. Add the column-3 guide changes then, not before: registering the plugin's MCP endpoint in [C.3 §7](../../workflows/3-coding-assistants/c.3-project-setup.md#7-wire-up-mcp-and-finish-grounding), and the segmented WIP loop where [4.3](../../workflows/3-coding-assistants/4.3-implementation.md) covers solution changes. Adding a guide also updates the matrix, the root README table and the column README together.
 
-**Exit:** installable from the Tool Library; README matches the shipped tool surface. On a fresh install the wizard shows; **Cancel** closes the tab and the wizard returns on the next open; every copy button puts its prompt on the clipboard; **Export skills…** writes one zip per companion skill; and an agent set up from the prompts alone passes the test prompt.
+**Exit:** installable from the Tool Library; README matches the shipped tool surface. On a fresh install the wizard shows; **Cancel** closes the tab and the wizard returns on the next open; every copy button puts its prompt on the clipboard; **Export skills…** writes one zip per companion skill; and an agent set up from the prompts alone passes the test prompt. After an upgrade to a new version, the **Plugin updated** page shows once — **Skip** and **Done** both record the version — and an agent following its prompts ends with the new skills installed and the endpoint registered.
 
 ### Phase 6 — Planned enhancements
 

@@ -44,6 +44,10 @@ The plugin is the approval window and the endpoint; the agent does the work, usi
 7. **Run the test** — the wizard's last page copies a test prompt: the agent checks the skills, PAC and the connection, then calls `list_solutions`. Approve the call in the tab and watch it appear in the log.
 8. **Work** — ask the agent for the change you want, with its work item number. It establishes how your project delivers, states its steps for you to confirm, and asks you in the plugin before every call.
 
+## Plugin upgrades
+
+When the plugin opens after an update, it shows a *Plugin updated* page once. The skills and the MCP client configuration may have changed with the new version, so the page offers to reinstall them through your agent — **Export skills…** for the new skill zips, and prompts that ask the agent to replace its agent-companion skills (and only those) and to check its endpoint registration — plus the test prompt. Reinstalling is optional: **Skip** goes straight to the main panel, and the page does not come back until the next update.
+
 ## Registering the endpoint
 
 The endpoint is `http://127.0.0.1:47321/mcp` (the port can be changed on the main panel) and every request carries the bearer token shown, masked, on the main panel. The token is kept across XrmToolBox restarts; **Regenerate** replaces it for every client.
