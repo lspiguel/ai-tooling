@@ -29,6 +29,9 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
     /// </summary>
     public sealed class AgentCompanionControl : PluginControlBase, IHostInstance
     {
+        /// <summary>The host log's fixed height, in pixels.</summary>
+        private const int HostLogHeight = 160;
+
         private static int tabCounter;
 
         private readonly CompanionHost host = CompanionHost.Shared;
@@ -306,9 +309,11 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
             Add(tabGroup, new RowStyle(SizeType.AutoSize));
             Add(hostGroup, new RowStyle(SizeType.AutoSize));
             Add(UiBuilder.Text("Call log — this connection   (no wrap; double-click a line for its detail)"), new RowStyle(SizeType.AutoSize));
-            Add(this.callLogView, new RowStyle(SizeType.Percent, 65));
+
+            // The call log takes whatever height is left; the host log keeps a fixed height of about ten lines.
+            Add(this.callLogView, new RowStyle(SizeType.Percent, 100));
             Add(UiBuilder.Text("Host log — list_connections and calls naming an unknown connection"), new RowStyle(SizeType.AutoSize));
-            Add(this.hostLogView, new RowStyle(SizeType.Percent, 35));
+            Add(this.hostLogView, new RowStyle(SizeType.Absolute, HostLogHeight));
             Add(footer, new RowStyle(SizeType.AutoSize));
             this.Controls.Add(table);
         }

@@ -107,11 +107,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
 
             // Resolve the table first, so a wrong name is not_found rather than a ribbon fault.
             MetadataHelpers.RetrieveEntity(execution.Service, logicalName, EntityFilters.Entity);
-            var response = (RetrieveEntityRibbonResponse)execution.Service.Execute(new RetrieveEntityRibbonRequest
-            {
-                EntityName = logicalName,
-                RibbonLocationFilter = Filter(location),
-            });
+            var request = new RetrieveEntityRibbonRequest { EntityName = logicalName, RibbonLocationFilter = Filter(location) };
+            var response = ServiceTimeout.With(execution.Service, ServiceTimeout.Ribbon, () => (RetrieveEntityRibbonResponse)execution.Service.Execute(request));
 
             return Chunks(
                 Decompress(response.CompressedEntityXml),
@@ -121,7 +118,10 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
 
         private static IPageSource OpenApplicationRibbon(ToolExecution execution)
         {
-            var response = (RetrieveApplicationRibbonResponse)execution.Service.Execute(new RetrieveApplicationRibbonRequest());
+            var response = ServiceTimeout.With(
+                execution.Service,
+                ServiceTimeout.Ribbon,
+                () => (RetrieveApplicationRibbonResponse)execution.Service.Execute(new RetrieveApplicationRibbonRequest()));
             return Chunks(
                 Decompress(response.CompressedApplicationRibbonXml),
                 execution.Host.Settings.Read(s => s.ResponseCapCharacters),

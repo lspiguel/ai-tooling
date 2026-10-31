@@ -46,14 +46,58 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
             return row;
         }
 
-        /// <summary>Creates a group box holding rows.</summary>
+        /// <summary>
+        /// Creates a group box holding rows, as tall as its rows at its current width. An auto-sized table measures
+        /// wrapping rows as if each control sat on its own line, which made the groups about twice as tall as their
+        /// content; the height is computed here instead, and follows the width as rows wrap.
+        /// </summary>
         /// <param name="title">The group title.</param>
         /// <param name="rows">The rows.</param>
         /// <returns>The group.</returns>
         public static GroupBox Group(string title, params Control[] rows)
         {
-            var group = new GroupBox { Text = title, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Dock = DockStyle.Top, Padding = new Padding(6) };
-            group.Controls.Add(Stack(rows));
+            var group = new GroupBox { Text = title, Dock = DockStyle.Top, Padding = new Padding(6) };
+            var stack = Stack(rows);
+            stack.AutoSize = false;
+            group.Controls.Add(stack);
+
+            var fitting = false;
+            void Fit()
+            {
+                if (fitting)
+                {
+                    return;
+                }
+
+                fitting = true;
+                try
+                {
+                    var width = Math.Max(1, group.DisplayRectangle.Width);
+                    var content = 0;
+                    foreach (Control row in stack.Controls)
+                    {
+                        content += row.GetPreferredSize(new Size(width - row.Margin.Horizontal, 0)).Height + row.Margin.Vertical;
+                    }
+
+                    var height = (group.Height - group.DisplayRectangle.Height) + content;
+                    if (group.Height != height)
+                    {
+                        group.Height = height;
+                    }
+                }
+                finally
+                {
+                    fitting = false;
+                }
+            }
+
+            group.Layout += (s, e) => Fit();
+            foreach (Control row in rows)
+            {
+                // Rows change height when a label's text changes or a row wraps.
+                row.SizeChanged += (s, e) => Fit();
+            }
+
             return group;
         }
 

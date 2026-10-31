@@ -120,7 +120,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             {
                 Query = new EntityQueryExpression
                 {
-                    Properties = new MetadataPropertiesExpression("LogicalName"),
+                    // Dataverse refuses an attribute query unless Attributes is among the entity properties (0x80072527).
+                    Properties = new MetadataPropertiesExpression("LogicalName", "Attributes"),
                     AttributeQuery = new AttributeQueryExpression { Criteria = criteria, Properties = new MetadataPropertiesExpression("LogicalName") },
                 },
             };

@@ -10,7 +10,7 @@
 |---|---|---|
 | [0 — Spikes](SPEC.md#phase-0--spikes) | **Done for v1** (2026-10-30). S7 in cold storage (no build environment); S8 deferred with strategy C. Sandbox and workstation cleaned up | Every v1 spike has a written finding, and the spec is updated |
 | [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | **Done** (2026-10-30) — built, unit-tested, and all twelve live exit checks passed in XrmToolBox. See [Phase 1 — execution](#phase-1--execution) | See spec |
-| [2 — Discovery](SPEC.md#phase-2--discovery) | **In progress** (2026-10-31) — built and unit-tested; live exit checks against the sandbox not yet run. See [Phase 2 — execution](#phase-2--execution) | See spec |
+| [2 — Discovery](SPEC.md#phase-2--discovery) | **Done** (2026-10-31) — built, unit-tested (176 tests), and the live exit checks passed against the sandbox; four findings (L1–L4) fixed on the way. See [Phase 2 — execution](#phase-2--execution) | See spec |
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | Not started | See spec |
 | [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | Not started | See spec |
 | [5 — Release](SPEC.md#phase-5--release) | Not started | See spec |
@@ -36,7 +36,7 @@ The eleven discovery tools of SPEC §6.5, listed in §6.3 order after the Phase 
 | `get_entity_ribbon`, `get_application_ribbon` | `Tools/RibbonTools` — unzipped, chunked within the cap | §6.5 |
 | `query` | `Tools/QueryTool`, `FetchXmlQuery` — `top` (F15) and `<all-attributes />` refused, record detection against the allow-list; `RecordValues` — the typed value wrappers | §6.5 |
 | Component types | `Common/ComponentTypes` — codes and names | §6.2 |
-| Tests | 38 new: `DiscoveryToolsTests` against the synthetic environment in `DiscoveryData`, `SerializationTests`; 175 in total | §10 |
+| Tests | 39 new: `DiscoveryToolsTests` against the synthetic environment in `DiscoveryData`, `SerializationTests`, `UiBuilderTests`; 176 in total | §10 |
 
 **Fixed on the way:** a continuation call with only `connection` and `cursor` failed the required-argument check for tools with required arguments (`get_table_metadata`, `query`). Phase 1's only paged tool had none. Continuations now need only `connection` and `cursor`, as SPEC §6.2 says.
 
@@ -72,6 +72,39 @@ Exit criterion (SPEC §11 Phase 2): an agent can find the solutions in an enviro
 9. `get_table_metadata` with a wrong table name, and `get_required_components` with a wrong option set name: both `not_found` (I15 — note the fault codes seen).
 10. `list_solution_components` and `get_component_state` on a sandbox solution; `get_required_components` for one of its forms.
 11. Every call above shows as a line pair in the tab's log.
+
+### Live run — 2026-10-31
+
+Against the data-free sandbox, one tab bound and confirmed as development, read approval already scoped to the environment. Calls made over HTTP (2026-07-28) by a helper kept in the session scratchpad; the Claude Code CLI 2.1.72 registration connects (`claude mcp list`). No client data recorded here (R7).
+
+| Step | Result |
+|---|---|
+| 3 `list_solutions` | **Pass.** Default 329 visible over 5 pages; managed with hidden 1,185 (859 hidden) over 15 pages; unmanaged 3. Every page's text block under 40,000 characters; the cursor runs to `null` |
+| 4 `list_tables`, `get_table_metadata` | **Pass.** 2,917 tables over 20 pages. `account`: 471 columns over 10 pages of 50; `table` and `keys` on page 1 only; types, required levels, lookup targets and local choices as expected. `account` has no alternate keys here; three other tables returned theirs, and `include: ["keys"]` omits columns — **I12 confirmed** |
+| 5 `get_relationships`, `get_option_sets` | **Pass.** 276 relationships; every self-referencing one appears as both `oneToMany` and `manyToOne`; cascades populated. 791 global choices; `names` with a missing one lists it in `notFound` |
+| 6 forms and views (`query`) | **Pass.** 50 forms (the same 50 through pages of 20) and 54 views of `account`, `touchesRecords: false`, option-set wrappers with labels. Note for skills: `objecttypecode` and `returnedtypecode` filter on the type code (`1`), not the logical name — the logical name fails with `0x80040203` |
+| 7 ribbons | **Partial.** Application ribbon: 912,733 bytes in 25 chunks, reassembles and parses. `account` by location: form 244,696 bytes (7 chunks, reassembled length equals `sizeBytes`), homepage grid 336,518, subgrid 185,171. `all` on another table: 549,414 bytes in 15 chunks. **`account` with `location: all` fails twice after about 120 s** with a socket timeout from Dataverse — see finding L3 |
+| 8 records | **Pass (automatic part).** `systemuser` IDs in pages of 2, `touchesRecords: true`, no repeats across pages. Unknown cursor and a cursor used on another tool both `invalid_cursor`. `account` itself has no records in the sandbox. Dialog warning and the switch-off check need the person — pending |
+| 9 not found | **Pass.** `not_found` with kind and name for a table (three tools), column, global option set, relationship and solution — **I15 works**; the fault codes were not visible. `top` and `<all-attributes />` refused |
+| 10 solution contents | **Two bugs found and fixed (L1, L2); re-run pending on the new build.** Before the fixes: `list_solution_components` on two unmanaged solutions — 33 roles (unnamed, as specified), and 85 tables, forms, views and apps, all named |
+
+Re-run on the build with L1–L4 (same day, after the DLL was replaced):
+
+| Step | Result |
+|---|---|
+| 7 ribbons | **Pass.** `account` with `location: all`: 610,533 bytes in 17 chunks, reassembles to `sizeBytes` and parses — in 2.4 s, so the 5-minute timeout was not exercised; the platform had likely cached the ribbon after the per-location calls. The cause of the two earlier failures is unconfirmed |
+| 8 records | **Pass.** Paging re-passed. With record queries off, the `systemuser` query failed with `tool_disabled` naming the table, at once and without a dialog; a `systemform` query still ran, after a dialog (reads revoked: every read prompted again). With record queries back on, the `systemuser` query waited for the dialog and ran with `touchesRecords: true`. The person confirmed the records dialog showed the warning and the configuration dialog did not |
+| 11 log | **Pass**, as confirmed by the person: every call, the `tool_disabled` refusal included, shows as a line pair in the tab's log |
+| 10 solution contents | **Pass.** Two unmanaged solutions: 33 roles, and 186 components (tables, columns, choices' environment variables, forms, views, workflows, apps), 45 under a root. Columns named `table.column` (L1). `get_component_state` on views, forms and apps: versions as decimal strings, forms with `modifiedOn` and `modifiedBy` `null` (L2), an unknown ID `found: false`. `get_required_components` for a form, `account` by name and `account.name` by name: 40 dependencies; 34 named (the six unnamed are relationships, as specified); 13 with holding solutions; the default and active solutions never listed |
+
+Findings:
+
+| # | Finding | Action |
+|---|---|---|
+| L1 | Naming columns failed: `RetrieveMetadataChanges` refuses an attribute query unless `Attributes` is among the entity properties (`0x80072527`) | **Fixed** in `ComponentNames`; unit test asserts the request shape |
+| L2 | `systemform` has no `modifiedon` or `modifiedby`; `get_component_state` asked for them and failed (`0x80041103`). The other four row-backed tables have both | **Fixed:** forms report `modifiedOn` and `modifiedBy` as `null`; SPEC §6.5 updated — the overwrite check compares `versionNumber` |
+| L4 | The panel's two top groups were about twice as tall as their rows: the auto-sized table measured wrapping rows one control per line | **Fixed:** `UiBuilder.Group` fits its height to its rows at the current width (wrapping still works); the call log takes the spare height, the host log is fixed at 160 px. `UiBuilderTests` covers it |
+| L3 | `get_entity_ribbon` for `account` with `location: all` exceeds the SDK's two-minute request timeout; each location alone returns in seconds | **Fixed (decided by the person):** both ribbon requests run with a 5-minute timeout, set on the call's service clone (`OrganizationWebProxyClient` channel or `OrganizationServiceProxy`) for that request and restored; `MaxConnectionTimeout` is process-wide and left alone. SPEC §6.5 updated. Re-test pending on the new build |
 
 ---
 

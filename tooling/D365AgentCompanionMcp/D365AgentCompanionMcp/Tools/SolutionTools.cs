@@ -37,6 +37,9 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         /// <summary>Solutions never reported as holding a requirement: the default solution and the active layer.</summary>
         internal static readonly IReadOnlyCollection<string> SystemSolutions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Default", "Active" };
 
+        /// <summary>Row-backed types whose table has no <c>modifiedon</c> or <c>modifiedby</c> — <c>systemform</c> (found live).</summary>
+        internal static readonly IReadOnlyCollection<int> WithoutModifiedColumns = new HashSet<int> { ComponentTypes.SystemForm };
+
         private const string Managed = "managed";
         private const string IncludeHidden = "includeHidden";
         private const string NameContains = "nameContains";
@@ -102,7 +105,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         public static ToolDefinition GetComponentStateTool() => ToolDefinition.Simple(
             GetComponentState,
             ToolTier.Read,
-            "Row version, modified-on and modified-by of row-backed components — views (26), forms (60), web resources (61), sitemaps (62), app modules (80) — for the pre-import overwrite check. found: false means the component was deleted. Tables and columns have no comparable version: use a PAC re-export and diff.",
+            "Row version, modified-on and modified-by of row-backed components — views (26), forms (60), web resources (61), sitemaps (62), app modules (80) — for the pre-import overwrite check: compare versionNumber. found: false means the component was deleted. Forms have no modified-on or modified-by, so both are null for them. Tables and columns have no comparable version: use a PAC re-export and diff.",
             InputSchema.ForConnection()
                 .ObjectArray(Components, "1–200 components, each { type, id }.", RowBackedComponentSchema(), 1, 200)
                 .WithReason(required: false),
@@ -344,7 +347,10 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 var table = ComponentNames.RowBacked[group.Key];
                 foreach (var batch in ComponentNames.Batches(group.Select(r => r.Id).Distinct().ToList()))
                 {
-                    var query = new QueryExpression(table.Table) { ColumnSet = new ColumnSet(table.NameColumn, "versionnumber", "modifiedon", "modifiedby") };
+                    var columns = WithoutModifiedColumns.Contains(group.Key)
+                        ? new ColumnSet(table.NameColumn, "versionnumber")
+                        : new ColumnSet(table.NameColumn, "versionnumber", "modifiedon", "modifiedby");
+                    var query = new QueryExpression(table.Table) { ColumnSet = columns };
                     query.Criteria.AddCondition(table.IdColumn, ConditionOperator.In, batch.Cast<object>().ToArray());
                     foreach (var row in execution.Service.RetrieveMultiple(query).Entities)
                     {
@@ -399,12 +405,13 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 return item;
             }
 
-            var modifiedBy = row.GetAttributeValue<EntityReference>("modifiedby");
+            var audited = !WithoutModifiedColumns.Contains(type);
+            var modifiedBy = audited ? row.GetAttributeValue<EntityReference>("modifiedby") : null;
             var version = row.Contains("versionnumber") ? Convert.ToInt64(row["versionnumber"], CultureInfo.InvariantCulture) : (long?)null;
             item["found"] = true;
             item["name"] = MetadataHelpers.Text(row.GetAttributeValue<string>(ComponentNames.RowBacked[type].NameColumn));
             item["versionNumber"] = ValueFormats.NullableString(version?.ToString(CultureInfo.InvariantCulture));
-            item["modifiedOn"] = Date(row, "modifiedon");
+            item["modifiedOn"] = audited ? Date(row, "modifiedon") : JValue.CreateNull();
             item["modifiedBy"] = modifiedBy == null
                 ? JValue.CreateNull()
                 : new JObject

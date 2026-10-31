@@ -798,6 +798,8 @@ interface RibbonResult {
 
 *Paged* in chunks. Ribbon XML is large: each page's `ribbonXml` is the next part of one document, split at the response cap. The agent concatenates the pages in order; the document is complete when `nextCursor` is `null`.
 
+Building a ribbon is slow: the whole ribbon of a large table can take the platform longer than the SDK's default two-minute request timeout. Both ribbon requests run with a timeout of up to **5 minutes**, set on the call's service clone for that request only and restored afterwards; the process-wide `CrmServiceClient.MaxConnectionTimeout` is not changed. The call's keep-alive ([§6.1](#61-protocol-surface), D9) holds the client's request open meanwhile. When the whole ribbon still times out, the agent asks for `form`, `homepageGrid` and `subGrid` one at a time.
+
 #### `query`
 
 | Input | Type | Required | Notes |
@@ -902,13 +904,13 @@ interface ComponentStateResult {
     found: boolean;                  // false when deleted — itself a change the overwrite check must catch
     name: string | null;
     versionNumber: string | null;    // row version, decimal string
-    modifiedOn: DateTime | null;
-    modifiedBy: UserRef | null;
+    modifiedOn: DateTime | null;     // null for forms: systemform has no modifiedon (Phase 2, live)
+    modifiedBy: UserRef | null;      // null for forms: systemform has no modifiedby
   }>;                                // in request order
 }
 ```
 
-Table and column metadata carry no comparable row version; for those, the overwrite check falls back to a PAC re-export and diff.
+The overwrite check compares `versionNumber`, which every accepted type has; `modifiedOn` and `modifiedBy` are for the person. Table and column metadata carry no comparable row version; for those, the overwrite check falls back to a PAC re-export and diff.
 
 #### `get_required_components`
 

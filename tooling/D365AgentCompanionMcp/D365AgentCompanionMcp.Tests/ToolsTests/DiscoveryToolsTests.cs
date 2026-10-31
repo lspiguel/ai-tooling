@@ -326,6 +326,10 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
             Assert.That(components[0]!["rootComponentBehavior"]!.ToString(), Is.EqualTo("includeAsShellOnly"));
             Assert.That(components[1]!["rootComponentBehavior"]!.Type, Is.EqualTo(JTokenType.Null));
             Assert.That(components[3]!["componentType"]!["name"]!.ToString(), Is.EqualTo("Workflow"));
+
+            // Dataverse refuses an attribute query unless Attributes is requested on the entity (found live, 0x80072527).
+            _dataverse.Verify(s => s.Execute(It.Is<Microsoft.Xrm.Sdk.Messages.RetrieveMetadataChangesRequest>(r =>
+                r.Query.Properties.PropertyNames.Contains("Attributes") && r.Query.AttributeQuery.Properties.PropertyNames.Contains("LogicalName"))));
         }
 
         [Test]
@@ -349,8 +353,12 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
             Assert.That(states[0]!["found"]!.Value<bool>(), Is.True);
             Assert.That(states[0]!["id"]!.ToString(), Is.EqualTo(DiscoveryData.MainFormId.ToString()));
             Assert.That(states[0]!["versionNumber"]!.ToString(), Is.EqualTo("9007199254740993"));
-            Assert.That(states[0]!["modifiedBy"]!["name"]!.ToString(), Is.EqualTo("Test User"));
             Assert.That(states[1]!["found"]!.Value<bool>(), Is.False);
+
+            // systemform has no modifiedon or modifiedby (found live): they are not asked for, and come back null.
+            Assert.That(states[0]!["modifiedOn"]!.Type, Is.EqualTo(JTokenType.Null));
+            Assert.That(states[0]!["modifiedBy"]!.Type, Is.EqualTo(JTokenType.Null));
+            _dataverse.Verify(s => s.RetrieveMultiple(It.Is<QueryExpression>(q => q.EntityName == "systemform" && !q.ColumnSet.Columns.Contains("modifiedon"))));
         }
 
         [Test]
