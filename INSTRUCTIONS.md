@@ -163,7 +163,7 @@ dotnet test    tooling/D365ContextExporter/D365ContextExporter.Tests/D365Context
 
 ## Tooling conventions — Agent Companion MCP
 
-The [Agent Companion MCP](/tooling/D365AgentCompanionMcp/SPEC.md) is a planned XrmToolBox plugin that gives a coding agent a local MCP endpoint over XrmToolBox connections, with every call authorized by a person. **It is a draft specification; there is no code yet.** The spec is the source of truth: build tasks cite its rule IDs (R1–R13 for rules, H and C for host and connection behaviour, W and X for WIP solutions), and a change in behaviour is made in the spec first.
+The [Agent Companion MCP](/tooling/D365AgentCompanionMcp/SPEC.md) is a planned XrmToolBox plugin that gives a coding agent a local MCP endpoint over XrmToolBox connections, with every call authorized by a person. **It is a draft specification; there is no code yet.** The spec is the source of truth: build tasks cite its rule IDs (R1–R16 for rules, H and C for host and connection behaviour, W and X for WIP solutions, T for delivery context, K for skill coexistence), and a change in behaviour is made in the spec first.
 
 ### Rules specific to this plugin
 

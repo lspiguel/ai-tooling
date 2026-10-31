@@ -1,6 +1,6 @@
 # Agent Companion MCP — specification and plan
 
-> **Status:** Draft · **Date:** 2026-10-25 · **Updated:** 2026-10-30 · **Plugin:** `D365AgentCompanionMcp` · **Intended path:** `tooling/D365AgentCompanionMcp/SPEC.md`
+> **Status:** Draft · **Date:** 2026-10-25 · **Updated:** 2026-10-31 · **Plugin:** `D365AgentCompanionMcp` · **Intended path:** `tooling/D365AgentCompanionMcp/SPEC.md`
 
 An XrmToolBox plugin that exposes a local Model Context Protocol (MCP) endpoint over one or more XrmToolBox connections. It gives a coding agent the few Dataverse operations PAC CLI cannot perform, so the agent can bootstrap and maintain small, unmanaged work-in-progress (WIP) solutions locally. One MCP host serves the whole XrmToolBox process; each open plugin tab binds one connection and is the window where a person sees and authorizes every call to it.
 
@@ -36,8 +36,11 @@ The need to reach those components is greatest at the start of a project, but it
 | **Project start** | Everything — there are no transport solutions yet. Publisher, base solutions, and the first out-of-box tables, forms, views, ribbons and sitemaps to customize |
 | **During delivery** | Each out-of-box component a story touches for the first time — a table, form, view or ribbon not yet in any transport solution |
 | **A first-party app joins the solution** | Sales, Customer Service, Field Service or another app brings a new set of out-of-box tables, forms, views, sitemaps and ribbons, none of them in a transport solution |
+| **After go-live — maintenance and support** | Usually nothing new: most fixes change a component that already has a transport home, and a short-lived WIP only carries the edit. A fix that touches an out-of-box component for the first time pulls it in as during delivery |
 
 At each of these moments the agent has no ground truth for the components it needs: it cannot see them, their IDs, or their current definitions.
+
+These moments are conditions, not project phases. They recur and overlap. A project in support still installs a new first-party app, and a story during delivery mostly edits components that already have a transport home. One task can meet several of them at once. The workflows and the skills key on the condition the work is in, never on the phase the project is said to be in ([§9.9](#99-routes--placing-a-component-or-editing-it-in-place), K1).
 
 The plugin closes that gap. It lets the agent:
 
@@ -47,7 +50,7 @@ The plugin closes that gap. It lets the agent:
 
 From there, PAC CLI exports and unpacks the solution, the agent edits it locally, and PAC CLI packs and imports it. The platform's import is the final validation.
 
-The same loop serves every moment above: a small set of WIP solutions per user story or task — one for each transport solution the story touches ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)) — with discovery used whenever the work reaches beyond what the transport solutions already hold.
+The same loop serves every moment above: a small set of WIP solutions per user story or task — one for each transport solution the story touches ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)) — with discovery used whenever the work reaches beyond what the transport solutions already hold. For each component, a WIP either places it in its transport solution for the first time, or only carries an edit to a component that already has one. The two routes mix freely within a project and within a story ([§9.9](#99-routes--placing-a-component-or-editing-it-in-place)).
 
 ---
 
@@ -77,6 +80,9 @@ The same loop serves every moment above: a small set of WIP solutions per user s
 | R11 | **WIP solutions are never deployed downstream** — only transport solutions are | A deployed WIP becomes a managed layer that ties its components' lifetime to the WIP (D1) |
 | R12 | **Write and Publisher calls must state a reason.** `reason` is required and must not be blank. A call without one fails before any dialog. The reason is still unverified agent text (R8) | The person approving a change sees the agent's stated intent next to the arguments, and a mismatch between them is grounds to deny |
 | R13 | **Every call is logged in the plugin window as a call line and an outcome line**, including denied, rejected and host calls ([§8.6](#86-call-log-format)). The log reaches disk only when the person uses **Save as…** | Gives each environment a reviewable record of what the agent asked for and what it got |
+| R14 | **A transport solution is never the edit vehicle.** Local edits reach development only through a WIP holding just the components being changed. An unpacked transport solution is never edited locally and imported into development. The one import of a transport solution into development is the unmanaged alignment import from the build environment under strategy A, which carries no local edits (A8) | An unmanaged import replaces every whole document in the solution with the imported copy ([§9.4](#94-why-the-overwrite-check-matters)). As an edit vehicle, that discards every change made in development since the copy was taken, across a whole transport solution |
+| R15 | **Delivery facts are derived or asked, never assumed.** The close-out strategy, which transport solutions exist, where each is extracted from, whether there is a build environment, and how pipelines run all come from the project, its environments or the person. Before shaping, and again before close-out, the agent states the steps it will take and the person confirms them ([§9.8](#98-delivery-context)) | A wrong assumption about the transport source or about who runs which pipeline puts work where it never ships, or ships it unreviewed |
+| R16 | **No managed solution of the project is ever imported into development.** A managed build of a transport solution, from any downstream environment or pipeline artifact, is never imported into a development environment — by the agent, by a script, or as a step the agent proposes. When a skill finds a managed copy of a project solution in development, it stops and tells the person | The managed layer locks the project's own components in development under a managed solution. Removing it means uninstalling that solution, which deletes its components — for tables and columns, with their data |
 
 ---
 
@@ -109,6 +115,7 @@ The same loop serves every moment above: a small set of WIP solutions per user s
 
 | Step | Owner | Notes |
 |---|---|---|
+| Establish the delivery context | Agent, from the project repository, the bound environments and the person | Before any other step; [§9.8](#98-delivery-context), R15 |
 | Choose the environment | **MCP** `list_connections`, `get_connection_info` | One connection per task; the PAC profile is matched to it — see below |
 | Identify the user for WIP naming | **MCP** `who_am_i` | First and last names give the initials in WIP names ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)) |
 | Find publishers | **MCP** `list_publishers` | |
@@ -124,8 +131,8 @@ The same loop serves every moment above: a small set of WIP solutions per user s
 | Local edits and validation | Agent, skills, scripts | |
 | Pre-import overwrite check | **MCP** `get_component_state` **or** PAC re-export and diff | |
 | Pack, import, publish | PAC `solution pack`, `solution import --publish-changes` | Platform validates on import |
-| Close-out — promote, add to transport, or commit | Depends on the project's strategy — [§9.7](#97-close-out-strategies) | Each WIP feeds one transport solution (R10) |
-| Delete WIP solution after close-out | PAC `solution delete` | Deleting an unmanaged solution keeps its components |
+| Close-out — promote, add to transport, or commit | Depends on the WIP's route and on where its destination is extracted from — [§9.9](#99-routes--placing-a-component-or-editing-it-in-place), [§9.7](#97-close-out-strategies) | Each WIP feeds one transport solution (R10) |
+| Delete WIP solution | PAC `solution delete` | After close-out. A WIP holding only in-place edits is deleted as soon as its edit has reached the transport source (W10). Deleting an unmanaged solution keeps its components |
 
 ### Two paths for adding components
 
@@ -1312,6 +1319,8 @@ After an `add_solution_components` outcome line, one `⚠ unexpected <type> <nam
 
 Every workflow starts by settling the connection ([§6.2](#62-conventions)); every MCP call that follows passes it.
 
+§9.1 to §9.3 are entry conditions, not exclusive phases. One task can begin as a cold start for a missing transport solution, continue as a story, and include an in-place edit to a component already in production. Before any of them the agent establishes the delivery context ([§9.8](#98-delivery-context)), and it routes every component it touches on its own ([§9.9](#99-routes--placing-a-component-or-editing-it-in-place)).
+
 ### 9.1 Cold start — first base solution
 
 ```
@@ -1345,17 +1354,20 @@ Every workflow starts by settling the connection ([§6.2](#62-conventions)); eve
 
 Where the project uses segmented transport solutions ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)), cold start creates them empty, in transport order, under the project publisher — except a shared-library solution, which is imported from its own publisher — and the first components go into segmented WIP solutions rather than straight into the transport solutions.
 
+Cold start is not only for the start of a project. It applies whenever a transport solution the work needs does not exist yet — for example, the first Assemblies change on a project that so far has only Base. Only the missing transport solutions are created, in transport order. Before creating any, `list_solutions` on development, and on the build environment where there is one, shows which already exist.
+
 ### 9.2 Per user story — WIP solutions
 
-1. Discover the components the story touches (metadata, queries, ribbon reads).
-2. Classify each with the project's segmentation map, and check whether it already has a transport home (W1, W2). Check for overlap with other open WIP solutions (W7).
-3. `create_solution` once for each transport group the story touches, named `<initials>_Agent_WIP_<work item id>_<Group>` with initials from `who_am_i` ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)) and under the destination's publisher (W3), after `list_solutions` confirms the names are free.
-4. Add each component to its group's WIP — Path A or Path B per the skill — then `list_solution_components` on each WIP (R1).
-5. `pac solution export` and `pac solution unpack` for each WIP; record a baseline of `get_component_state` for every row-backed component.
-6. Edit locally; run validation scripts.
-7. **Pre-import overwrite check** — `get_component_state` again, compared with the baseline. Any difference: stop, tell the person, re-export and merge before continuing. For table and column metadata, re-export and diff instead.
-8. `pac solution pack`, `pac solution import --publish-changes` — one WIP at a time, in transport order (W5).
-9. Close-out using the project's strategy ([§9.7](#97-close-out-strategies)): all of the story's WIPs together, in transport order (X8). Then `pac solution delete` removes each WIP from development and keeps its components.
+1. Establish the delivery context, or confirm the one already established for this task, and state the steps (R15, T3).
+2. Discover the components the story touches (metadata, queries, ribbon reads).
+3. Classify each with the project's segmentation map, and look up its transport home where transport is extracted from (W1, W2, T4). Route each one: **placement** when it has no transport home, **in place** when it has one (W9). Check for overlap with other open WIP solutions (W7).
+4. `create_solution` once for each transport group the story touches, named `<initials>_Agent_WIP_<work item id>_<Group>` with initials from `who_am_i` ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)) and under the destination's publisher (W3), after `list_solutions` confirms the names are free. A second WIP for a group only when the person chooses to end part of that group's work early (W12).
+5. Add each component to its group's WIP — Path A or Path B per the skill — then `list_solution_components` on each WIP (R1). After any removal, remove an orphaned parent shell (W13).
+6. `pac solution export` and `pac solution unpack` for each WIP, outside the repository; record a baseline of `get_component_state` for every row-backed component.
+7. Edit locally; run validation scripts.
+8. **Pre-import overwrite check** — `get_component_state` again, compared with the baseline. Any difference: stop, tell the person, re-export and merge before continuing. For table and column metadata, re-export and diff instead.
+9. `pac solution pack`, `pac solution import --publish-changes` — one WIP at a time, in transport order (W5). The import publishes every pending customization in the environment, not only the WIP's (X11).
+10. End each WIP by its route ([§9.9](#99-routes--placing-a-component-or-editing-it-in-place)). An in-place WIP ends once its edit has reached the transport source (W10). Placement WIPs end at close-out by the strategy for their destination ([§9.7](#97-close-out-strategies)): all of the story's placement WIPs together, in transport order (X8). Then `pac solution delete` removes each WIP from development and keeps its components.
 
 ### 9.3 A first-party app joins the solution
 
@@ -1390,7 +1402,7 @@ Projects vary — some import Security directly after Base. The fixed part is th
 
 **Consequence: several WIP solutions per work item.** A WIP solution feeds exactly one transport solution (R10). A story that touches a column, a form, a web resource and a plug-in step therefore needs three WIPs — Base, Resources and Assemblies — each named for the story and its group. Only the groups the story touches get a WIP.
 
-**WIP naming.** `<initials>_Agent_WIP_<work item id>_<Group>` — for example `[XY]_Agent_WIP_1234_Base`.
+**WIP naming.** `<initials>_Agent_WIP_<work item id>_<Group>[_<n>]` — for example `[XY]_Agent_WIP_1234_Base`.
 
 | Part | Rule |
 |---|---|
@@ -1398,6 +1410,7 @@ Projects vary — some import Security directly after Base. The fixed part is th
 | `Agent_WIP` | Literal. Marks a WIP shaped by an agent through the plugin, as distinct from WIPs people create by hand |
 | `<work item id>` | The work item's numeric ID |
 | `<Group>` | The transport group's name in the segmentation map — `Resources`, `Base`, `Assemblies`, `Processes`, `Apps`, `Security`, or the map's name for the shared-library solution |
+| `_<n>` | Optional. A sequence number starting at 2, used only for a story's second or later WIP for the same group (W12). The first WIP has no suffix |
 | Friendly name | The unique name with each underscore replaced by a space — `[XY] Agent WIP 1234 Base` |
 
 The agent stops and asks the person for initials when `firstName` or `lastName` is empty, when `isApplicationUser` is true, or when `impersonating` is true — the WIP belongs to the person doing the work, not to the identity the connection runs as. The name must also pass `create_solution`'s rules (letters, digits and underscores, starting with a letter, at most 65 characters) and W4. Before creating, `list_solutions` confirms the name is free; a clash, such as two people with the same initials on the same work item and group, is resolved by the person.
@@ -1405,15 +1418,20 @@ The agent stops and asks the person for initials when `firstName` or `lastName` 
 | # | WIP rule | Why |
 |---|---|---|
 | W1 | **One group per WIP.** Before adding, the agent classifies every component with the project's map, including subtype rules, and adds it to the WIP for that group | A promotion validator rejects mixed WIPs; a component in the wrong group lands in the wrong transport solution, which is costly to undo (X4) |
-| W2 | **A component already in a transport solution stays in that group**, even if the map has changed since. The agent looks for an existing transport home in `solutioncomponent` first | Each component has exactly one transport home |
+| W2 | **A component already in a transport solution stays in that group**, even if the map has changed since. The agent looks for an existing transport home in `solutioncomponent` first, in the environment the transport solutions are extracted from (T4) | Each component has exactly one transport home |
 | W3 | **Same publisher as the destination.** A WIP uses the publisher of the transport solution it feeds — the project publisher, or the shared library's publisher for that solution | Promotion validation requires matching prefixes; components created while working in the WIP take its publisher's prefix |
 | W4 | **WIP names never start with a protected prefix.** A promotion pipeline can refuse WIP names that start with the project's, a partner's or the platform's prefix, so that no transport solution is promoted as if it were WIP. Leading with initials makes a clash unlikely, but the agent still checks the name against the project's protected prefixes and asks the person if one matches | A transport solution promoted as WIP would be copied into another transport solution and then deleted from the build environment |
 | W5 | **Work in transport order.** Create, import and close out a story's WIPs in transport order — Resources before Base, Base before Assemblies, and so on | Each WIP excludes required components (R1), so the target must already hold what it depends on |
 | W6 | **Dependencies point down the order.** No component may require one in a later group. Where one does — for example a Base form embedding a canvas app that the map places in Apps — stop and ask the person. `get_required_components` finds these. The fix is a placement decision, not a workaround | A dependency pointing up breaks the import of the earlier solution in every downstream environment |
 | W7 | **Check overlap with other open WIPs.** Before adding a whole-document component (form, view, sitemap, web resource, workflow, app module, table), the agent queries `solutioncomponent` for the same object in other WIP solutions and reports any overlap | Two stories editing one document ship each other's in-flight changes (X1) |
 | W8 | **Never in a WIP:** record creation and update rules and their generated cloud flows; managed tables with all subcomponents (also R1); components carrying another publisher's prefix | Known managed-deployment failures; validator rejections; layering |
+| W9 | **Route per component, lifetime per WIP.** Each component is routed when it is classified: *placement* when it has no transport home yet, *in place* when it already has one (W2). A WIP holding any placement component lives until close-out. A WIP holding only in-place components ends as soon as its edit has reached the transport source ([§9.9](#99-routes--placing-a-component-or-editing-it-in-place)) | The route decides what close-out has to do. Deciding it per component lets one story mix new and existing components without forcing one onto the other's lifetime |
+| W10 | **Re-check before ending an in-place WIP.** After import, run `list_solution_components` on the WIP. Every component in it must already have a transport home. A component authored locally during the edit, such as a new column or web resource, has none, so the WIP becomes a placement WIP | Deleting the WIP would leave that component in development with no transport home. It never ships, and the next downstream import that needs it fails (X5) |
+| W11 | **Changing route never changes the group.** Switching a component between placement and in place, or moving it between a story's WIPs, keeps it in the group its transport home and the map give it | W1 and W2 fix placement; a route sets only a lifetime (X4) |
+| W12 | **A second WIP for one group is the person's choice.** The person may want part of a group's work to end before the rest — typically in-place edits that should reach the transport source now while new components wait. The story then gets a second WIP for that group, named with a suffix. A component is in at most one of a story's WIPs | Keeps R10 and W7 intact and lets the person decide when each part ends |
+| W13 | **Remove orphaned parent shells.** After removing a column, form or view from a WIP, read the WIP back. If nothing else in the WIP needs the table shell the platform added for it, remove the shell | The platform keeps the shell, and with it the table's ribbon diff (X6) — finding P1 in [notes](notes.md#phase-3--execution) |
 
-How the plugin supports this: `list_solutions` finds open WIPs and the transport solutions with their publishers. `query` over `solutioncomponent` finds a component's existing home and any overlapping WIPs. `query` over `systemform` and `workflow` reads the subtype columns the map uses. `get_required_components` checks dependencies against the order. `create_solution` and `add_solution_components` shape one WIP per group. The plugin neither reads, tracks nor enforces the segmentation map: placement is the agent's responsibility, guided by its skill.
+How the plugin supports this: `list_solutions` finds open WIPs and the transport solutions with their publishers. `query` over `solutioncomponent` finds a component's existing home and any overlapping WIPs. `query` over `systemform` and `workflow` reads the subtype columns the map uses. `get_required_components` checks dependencies against the order. `create_solution` and `add_solution_components` shape one WIP per group. Where transport is extracted from a build environment, the agent reads `solutioncomponent` there through the build environment's read-only tab (A2, T4). The plugin neither reads, tracks nor enforces the segmentation map: placement is the agent's responsibility, guided by its skill.
 
 ### 9.6 Issues common to every close-out strategy
 
@@ -1429,10 +1447,13 @@ How the plugin supports this: `list_solutions` finds open WIPs and the transport
 | X8 | **Partial close-out.** A story's WIPs close out one at a time | A build in between carries half a story — Base without the app that uses it | Close out all of a story's WIPs together, in order; make sure no automated deployment runs between them, or accept the intermediate state knowingly |
 | X9 | **Leftover WIP solutions.** Unmanaged WIPs in development — and, for C, in source control — outlive their story | Stale WIPs distort overlap checks and clutter pipeline pickers | Delete each WIP at close-out (`pac solution delete` keeps components); `list_solutions` finds stragglers |
 | X10 | **Inactive forms are not exported.** In spike S2, two inactive main forms in a WIP produced no form XML in the unmanaged export, while an active form did | The agent has nothing to edit locally, and an import cannot carry a change to that form | Check `formactivationstate` before adding a form; a person decides whether to activate it or work on another form |
+| X11 | **An import publishes everything.** `pac solution import --publish-changes` publishes every pending customization in the environment, not only the WIP's (finding P2 in [notes](notes.md#phase-3--execution)) | Another person's unpublished change in development is published by the agent's import | In a shared development environment, tell the person before importing; where it matters, the person coordinates publishing with the team |
 
 ### 9.7 Close-out strategies
 
 **v1 support.** The v1 skills support strategies **A** and **B**. Strategies C and D are recorded here for a later assessment with teams that use them; until then their considerations are analysis, not experience-based recommendations.
+
+**Chosen per close-out, not per project.** A strategy follows from where the destination transport solution is extracted from (T4), so it is settled for each WIP, not once for the project. A project can extract some transport solutions from a build environment and others from development. It can add a build environment after go-live, or keep a separate development environment for production fixes. The agent derives each WIP's strategy from the delivery context ([§9.8](#98-delivery-context)). Where more than one is possible, it recommends one, explains the difference, and the person chooses (R15). In-place WIPs ([§9.9](#99-routes--placing-a-component-or-editing-it-in-place)) use the same strategies: under A an in-place edit is still promoted, because development is not the transport source.
 
 |  | A — Promote to a build environment | B — Add to transport solutions in development | C — Add to Git-linked solutions | D — Add to solutions deployed by Power Platform pipelines |
 |---|---|---|---|---|
@@ -1441,6 +1462,15 @@ How the plugin supports this: `list_solutions` finds open WIPs and the transport
 | Isolation from in-flight work | Yes, apart from shared whole documents (X1) | No (X2) | No (X2) | Only when the source is a build environment fed by A |
 | Transport order enforced by | The person promoting; multi-solution deployment pipelines | Multi-solution deployment pipelines | The build from the repository | The person requesting deployments — one solution per deployment[^3] |
 | R1 check after close-out | `list_solution_components` through a read-only build connection | `list_solution_components` on development | The same, plus review of the commit | The same, on the source environment |
+
+**Mixing strategies.** When strategies meet in one project, the agent checks the combination before acting:
+
+| Situation | Effect | Agent's action |
+|---|---|---|
+| The destination is extracted from a build environment, but the close-out adds components to the transport solution in development (B) | Nothing reaches the build environment. Development's copy of the transport solution, where there is one, drifts from the build copy | Not offered; promote instead (A). If the person asks for B anyway, the agent says the work will not ship until it is promoted |
+| A build environment is added to a project that used B | Components placed in development's transport solutions before the change are missing from the build environment | A person seeds the build environment once, before the first promotion. The agent lists what development's transport solutions hold that the build environment's do not |
+| A separate development environment is kept for production fixes | Its transport source and pipelines can differ from the main development environment's, and its fixes must also reach the main line, or the next release from there overwrites them | Bind it in its own tab and establish its delivery context separately. The agent asks how a fix reaches the main development environment — re-applied there, or carried by the next deployment — and puts it in the steps |
+| An in-place edit where transport is extracted from a build environment | The edit sits in development until the WIP is promoted | The in-place WIP ends after promotion, not after import (W10) |
 
 #### A — WIP promoted to a build environment
 
@@ -1455,6 +1485,7 @@ A promotion pipeline exports a WIP unmanaged from development and validates it a
 | A5 | **Deletions** are made by a person in the build environment (X3); the promotion pipeline never deletes |
 | A6 | **The development WIP survives promotion.** Only the build copy is deleted; the development WIP is deleted at close-out (X9) |
 | A7 | **Promotion validation is the backstop, not the plan.** The pipeline rejects wrong groups, wrong prefixes and managed tables with all subcomponents only after the work is done. The agent applies W1–W8 while shaping the WIP so that promotion passes the first time |
+| A8 | **Aligning development from build.** A transport solution may be exported unmanaged from the build environment and imported unmanaged into development, so that development holds the same transport solutions with the same placement as build. This gives W2 and W7 a current view in development, and the project's own solutions in development stay unmanaged (R16). It is not an edit: nothing is changed locally before the import (R14). A person decides when it runs and runs it. Before it runs, the agent lists the open WIPs and the whole documents they share with the transport solution, because the import replaces those documents in development with the build copy (X1). Transport homes are still looked up in the build environment (T4) |
 
 #### B — WIP until its components are added to transport solutions
 
@@ -1495,6 +1526,68 @@ In-product pipelines export a solution from a source environment when a maker re
 | D4 | **The artifact is exported when deployment is requested**[^3]. With development as the source, every in-flight edit to a component in the solution ships (X2). Using a build environment fed by strategy A as the pipeline's source restores isolation |
 | D5 | **Preflight checks catch missing dependencies**[^3] — a useful late check for X5, but only after the work is done |
 | D6 | **Target environments must be managed environments, and the deploying identity owns the deployed objects**[^3]. Flow ownership and connection references follow from who deploys |
+
+### 9.8 Delivery context
+
+Every skill that shapes, edits or closes out a WIP needs the same facts about how the project delivers. The agent establishes them once per task — from the project first and the person last — and every skill uses the same answers (R15, K2, K4). Facts recorded earlier (T5) are read first and checked like any other source.
+
+| Fact | Used for | Derived from | When it cannot be derived |
+|---|---|---|---|
+| Development connection and PAC profile | Every call and every PAC command | `list_connections`, `get_connection_info`, `pac org who` ([§4](#keeping-pac-cli-on-the-same-environment)) | Ask which connection; stop on a profile mismatch |
+| Build environment | Strategy A; where transport homes are looked up | A second bound tab left unconfirmed (A2); pipeline definitions that name it | Ask whether one exists. If it exists but is not bound, ask the person to bind it and leave it unconfirmed |
+| Publisher of each transport solution | W3; WIP creation | `list_solutions` (each transport solution's publisher), `list_publishers` | Ask; never create one without R3's confirmation |
+| Segmentation map and transport order | W1, W5, W6 | The map in the project's source control, next to its solutions ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)) | Ask where it is. If the project has none, recommend the order in §9.5 or a single transport solution, and the person decides. A project with one transport solution has a map with one group |
+| Transport solutions present | Cold start for missing ones ([§9.1](#91-cold-start--first-base-solution)); W2 | `list_solutions` on development and on the build environment; the solutions folder in the project repository | Always derivable. Differences between the environments and the repository are reported to the person |
+| Transport source of each transport solution | Close-out strategy; where W2 looks up a home; when an in-place WIP ends | Extraction pipeline definitions in the project repository; whether a build environment exists | Ask, showing what was found |
+| Close-out strategy for each WIP | [§9.7](#97-close-out-strategies) | The transport source of its destination | Recommend one; the person chooses where more than one applies |
+| Pipelines — promotion, extraction and commit, build, deployment | The close-out steps and what follows them | Pipeline definitions in the project repository: their triggers (manual, on commit, scheduled) and approvals | Ask what triggers each one and who approves it. A person runs them (T6) |
+| Protected prefixes | W4 | The promotion pipeline's configuration | Ask. Until known, check against the project, partner and platform prefixes the agent can see |
+| Work item ID | WIP naming | The task | Ask |
+| Automated runs between close-outs | X8 | The pipeline triggers above | Ask whether a commit or a schedule can deploy between two close-outs |
+| Others working in the development environment | X1, X11 | — | Ask |
+
+| # | Rule |
+|---|---|
+| T1 | **Derive first, then ask.** Read the project repository and the bound environments before asking. Ask only for what neither shows, and never fill a gap with a default without saying so |
+| T2 | **Ask with a recommendation.** Each question carries the agent's recommended answer, the reason for it, and what the alternatives would change |
+| T3 | **Steps before action.** Before the first Write call of a task, and again before close-out, the agent lists the concrete steps: each WIP with its group, route and connection; the import order; how and when each WIP ends; each pipeline to run, who runs it and what it triggers; the checks after each step; and when each WIP is deleted. The person confirms. Any change to the steps during the task is stated again before the agent acts on it |
+| T4 | **Transport homes are looked up where transport is extracted from** — `solutioncomponent` on the build environment's read-only tab under A, on development under B. A project with mixed sources looks up each group in its own source |
+| T5 | **The environments win over a record.** The person may have the agent record confirmed answers as delivery facts — a client repository, never this one (R7). Where the project has a `<client>-Context/` repository, that is where they go. Otherwise they go in the project's solution repository (`<client>-d365/`), next to the segmentation map. The agent writes the file; a person commits it (T6). A recorded answer is checked against the environments and the repositories each time it is used: a transport solution it names must exist, and so must a pipeline it names |
+| T6 | **Pipeline runs, commits and pushes are a person's.** The agent prepares them — the pipeline to run and its parameters, the files to commit and the message — and a person executes them. The agent runs one itself only when the person explicitly delegates that specific run, commit or push. It never starts a deployment to a downstream environment, and never one that deploys a WIP (R11, D1) |
+
+### 9.9 Routes — placing a component or editing it in place
+
+A WIP does one of two jobs for each component in it. The job is decided per component, from whether the component already has a transport home. The two routes mix freely within a project, within a story, and within one person's day.
+
+|  | Placement | In place |
+|---|---|---|
+| The component | Has no transport home — a new component, or an out-of-box one touched for the first time | Is already in a transport solution (W2) — for example, a form on a table already in production |
+| What the WIP does | Carries the edit and, at close-out, places the component in its transport solution | Carries the edit only |
+| When the WIP ends | At close-out, together with the story's other placement WIPs (X8) | When the edit has reached the transport source: at import and validation where transport is extracted from development (B); after promotion where it is extracted from a build environment (A) |
+| Close-out | Add to the transport solution (B), or promote (A) | Nothing to add (B); promote (A) |
+| Checks | R1 after every add; W6, W7 and X5 before close-out | R1 after every add; the overwrite check before import; W10 before the WIP ends |
+
+**An in-place change, transport extracted from development.** A fix changes a form on a table already in production:
+
+1. Classify: the table and form are in the Base transport solution, so both are in place (W2, W9).
+2. `create_solution` for `[XY]_Agent_WIP_1234_Base`. Add the table — as a shell, or as metadata when its properties change, never with subcomponents (R1) — and the form. `list_solution_components` shows nothing unexpected.
+3. Export, unpack, baseline, edit, validate, overwrite check, pack, import ([§9.2](#92-per-user-story--wip-solutions) steps 6–9).
+4. Validate: the import succeeded, the read-back passes W10, and the person confirms the form behaves as intended ([§12](#12-human-review-checkpoints)).
+5. `pac solution delete` the WIP. The edit ships with the next extract from development (X2).
+
+Under A, step 5 waits for the WIP to be promoted, and the build environment's transport solution receives the edit.
+
+**Switching between routes**
+
+| Case | What happens |
+|---|---|
+| A story mixes both routes in one group | They share the group's WIP by default, which then lives until close-out (W9). The person can split them so the in-place part ends first (W12) — for example `[XY]_Agent_WIP_1234_Base` for a new column and `[XY]_Agent_WIP_1234_Base_2` for an edit to a form already in production |
+| An in-place WIP gains a new component | A new column or web resource authored during the edit makes the WIP a placement WIP. W10 catches it, and the WIP is not deleted until it is closed out |
+| A placement component gets a transport home elsewhere | Another story's close-out places the same component first. The overlap check (W7) reports it; the component becomes in place, and the person decides whose edit wins (X1) |
+| A person edits in the maker portal | Direct edits are neither route. The overwrite check ([§9.4](#94-why-the-overwrite-check-matters)) catches them before an import discards them; W7 does not see them |
+| The edit is to a transport solution as a whole | Not a route. Edits reach development through a WIP holding only the components being changed (R14) |
+
+**When the WIP's lifetime matters.** Under B, an in-place edit ships at the next extract from development whatever happens to its WIP (X2); ending the WIP early only removes clutter (X9). Under A, the lifetime is the release: an in-place edit ships when its WIP is promoted, so promoting early ships early.
 
 ---
 
@@ -1602,22 +1695,74 @@ Short, throwaway investigations against a development environment. Each produces
 
 ### Phase 4 — Agent skills and scripts
 
-Agent-side work that makes the local edits safe. Skills decide between Path A and Path B per component type using the S2 and S3 findings.
+Agent-side work that helps an agent use the plugin safely. Skills decide between Path A and Path B per component type using the S2 and S3 findings, and carry the Phase 3 findings P1 and P2 (W13, X11).
+
+**Companion skills, separate from the existing ones.** The Phase 4 skills live in [skills/](../../skills/) with the repository's other skills, one folder each, in the layout the instructions file sets (`SKILL.md` with `name` and `description`, plus `references/` and `scripts/`). They are new skills that help an agent use this plugin. The existing skills are not rebuilt around it (K7). Every companion skill's frontmatter says so plainly:
+
+- `name` starts with `agent-companion-`.
+- `description` opens by stating that the skill is used together with the Agent Companion MCP — the XrmToolBox plugin — and needs a plugin tab bound to the environment. It then names the conditions the skill applies to (K1).
+- `SKILL.md` checks that a bound connection exists before anything else. When none does, it stops and says the plugin is needed, rather than falling back to another route.
+
+**Composable, not phased.** Each skill owns one concern. Any of them can be active at the same time, in any task. A cold start for one missing transport solution, a story, and an in-place fix to a component already in production can happen in one session, and the person moves between them without announcing a phase. Loaded together, the skills never give the agent two different instructions for the same step.
+
+| Skill (working name) | Owns | Applies when | Hands to |
+|---|---|---|---|
+| `agent-companion-context` | The delivery context and the steps ([§9.8](#98-delivery-context), T1–T6): connection and PAC match, publishers, segmentation map, transport solutions present and their sources, each WIP's close-out strategy, pipelines, protected prefixes. Also the WIP ledger's shape (K5) | A task will shape, edit or end a WIP, or another skill needs a delivery fact it does not have | Any |
+| `agent-companion-transport-bootstrap` | Creating the transport solutions the work needs that do not exist yet, in order and under the right publisher; pulling in a first-party app's components ([§9.1](#91-cold-start--first-base-solution), [§9.3](#93-a-first-party-app-joins-the-solution)) | A transport solution or publisher the work needs is missing, or a first-party app has been installed | `agent-companion-wip-shaping` |
+| `agent-companion-wip-shaping` | Classification (W1, W2, T4); routes and WIP lifetimes (W9–W12); WIP names; create; add by Path A or B; read-back (R1); removal with shell cleanup (W13); overlap and dependency checks (W6, W7, X5) | A change touches a component — new, out-of-box, or already in transport | `agent-companion-wip-edit-loop` |
+| `agent-companion-wip-edit-loop` | Export; unpack outside the repository; baseline; local edits; validation scripts; overwrite check; pack; import in transport order (W5, X11) | A WIP holds its components and they need editing | `agent-companion-wip-close-out` |
+| `agent-companion-wip-close-out` | Ending each WIP by its route: W10 for in-place WIPs; close-out by A or B with the X issues; promotion requests under T6; R1 after close-out; deletion; stragglers (X9) | A WIP has been imported and validated, or the person asks to end a WIP or a story | — |
+
+**Decision ownership.** Each decision belongs to one skill (K2):
+
+| Decision | Owned by |
+|---|---|
+| Connection; PAC profile match | `agent-companion-context` |
+| Publisher of each transport solution | `agent-companion-context`; creating one, if ever, in `agent-companion-transport-bootstrap` under R3 |
+| Segmentation map, transport order, transport source of each transport solution | `agent-companion-context` |
+| A WIP's close-out strategy | `agent-companion-context` derives it; `agent-companion-wip-close-out` carries it out |
+| Which transport solutions to create | `agent-companion-transport-bootstrap` |
+| A component's group, transport home and route; a WIP's lifetime; a second WIP for a group | `agent-companion-wip-shaping`, confirmed by the person under T3 |
+| Path A or B for a component type | `agent-companion-wip-shaping` |
+| WIP name | `agent-companion-wip-shaping` |
+| Import order and import flags | `agent-companion-wip-edit-loop` |
+| Overwrite-check outcome | `agent-companion-wip-edit-loop` |
+| When a WIP ends; which pipeline run to request | `agent-companion-wip-close-out`, within the steps confirmed under T3 |
+
+**Coexistence rules**
+
+| # | Rule |
+|---|---|
+| K1 | **Conditions, not phases.** A skill applies because of the state of the work — a missing transport solution, a component to change, a WIP ready for edits, a WIP ready to end. It never applies because the project is said to be starting, in delivery or in support. Skill descriptions name conditions, so loading one never rules out another |
+| K2 | **One owner per decision** (table above). A skill that needs a decision it does not own uses the owner's result. When there is none yet, it applies the owner skill instead of deciding locally |
+| K3 | **Rules come from this spec, by ID.** A skill cites R, W, X, T, A and B rules by ID and keeps their meaning. It may add detail in its `references/`, but never restates a rule more loosely, more strictly, or with a default the spec does not give |
+| K4 | **No skill-local defaults for delivery facts.** No skill assumes a strategy, a build environment, a pipeline or a transport source; they come from the delivery context (R15) |
+| K5 | **One shared record of the work.** A task's WIPs are kept in one shape that every skill reads and updates — the *WIP ledger*: for each WIP its name, connection, group, route, components, baseline, import state and how it will end — next to the delivery context and the confirmed steps. The shape is defined once, in `agent-companion-context`'s references. The ledger lives in the conversation and, where the person wants it kept, in the task's implementation plan |
+| K6 | **The environment wins over the ledger.** A skill entering a task already under way — a hand-off from another skill, or a new session — re-reads the WIPs with `list_solutions` and `list_solution_components` and reconciles the ledger before acting |
+| K7 | **Existing skills keep their procedures; tooling is offered, never forced.** The repository's skills, such as `power-automate-flow-editing` and `d365ce-planning`, are not rewritten for the plugin. At most they gain a short note that, when an MCP server such as this one is available, the agent may use it — for example to create the WIP. They keep working without it. Fitting together is the companion skills' job. Where an existing skill covers a step, the companion skills defer to it for that step and supply only what it leaves open. For example, `power-automate-flow-editing` owns a cloud flow's edit and its import flags for that WIP, while `agent-companion-wip-shaping` can supply the WIP (cloud flows are type 29, not among `add_solution_components`' v1 types, so Path B). A plan from `d365ce-planning` that names WIPs or routes is taken as a proposal, still subject to classification |
+| K8 | **When two instructions still differ, stop.** If active skills give different instructions for the same step, the agent follows neither silently. It tells the person and follows the stricter one if the person agrees. The difference is then a defect to fix in the companion skills |
+
+**Scripts**
 
 | Deliverable | Purpose |
 |---|---|
-| Cold-start skill | Connection choice, PAC profile match, publisher choice, base solutions, first components |
-| WIP story skill | Classify by the segmentation map, create one WIP per group, add, verify, export, baseline, edit, overwrite check, import in transport order, close-out by strategy A or B ([§9.7](#97-close-out-strategies)) |
-| Component-adding guidance | Path A vs Path B per type; R1 and R10 restated; W1–W8 |
-| Overlap and dependency checks | W6, W7 and X5 before close-out: overlapping open WIPs, dependencies pointing up the order, dependencies not yet placed |
 | Validation scripts | Schema check of `Customizations.xml` and entity files against the customization XSD; form checks (controls bound to existing columns, unique control IDs, GUID format); ribbon checks (referenced commands, rules and web resources exist) |
-| Baseline and overwrite-check script | Records and compares `get_component_state` results |
+| Baseline and overwrite-check script | Records and compares `get_component_state` results; for table and column metadata, re-exports and diffs |
 
-**Exit:** a WIP story touching a column, a form, a view, a web resource and a ribbon button is delivered through the full loop — two WIPs, Resources and Base, imported and closed out in order — with the platform import succeeding and no unexpected components.
+Scripts ship inside the skill that uses them. A companion skill may call a script from a repository skill when that skill is installed, and works without it.
+
+**Exit:** on the sandbox, without a build environment — S7 is in cold storage, so strategy A is checked as steps, not run:
+
+1. **Placement story.** At the start the Resources transport solution is missing, so the bootstrap creates only that one. A story touching a new column, a form, a view, a web resource and a ribbon button then runs the full loop: two WIPs, Resources and Base, imported and closed out by B in order, with the platform import succeeding and no unexpected components.
+2. **In-place change.** An edit to a form already in a transport solution goes through an in-place WIP that is imported, validated (W10) and deleted, with no close-out add.
+3. **Both routes in one story.** A story adds a column and edits a form already in transport. The person splits the Base work (W12); the in-place WIP ends at import while the placement WIP waits for close-out.
+4. **Route change.** A new column authored in an in-place WIP is caught by W10, and the WIP is not deleted until it is closed out as placement.
+5. **Gaps in the delivery context.** With the segmentation map or the transport source withheld, the agent asks with a recommendation (T1, T2) and states the steps before its first Write call and again before close-out (T3). Given a described build environment and promotion pipeline, it produces the steps for A — promotion order, R1 on the build connection, promotion of the in-place WIP — and runs none of them (T6).
+6. **Coexistence.** With every companion skill and `power-automate-flow-editing` loaded, review finds each decision in the ownership table owned by one skill and no step carrying two instructions (K2, K8). A cloud flow edit inside a story WIP follows one set of import flags. Each repository skill still works with the plugin absent (K7).
 
 ### Phase 5 — Release
 
-- Tooling README with installation, client configuration (snippets in [Spikes/README.md](https://github.com/lspiguel/ai-tooling/blob/643fe93/tooling/AgentCompanionMcp/Spikes/README.md#client-registration-s4)), minimum client versions, what to do when a client shows an OAuth prompt, tool table, the one-tab-per-connection behaviour, and settings.
+- Tooling README with installation, client configuration (snippets in [Spikes/README.md](https://github.com/lspiguel/ai-tooling/blob/643fe93/tooling/AgentCompanionMcp/Spikes/README.md#client-registration-s4)), minimum client versions, what to do when a client shows an OAuth prompt, tool table, the one-tab-per-connection behaviour, settings, and the companion skills in [skills/](../../skills/) with how to install them for an agent client.
 - Tool Library install and uninstall from the NuGet package — the part of S1's exit criterion the spike could not cover.
 - CI workflow, NuGet package, Tool Library listing.
 - Repository updates outside this plugin: the instructions file's tooling-conventions section, the codebase map, the root README and the matrix's build-backlog row already describe the plugin as specified, not built — change them to describe it as shipped. Add the column-3 guide changes then, not before: registering the plugin's MCP endpoint in [C.3 §7](../../workflows/3-coding-assistants/c.3-project-setup.md#7-wire-up-mcp-and-finish-grounding), and the segmented WIP loop where [4.3](../../workflows/3-coding-assistants/4.3-implementation.md) covers solution changes. Adding a guide also updates the matrix, the root README table and the column README together.
@@ -1644,18 +1789,22 @@ Agent-side work that makes the local edits safe. Skills decide between Path A an
 |---|---|
 | Binding a tab to a connection | The connection is the intended **development** environment, confirmed in that tab |
 | Choosing the connection for a task | With more than one bound, the agent asked which to use; the PAC profile targets the same organization |
+| Delivery context and steps | Each fact was derived or confirmed, not assumed. The steps name every WIP with its route and how it ends, and every pipeline run with who runs it (R15, T3) |
 | Publisher selection | The existing publisher is reused; a new one only with explicit certainty (R3) |
 | Classifying a story's components | Each component's group follows the segmentation map; components already in a transport solution stay there (W1, W2) |
+| Routing a component | Placement when it has no transport home, in place when it has one — looked up where transport is extracted from (W9, T4). A second WIP for a group only by the person's choice (W12) |
 | Overlap with other open WIPs | Shared whole documents are sequenced or reviewed (W7, X1) |
 | Every Write approval | Connection, solution name, component list, fixed flags shown as OFF; the agent's reason matches what the arguments do (R12) |
 | Reviewing or handing over a session | The call log shows the expected calls and outcomes; a saved log is kept outside any repository (R13, R7) |
 | After every add | `list_solution_components` shows nothing unexpected (R1) |
 | Read approval scope | Per environment only for development environments; per session for production; *always* only with a reason ([§7](#7-authorization-model)) |
 | A query that touches records | The tables and columns are needed for the task; no more |
-| Before import | The overwrite check passed or a re-export was merged |
+| Before import | The overwrite check passed or a re-export was merged; in a shared development environment, others' pending changes will be published too (X11) |
 | After import | Components behave as intended in the app; the WIP solution contains only what the story touched |
 | Ribbon changes | Button rules and commands reviewed against the base ribbon, not only the diff |
-| Close-out | All of the story's WIPs, in transport order; no dependency points up the order; deletions handled by hand; no WIP deployed downstream (W5, W6, X3, X8, R11) |
+| Ending an in-place WIP | Every component in it already has a transport home; under A it has been promoted (W10) |
+| Aligning development from build | The transport solution was exported unmanaged from the build environment and carries no local edits; the open WIPs' shared whole documents were reviewed; nothing managed from the project is imported into development (A8, R14, R16) |
+| Close-out | All of the story's placement WIPs, in transport order; the strategy fits each destination's transport source ([§9.7](#97-close-out-strategies)); no dependency points up the order; deletions handled by hand; no WIP deployed downstream (W5, W6, X3, X8, R11) |
 
 ---
 
@@ -1675,6 +1824,9 @@ None open.
 | Q7 | The plugin does not enforce or track the segmentation map; the agent does, with skill guidance | [§9.5](#95-transport-solutions-and-segmented-wip-solutions) |
 | Q5 | Repository follow-ups made with the spec: a tooling-conventions section in the instructions file, the codebase map, the root README's repository map, and a build-backlog row in the matrix. Workflow guides change at release, when the plugin is usable | [Phase 5](#phase-5--release) |
 | Q8 | v1 skills support close-out strategies A and B; C and D are assessed later with teams that use them | [§9.7](#97-close-out-strategies) |
+| Q9 | The close-out strategy is chosen per WIP from where its destination is extracted from, not once per project; A and B can coexist in one project. Delivery facts the agent cannot derive are asked with a recommendation, and the steps are confirmed before acting. Confirmed facts are recorded in `<client>-Context/` where it exists. Pipeline runs, commits and pushes are a person's (T6) | [§9.7](#97-close-out-strategies), [§9.8](#98-delivery-context) |
+| Q10 | Two routes per component — placement and in place — mixed freely. An in-place WIP is deleted once its edit has reached the transport source; a transport solution is never the edit vehicle, though under A it may be imported unmanaged from build to align development (A8); no managed project solution is ever imported into development (R16) | [§9.9](#99-routes--placing-a-component-or-editing-it-in-place), R14 |
+| Q11 | Phase 4 skills are new `agent-companion-*` skills in `skills/`, whose frontmatter states they are used with this plugin; they are split by concern, apply on conditions rather than project phases, and share one delivery context and WIP ledger. Existing skills keep their procedures and are not made to depend on the plugin | [Phase 4](#phase-4--agent-skills-and-scripts) |
 
 ---
 
