@@ -1,0 +1,13 @@
+The D365 Agent Companion MCP plugin for XrmToolBox was updated from version {{PREVIOUS_VERSION}} to {{PLUGIN_VERSION}}. Please check this client's registration of the plugin's MCP server against its current client configuration, copied from the plugin:
+
+{{CLIENT_CONFIG}}
+
+Please:
+1. Find the registration of the `d365-agent-companion` server, or of a server whose URL is on `127.0.0.1` and ends in `/mcp`. If there is none, register it at user level as the configuration above describes (for Claude Code, add `--scope user`). The token is a secret: never write it into a file inside a Git repository, or into project configuration that gets committed.
+2. Compare the registration's URL and bearer token with the configuration above. Do not show me the token; say only whether it matches. If the client keeps the token outside the registration — VS Code asks for it and caches it — tell me to run **MCP: Reset Cached Inputs** and paste the token when asked.
+3. If the URL or the token differs, update the registration, then restart or reload the client so that the tools appear, or tell me what I must do. If the reload ends this session, tell me first.
+4. If both match, change nothing.
+
+Report back: where the registration is kept, whether you changed it, and — after a reload — whether the client connected and how many of the server's tools it lists. If the client shows an OAuth or sign-in prompt, stop and tell me: the token is out of date, and this server does not use OAuth.
+
+This prompt holds the token. Do not repeat it in your reply.

@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<!--
+To generate a nuget (run from the ai-tooling repo folder):
+nuget.exe pack tooling\D365AgentCompanionMcp\D365AgentCompanionMcp\D365AgentCompanionMcp.nuspec -BasePath tooling\D365AgentCompanionMcp\D365AgentCompanionMcp -OutputDirectory nupkg -Symbols -SymbolPackageFormat snupkg
+
+<version> must stay identical to AssemblyVersion / FileVersion / Version in D365AgentCompanionMcp.csproj.
+-->
+<package>
+  <metadata>
+    <id>Lspiguel.Xrm.D365AgentCompanionMcp</id>
+    <version>1.2026.10.1</version>
+    <title>D365 Agent Companion MCP for XrmToolBox</title>
+    <authors>Luciano Spiguel</authors>
+    <owners>Luciano Spiguel</owners>
+    <projectUrl>https://github.com/lspiguel/ai-tooling</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/lspiguel/ai-tooling/refs/heads/main/tooling/D365AgentCompanionMcp/D365AgentCompanionMcp/d365-agent-companion-128px.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>XrmToolBox plugin that gives a local coding agent person-approved Dataverse operations over MCP</summary>
+    <description>
+      XrmToolBox plugin that exposes a local Model Context Protocol (MCP) endpoint over XrmToolBox connections, so a coding agent such as GitHub Copilot, Cursor or Claude Code can discover components and shape small, segmented work-in-progress solutions - the operations PAC CLI cannot perform. Every call is approved by a person in the plugin tab and logged there. Components are always added without required components or subcomponents. Solution export, local editing and import stay with PAC CLI and the agent-companion skills.
+    </description>
+    <releaseNotes>
+      First release.
+
+      - One local MCP endpoint per XrmToolBox process; one plugin tab per connection, where every call is approved and logged.
+      - Discovery tools: connections, publishers, solutions and their components, tables, relationships, choices, ribbons, FetchXML queries, component state and required components.
+      - Solution shaping: create solutions, add and remove components with required components and subcomponents always off, and gated publisher creation.
+      - First-run setup wizard, with setup prompts for the agent and an export of the agent-companion skills.
+    </releaseNotes>
+    <copyright>Copyright 2026- Luciano Spiguel</copyright>
+    <tags>XrmToolBox MCP AI Agent D365 Dataverse Solutions ALM</tags>
+    <dependencies>
+      <dependency id="XrmToolBox" version="1.2025.10.74" />
+    </dependencies>
+    <license type="expression">MIT</license>
+    <readme>readme.md</readme>
+  </metadata>
+  <files>
+    <!-- License and readme must be at package root -->
+    <file src="..\..\..\LICENSE" target="LICENSE" />
+    <file src="..\README.md" target="readme.md" />
+
+    <!-- Plugin DLL and debug symbols -->
+    <file src="bin\Release\net48\D365AgentCompanionMcp.dll" target="lib\net472\Plugins" />
+    <!-- Disconnect this line if symbols are not needed -->
+    <file src="bin\Release\net48\D365AgentCompanionMcp.pdb" target="lib\net472\Plugins" />
+
+    <!-- No loose runtime dependencies: Newtonsoft.Json is referenced at build time only
+         (ExcludeAssets="runtime") and provided by XrmToolBox itself; the MCP layer is
+         hand-rolled on HttpListener; the agent-companion skills exported by the setup
+         wizard are embedded resources of the plugin DLL. Keeping every file in the
+         Plugins root lets the Tool Library update/uninstall the tool without hitting
+         locked-file errors on subfolder DLLs. -->
+  </files>
+</package>

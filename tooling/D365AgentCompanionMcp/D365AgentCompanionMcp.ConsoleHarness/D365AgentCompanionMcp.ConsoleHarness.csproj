@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Runs the plugin's MCP layer as a console app with fake tools, for manual client checks and
+    Invoke-ProtocolChecks.ps1. Not shipped. Compiles the plugin's protocol source directly, so it
+    needs no XrmToolBox.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Lspiguel.Xrm.D365AgentCompanionMcp.ConsoleHarness</RootNamespace>
+    <AssemblyName>D365AgentCompanionMcp.ConsoleHarness</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\D365AgentCompanionMcp\Mcp\*.cs" Link="Mcp\%(Filename)%(Extension)" />
+    <Compile Include="..\D365AgentCompanionMcp\Common\*.cs" Link="Common\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="PolySharp" Version="1.15.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+I am setting up the D365 Agent Companion MCP plugin for XrmToolBox (version {{PLUGIN_VERSION}}). It works together with the Power Platform CLI (PAC CLI), which needs to be installed on this Windows machine, version 2.14.1 or later.
+
+Please:
+1. Check whether PAC CLI is installed: run `pac` and read the version it prints.
+2. If it is missing or older than 2.14.1, install or update it. Prefer the .NET tool (`dotnet tool install --global Microsoft.PowerApps.CLI.Tool`, or `dotnet tool update --global Microsoft.PowerApps.CLI.Tool`). Tell me the command before you run it. If the .NET SDK is not available, stop and tell me, rather than choosing another installer yourself.
+3. Run `pac` again to confirm that it runs.
+
+Do not create, select or change any `pac auth` profile in this step.
+
+Report back: the PAC CLI version now installed, how you installed or updated it (or that nothing was needed), and any error you saw.

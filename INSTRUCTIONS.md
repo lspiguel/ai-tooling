@@ -161,6 +161,21 @@ dotnet test    tooling/D365ContextExporter/D365ContextExporter.Tests/D365Context
 
 ---
 
+## Tooling conventions — Agent Companion MCP
+
+The [Agent Companion MCP](/tooling/D365AgentCompanionMcp/README.md) is an XrmToolBox plugin (`net48`, WinForms, `Nullable` enabled, StyleCop.Analyzers enforced; NUnit + Moq tests in [D365AgentCompanionMcp.Tests](/tooling/D365AgentCompanionMcp/D365AgentCompanionMcp.Tests/)) that gives a coding agent a local MCP endpoint over XrmToolBox connections, with every call authorized by a person. Its companion skills are the `agent-companion-*` folders in [skills/](/skills/). **It is built; its release is in progress** — progress is in [notes.md](/tooling/D365AgentCompanionMcp/notes.md). The [spec](/tooling/D365AgentCompanionMcp/SPEC.md) is the source of truth: build tasks cite its rule IDs (R1–R16 for rules, H and C for host and connection behaviour, W and X for WIP solutions, T for delivery context, K for skill coexistence), and a change in behaviour is made in the spec first.
+
+### Rules specific to this plugin
+
+- **The Context Exporter's platform rules apply unchanged** — no package references that ship a DLL next to the plugin, late binding only, two-file version bump, trusted publishing in CI. See [the section above](#tooling-conventions--d365-context-exporter).
+- **Never weaken the fixed safety behaviour.** Adding components to a solution never includes required components or subcomponents, every call except `list_connections` is approved by a person in the plugin, Write tools refuse on a connection not confirmed as development, Write and Publisher calls require a reason, every call is logged in its tab as a call line and an outcome line, and publisher creation stays off by default.
+- **Large results are paged, never written to files.** Payloads stay in memory and travel over MCP; the plugin creates no exchange files.
+- **The plugin does not interpret a project's solution segmentation.** Placing components in the right WIP and transport solutions is the agent's responsibility, guided by skills.
+- **Tests and fixtures are synthetic.** No organization URLs, user names, GUIDs or records from a client environment, including in recorded MCP request/response pairs.
+- **The companion skills ship inside the plugin.** The `agent-companion-*` folders in [skills/](/skills/) are embedded in the DLL at build time and exported by its setup wizard, so a change to a companion skill changes the package: CI ([build-and-pack-d365-agent-companion-mcp.yml](/.github/workflows/build-and-pack-d365-agent-companion-mcp.yml)) builds on it, and publishing it needs a version bump. The wizard's prompts are text resources in [Setup/Prompts/](/tooling/D365AgentCompanionMcp/D365AgentCompanionMcp/Setup/Prompts/) and can be revised without code.
+
+---
+
 ## Scripts
 
 [scripts/](/scripts/) holds standalone utilities. Where a script is needed on both platforms, ship the pair (`azdevops-auth.ps1` / `azdevops-auth.sh`) with matching behaviour. PowerShell is the primary surface; scripts take parameters rather than hardcoded paths and must not embed credentials.

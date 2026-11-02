@@ -1,0 +1,11 @@
+Please test my D365 Agent Companion MCP setup (plugin version {{PLUGIN_VERSION}}, endpoint {{ENDPOINT}}). Every call to the plugin except `list_connections` waits until I approve it in the plugin tab, so tell me before each one.
+
+1. Skills: confirm that these skills are installed and loaded: {{SKILL_NAMES}}. Name any that is missing.
+2. PAC CLI: run `pac org who` and note the organization URL it reports.
+3. Connection: call `list_connections`. If no connection is listed, stop and tell me to connect the plugin tab. If more than one is listed, ask me which one to use.
+4. Call `get_connection_info` for that connection and compare `organization.url` with the URL from step 2. If they differ, stop and tell me: PAC CLI and the plugin must target the same environment.
+5. Call `list_solutions` for that connection as a test, with the reason "Setup test". Tell me how many solutions its first page returned; do not list them.
+
+Do not create, change or import anything, and do not write anything you read from the environment into a file.
+
+Report back: one line per step — pass or fail, and for a fail, what you saw.

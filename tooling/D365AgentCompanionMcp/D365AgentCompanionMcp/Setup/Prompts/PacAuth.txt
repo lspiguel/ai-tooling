@@ -1,0 +1,13 @@
+I am setting up the D365 Agent Companion MCP plugin for XrmToolBox (version {{PLUGIN_VERSION}}). The agent-companion skills run PAC CLI against the same environments the plugin tabs are connected to, so PAC CLI needs a working authentication profile for each environment I will use.
+
+Environment of the plugin tab this prompt was copied from: {{ORGANIZATION_URL}}
+
+Please:
+1. Run `pac auth list` and show me the profiles.
+2. Ask me which environments I will use, starting with the one above. For each one that has no profile, run `pac auth create --environment <url>` and let me complete the sign-in. Do not delete or change existing profiles.
+3. For each environment, select its profile with `pac auth select --index <n>` and run `pac org who`. Check that the organization URL it reports is that environment's URL.
+4. Finish with the profile of the environment above selected.
+
+Do not write environment URLs, user names or organization IDs into any file in a repository.
+
+Report back: for each environment, the profile index and name and the organization URL `pac org who` reported; which profile is selected now; and any sign-in that failed.

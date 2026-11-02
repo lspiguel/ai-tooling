@@ -1,0 +1,15 @@
+I am setting up the D365 Agent Companion MCP plugin for XrmToolBox (version {{PLUGIN_VERSION}}). The plugin runs a local MCP server over HTTP, protected by a bearer token. Please register it with this client.
+
+Client configuration, copied from the plugin:
+
+{{CLIENT_CONFIG}}
+
+Please:
+1. Register the server as `d365-agent-companion` at user level, using the entry above for this client (for Claude Code, add `--scope user`). The token is a secret: never write it into a file inside a Git repository, or into project configuration that gets committed.
+2. If a server of that name is already registered, show me its URL — not its token — and replace it.
+3. Restart or reload the client so that the server's tools appear, or tell me exactly what I must do to reload it. If the reload ends this session, tell me first, so I can run the plugin's test prompt afterwards.
+4. After the reload, check that the server's tools are listed, for example `list_connections`. Do not call any tool in this step.
+
+Report back: where the registration is kept, whether the client connected, and how many of the server's tools it lists. If the client shows an OAuth or sign-in prompt, stop and tell me: the token it sends is missing or out of date, and this server does not use OAuth.
+
+This prompt holds the token. Do not repeat it in your reply.
