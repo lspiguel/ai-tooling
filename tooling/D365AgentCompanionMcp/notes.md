@@ -14,8 +14,46 @@
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | **Done** (2026-10-31) — built, unit-tested (207 tests), and the cold-start workflow (§9.1) ran end to end on the sandbox; two findings (P1, P2) for the Phase 4 skills. See [Phase 3 — execution](#phase-3--execution) | See spec |
 | [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | **In progress** (2026-10-31) — five companion skills and their scripts built; script self-tests pass (35 + 11). Live exit checks: I31 verified; scenarios 1–4 pass; scenario 5 desk-checked; scenario 6 partial — the imported flow did not fire (E13). Findings E1–E13. See [Phase 4 — execution](#phase-4--execution) | See spec |
 | [5 — Release](SPEC.md#phase-5--release) | **In progress** (2026-10-31) — built: setup wizard (§8.7) with embedded skills and prompts, GitHub workflow, nuspec, icons, README; repository pages describe the plugin as built; 245 tests. Remaining, a person's: nuget.org trusted-publishing policy, Tool Library install, the wizard's live checks. Column-3 guide changes wait for the release. See [Phase 5 — execution](#phase-5--execution) | See spec |
+| [6 — Planned enhancements](SPEC.md#phase-6--planned-enhancements) | **Not started.** Direct updates in development specified (2026-11-03): web resources, step mirroring and switching, custom API rebinding, PCF guidance; Power Pages not pursued. Spikes S9–S11 first. See [Phase 6 — preparation](#phase-6--preparation) | See spec |
 
 Status values: *Not started* · *In progress* · *Blocked* (say on what) · *Done*.
+
+---
+
+## Phase 6 — preparation
+
+### Direct updates in development — analysis, 2026-11-03
+
+Raised in field use: solution export and import are the slowest part of the edit loop. The person asked whether four kinds of component could be updated in development directly, still held by WIPs but without the import round trip. Each was weighed on its own. Decisions D10–D14; spec [§6.8](SPEC.md#68-direct-update-tools-phase-6) and [§9.11](SPEC.md#911-direct-updates-in-development).
+
+| Component | Platform facts | Complexity | Decision |
+|---|---|---|---|
+| Web resources | One `webresource` row each: content, then `PublishXmlRequest` for just those IDs. `get_component_state` already gives the version for the overwrite check. No PAC command updates a web resource | Low | **Build** `update_web_resources` (D10) |
+| Plug-in assemblies | `pac plugin push` already updates a registered assembly in seconds. A per-developer side-loaded build — the same source compiled under `<Assembly>.<initials>` in Debug, the shared name in Release — cannot be pushed over the shared assembly, because Dataverse matches assemblies by name. The slow, error-prone part is the steps: disabling the shared steps, re-creating them on the side-loaded assembly with their images, and undoing it | Push: low. Step work: medium–high | **Push with PAC after G5; build tools for the steps** (D11) |
+| Custom APIs | The main operation is `customapi.plugintypeid`, not a step, and it can be changed after creation. Steps on a custom API's message are ordinary steps | Low | **Build** `rebind_custom_apis` (D12) |
+| Power Pages | Standard data model: site configuration is `adx_*` records, not solution components. `pac pages upload` already uploads only what changed, from the manifest of the last download. The gap is concurrency with design-studio edits | Low as a skill; high as a write tool | **Not pursued** (D13) |
+| PCF | `pac pcf push --incremental` sends changed files as entity updates; `--solution-unique-name` puts the control in the WIP instead of `PowerAppsTools_<prefix>` | None for the plugin | **Guidance only** (D14) |
+
+Cross-cutting points that shaped the tools:
+
+- **The overwrite check moves into the tool.** Each item carries the baselined version; the tool refuses a mismatch before the dialog and again just before writing.
+- **Files by path, not content.** The host is on the person's machine. A DLL or bundle as base64 through MCP would cost tokens for nothing. Paths are limited to a **File roots** tab setting, and the dialog shows each file's size and SHA-256.
+- **A targeted publish avoids X11.** `update_web_resources` publishes only what it wrote, unlike `--publish-changes` on import (P2).
+- **Approval volume.** An edit-and-push loop raises many Write dialogs; Phase 6's scoped Write approvals make these tools practical.
+
+### Findings — 2026-11-03
+
+| # | Finding | Change |
+|---|---|---|
+| U7 | **Imports re-enable disabled steps.** Solution import with plug-in activation enables every step in the imported solution, so a disabled step does not stay disabled — reported by the person from field use, where it has already caused problems. The edit-loop helper passes `--activate-plugins` (`Invoke-EditLoopStep.ps1`), as pipelines commonly do | Rules M1–M7 in SPEC §9.11: mirrors created disabled, switching only by explicit calls, a side-load WIP never imported, open switches re-checked after every import and closed before extract or close-out, retire by deleting |
+| U8 | **Environment manifest tracked in git.** On a client project, the Power Pages environment manifest (`<org-url>-manifest.yml`) is committed. Microsoft says to git-ignore it; tracked, each developer's delta upload is computed against another's download | Recorded in SPEC §9.11 (Power Pages, not pursued); raise with the project, not a plugin change |
+| U9 | **Step mirroring also serves version changes.** A major or minor version change registers a new assembly beside the old one; mirroring the steps to it is the same operation as for a side-load | `mirror_steps` takes any target assembly; version-change flow in SPEC §9.11 |
+
+### Open for Phase 6
+
+- **Spikes S9–S11** ([SPEC Phase 6](SPEC.md#phase-6--planned-enhancements)): above all, whether a step can be created disabled (M1), and whether a direct web resource update saves enough time over a small WIP round trip to justify the tool.
+- **Q14** — whether removing mirrors and a side-loaded assembly gets a tool or stays with the person in the Plugin Registration Tool.
+- **Skill changes** listed in the Phase 6 table, including `Get-WipName.ps1`'s `_Sideload` suffix. Not started; the skills ship in the package, so they wait for the tools.
 
 ---
 
@@ -566,7 +604,7 @@ Left as is: PAC CLI 2.14.1 (updated by the person); Claude Code 2.1.72 on the PA
 
 ## Decisions
 
-Raised by the desk research and the live spikes. All closed.
+Raised by the desk research, the live spikes and field use. All closed.
 
 | # | Decision | Outcome | Applied |
 |---|---|---|---|
@@ -579,6 +617,11 @@ Raised by the desk research and the live spikes. All closed.
 | D7 | **Fallback for handshake-era clients** | **Dual-era host**: 2026-07-28 primary; 2025-11-25 and 2025-06-18 through `initialize`, with in-memory sessions | [SPEC §6.1](SPEC.md#61-protocol-surface), §6.2, §14 |
 | D8 | **Stable bearer token and clearer 401** | Token kept across restarts, DPAPI-protected in the plugin settings, changed only by **Regenerate**; plain-text `401` body; README guidance for OAuth prompts | [SPEC §5](SPEC.md#host) (Authentication, H4), §6.2, §7, §11 |
 | D9 | **Cancelling a call when the client goes away** (Phase 1) | **Whitespace keep-alive**: a `tools/call` reply not ready within 2 s is committed as `200` with a chunked `application/json` body, and a space is written every 2 s until the JSON follows. A failed write cancels a queued or pending call and withdraws its dialog (`cancelled_by_client`, log only). A running call completes. `notifications/cancelled` does the same in handshake sessions. Chosen over SSE keep-alive comments, which would have amended the no-SSE rule, and over no detection | [SPEC §6.1](SPEC.md#61-protocol-surface), §6.2, §10, §11 |
+| D10 | **Web resources updated directly** (Phase 6) | `update_web_resources`: create or update from local files in a WIP, overwrite check inside the tool, targeted publish, files by path under **File roots** | [SPEC §6.8](SPEC.md#68-direct-update-tools-phase-6), §9.11, §11 |
+| D11 | **Assemblies and steps** (Phase 6) | A new build of a registered assembly goes through `pac plugin push` after G5. Three separate step tools: `mirror_steps` only mirrors, and always creates disabled; `disable_steps` and `enable_steps` switch, on purpose. The person's choice over one combined switch tool, so that which copy runs is never a side effect. Side-load WIP named `…_Assemblies_Sideload`, never imported (M2) | [SPEC §6.8](SPEC.md#68-direct-update-tools-phase-6), §9.5, §9.10 (G5), §9.11 (M1–M7) |
+| D12 | **Custom APIs** (Phase 6) | `rebind_custom_apis` — a custom API's main operation is its `plugintypeid`, which mirroring cannot cover; steps on its message use `mirror_steps` | [SPEC §6.8](SPEC.md#68-direct-update-tools-phase-6) |
+| D13 | **Power Pages** | Not pursued for now, at the person's choice: standard-model configuration is records outside solutions, and `pac pages upload` already uploads changes in place. A read-only drift check is the candidate if the topic returns | [SPEC §9.11](SPEC.md#911-direct-updates-in-development) |
+| D14 | **PCF** | Guidance only: build, raise the patch version, `pac pcf push --solution-unique-name <WIP>` (then `--incremental`), publish when the change does not show | [SPEC §9.11](SPEC.md#911-direct-updates-in-development) |
 
 ---
 
@@ -921,3 +964,4 @@ Spike solutions left in the sandbox: `AgentSpikeS2A`, `AgentSpikeS2B`, `AgentSpi
 | 2026-10-31 | Icons wired into the plugin: the 16 px and 32 px PNGs as base64 `SmallImageBase64` / `BigImageBase64`, as the exporter does. Release build 0 warnings, 207 tests pass. Phase 5: GitHub workflow specified after the exporter's — same jobs, triggers also on `skills/agent-companion-*/**`, plus a step for the skills' script self-tests; nuget.org trusted-publishing policy for the new package ID is a person's step |
 | 2026-10-31 | Spec §8.7: the wizard records the plugin version it was completed for; after an update a one-time **Plugin updated** page offers an optional reinstall of the skills and the MCP configuration through agent prompts (**Skip** or **Done** record the new version). Phase 5 bullet and exit updated; README gained a *Plugin upgrades* section |
 | 2026-10-31 | Phase 5 built. Setup wizard (§8.7): version gate on `SetupCompletedVersion`, three pages and the **Plugin updated** page laid over the main panel, seven prompts as text resources, the five companion skills embedded from `skills/` and exported one zip per skill; **Copy client config** shared with the MCP prompts and now names the endpoint and token. GitHub workflow `build-and-pack-d365-agent-companion-mcp.yml`, with the skills' script self-tests (11 and 31 pass locally). INSTRUCTIONS.md, CLAUDE.md, root README and matrix describe the plugin as built, release in progress; column-3 guides wait for the release. Release build 0 warnings; 245 tests pass. Choices I37–I45 recorded; live exit checks next |
+| 2026-11-03 | Phase 6 prepared in the spec from field use: direct updates in development analysed per component (notes, *Phase 6 — preparation*). D10–D14 decided: `update_web_resources`; `pac plugin push` after G5 for a registered assembly; `mirror_steps` (always disabled), `disable_steps`, `enable_steps`; `rebind_custom_apis`; PCF guidance only; Power Pages not pursued. U7 (imports re-enable disabled steps) gave rules M1–M7. SPEC §3, §6.2, §6.3, §6.8 (new), §7, §9.5 (`_Sideload`), §9.10 (G5), §9.11 (new), Phase 6 (S9–S11, exit), §12, Q14, references 5–7. Nothing built |
