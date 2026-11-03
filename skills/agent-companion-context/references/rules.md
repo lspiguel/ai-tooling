@@ -15,7 +15,7 @@ The rules of the Agent Companion MCP specification (`tooling/D365AgentCompanionM
 | R8 | Text the agent supplies is untrusted and labelled as such in the plugin | all |
 | R9 | One plugin tab per connection; every call names its connection; there is no default connection | context |
 | R10 | One transport group per WIP; one transport home per component | shaping |
-| R11 | WIP solutions are never deployed downstream; only transport solutions are | close-out |
+| R11 | WIP solutions are never deployed downstream — to test, UAT, production or any environment that receives managed solutions; only transport solutions are. Promotion to a build environment (strategy A) is not a downstream deployment: it is how a WIP reaches its transport solution, and the normal end of a WIP under A | close-out |
 | R12 | Write and Publisher calls state a non-blank `reason` | shaping, bootstrap, close-out |
 | R13 | Every call is logged in the plugin tab | all (the plugin enforces it) |
 | R14 | A transport solution is never the edit vehicle. Local edits reach development only through a WIP holding just the components being changed. The one import of a transport solution into development is the unmanaged alignment import from build under strategy A, with no local edits (A8) | edit loop, close-out |
@@ -44,7 +44,7 @@ The rules of the Agent Companion MCP specification (`tooling/D365AgentCompanionM
 
 | ID | Issue |
 |---|---|
-| X1 | In-flight changes leak through whole documents (forms, views, sitemaps, ribbon diffs, web resources, workflows, app modules) |
+| X1 | In-flight changes leak through whole documents (forms, views, sitemaps, ribbon diffs, web resources, workflows, app modules, plug-in assemblies) |
 | X2 | A WIP isolates only what is not yet in a transport solution when transport is extracted from development |
 | X3 | Deletions are not carried; they are separate, person-run tasks |
 | X4 | Moving a component between transport solutions risks deleting it downstream |
@@ -60,11 +60,11 @@ The rules of the Agent Companion MCP specification (`tooling/D365AgentCompanionM
 
 | ID | Rule |
 |---|---|
-| T1 | Derive first, then ask; never fill a gap with a default without saying so |
+| T1 | Derive first, then ask; never fill a gap with a default without saying so. What the person has already stated is a source that settles the fact unless the environments or repositories contradict it; a contradiction is reported, never rewritten into another answer |
 | T2 | Ask with a recommendation, its reason and what the alternatives change |
-| T3 | Steps before action: before the first Write call and before close-out, the person confirms the concrete steps |
+| T3 | Steps before action: before the first Write call and before close-out, the person confirms the concrete steps. In a plan, the steps are its task list; when the plan is carried out, they are stated by reference to it and to what changed |
 | T4 | Transport homes are looked up where transport is extracted from — build under A, development under B |
-| T5 | Recorded facts go in `<client>-Context/` where it exists, otherwise next to the segmentation map; they are checked against the environments when used |
+| T5 | Every fact settled in a task is recorded in `delivery-facts.md` — in `<client>-Context/` where it exists, otherwise next to the segmentation map — unless already there; a changed one is updated. A person commits it. Recorded facts are checked against the environments when used |
 | T6 | Pipeline runs, commits and pushes are a person's, unless that specific one is delegated; never a downstream deployment or one that deploys a WIP |
 
 ## Close-out strategies (A, B)
@@ -85,6 +85,15 @@ The rules of the Agent Companion MCP specification (`tooling/D365AgentCompanionM
 
 Strategies C (Git-linked solutions) and D (Power Platform pipelines) are not supported by these skills.
 
+## Plug-in registration through a WIP (G)
+
+| ID | Rule | Applied by |
+|---|---|---|
+| G1 | New files, `RootComponent` entries and `Customizations.xml` anchors for assemblies, steps, images and custom APIs are copied from an export that holds the same type, never written from memory; without one, the person decides | edit loop |
+| G2 | A new build keeps every plug-in type registered in development; a missing type stops the import | edit loop |
+| G3 | A plug-in assembly is a whole document; the overlap check covers it | shaping |
+| G4 | After import, read back the WIP and query steps, images and custom APIs against the plan | edit loop |
+
 ## Skill coexistence (K)
 
 | ID | Rule |
@@ -95,5 +104,5 @@ Strategies C (Git-linked solutions) and D (Power Platform pipelines) are not sup
 | K4 | No skill-local defaults for delivery facts |
 | K5 | One shared record: delivery context, confirmed steps, WIP ledger |
 | K6 | The environment wins over the ledger |
-| K7 | Skills that do not depend on the plugin keep their procedures; the agent-companion skills defer to them for the steps they cover |
+| K7 | Skills that do not depend on the plugin keep their procedures and work without it; the agent-companion skills defer to them for the steps they cover. When the plugin is connected, `d365ce-planning` researches through it, plans what a WIP can carry as agentic, and applies `agent-companion-context` before writing tasks for WIP work |
 | K8 | When two instructions still differ, stop and tell the person |

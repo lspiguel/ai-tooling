@@ -1,6 +1,6 @@
 # FetchXML for shaping
 
-Every query goes through the plugin's `query` tool: explicit columns only (`<all-attributes />` is refused), no `top` (use `pageSize`), and results are paged — continue with `nextCursor` until it is `null` when the check needs every row. All tables below are on the plugin's configuration allow-list, so none of these touch records.
+Every query goes through the plugin's `query` tool: explicit columns only (`<all-attributes />` is refused), no `top` (use `pageSize`), and results are paged — continue with `nextCursor` until it is `null` when the check needs every row. All tables below are on the plugin's configuration allow-list, so none of these touch records — except the research queries at the end, which say so.
 
 GUIDs go in without braces. Table filters on `systemform` and `savedquery` use the table's **type code** (`objectTypeCode` from `list_tables`), not its logical name.
 
@@ -162,3 +162,123 @@ The same query, unfiltered by name or filtered to the names a form or ribbon ref
 ```
 
 The same shape works for `pluginassembly` (`pluginassemblyid`, `name`, `version`), `customapi` (`customapiid`, `uniquename`), `connectionreference` (`connectionreferenceid`, `connectionreferencelogicalname`), `environmentvariabledefinition` (`environmentvariabledefinitionid`, `schemaname`), `role` (`roleid`, `name`) and `fieldsecurityprofile` (`fieldsecurityprofileid`, `name`).
+
+## Research — what already runs on a table
+
+For planning and for checks before an edit: what is registered on a table now, whether it is in a solution or not. These join tables outside the configuration allow-list — `sdkmessagefilter`, `sdkmessage`, `plugintype`, `sdkmessageprocessingstepimage` — so the plugin reports them as touching records: they need record queries enabled on the connection, and the approval dialog says so. When record queries are off, say what could not be checked.
+
+**Custom plug-in steps on a table.** `primaryobjecttypecode` lives on the message filter, not on the step, and takes the table's type code. `customizationlevel` 1 leaves out the platform's internal steps — dozens on any table.
+
+```xml
+<fetch>
+  <entity name="sdkmessageprocessingstep">
+    <attribute name="sdkmessageprocessingstepid" />
+    <attribute name="name" />
+    <attribute name="stage" />
+    <attribute name="mode" />
+    <attribute name="rank" />
+    <attribute name="filteringattributes" />
+    <attribute name="statecode" />
+    <filter>
+      <condition attribute="customizationlevel" operator="eq" value="1" />
+    </filter>
+    <link-entity name="sdkmessagefilter" from="sdkmessagefilterid" to="sdkmessagefilterid" alias="f">
+      <filter>
+        <condition attribute="primaryobjecttypecode" operator="eq" value="[objectTypeCode]" />
+      </filter>
+    </link-entity>
+    <link-entity name="sdkmessage" from="sdkmessageid" to="sdkmessageid" alias="m">
+      <attribute name="name" />
+    </link-entity>
+    <link-entity name="plugintype" from="plugintypeid" to="eventhandler" link-type="outer" alias="t">
+      <attribute name="typename" />
+      <attribute name="assemblyname" />
+    </link-entity>
+  </entity>
+</fetch>
+```
+
+**Images of a step.**
+
+```xml
+<fetch>
+  <entity name="sdkmessageprocessingstepimage">
+    <attribute name="name" />
+    <attribute name="entityalias" />
+    <attribute name="imagetype" />
+    <attribute name="attributes" />
+    <filter>
+      <condition attribute="sdkmessageprocessingstepid" operator="eq" value="[stepid]" />
+    </filter>
+  </entity>
+</fetch>
+```
+
+**Plug-in types of an assembly, and the steps registered on them** — the comparison a new build must pass before import (G2).
+
+```xml
+<fetch>
+  <entity name="plugintype">
+    <attribute name="plugintypeid" />
+    <attribute name="typename" />
+    <filter>
+      <condition attribute="assemblyname" operator="eq" value="[AssemblyName]" />
+    </filter>
+    <link-entity name="sdkmessageprocessingstep" from="eventhandler" to="plugintypeid" link-type="outer" alias="s">
+      <attribute name="name" />
+    </link-entity>
+  </entity>
+</fetch>
+```
+
+**Custom APIs bound to a table.**
+
+```xml
+<fetch>
+  <entity name="customapi">
+    <attribute name="customapiid" />
+    <attribute name="uniquename" />
+    <attribute name="bindingtype" />
+    <attribute name="boundentitylogicalname" />
+    <attribute name="plugintypeid" />
+    <filter>
+      <condition attribute="boundentitylogicalname" operator="eq" value="[table]" />
+    </filter>
+  </entity>
+</fetch>
+```
+
+**Processes on a table.** `primaryentity` takes the type code, not the logical name. `type` 1 keeps definitions and leaves out activations.
+
+```xml
+<fetch>
+  <entity name="workflow">
+    <attribute name="workflowid" />
+    <attribute name="name" />
+    <attribute name="category" />
+    <attribute name="statecode" />
+    <filter>
+      <condition attribute="primaryentity" operator="eq" value="[objectTypeCode]" />
+      <condition attribute="type" operator="eq" value="1" />
+    </filter>
+  </entity>
+</fetch>
+```
+
+**Cloud flows are not found that way.** A cloud flow (`category` 5) keeps its trigger table in its definition, not in `primaryentity`, so the query above misses it. Search the definition for the table's logical name, with a small page size — definitions are large:
+
+```xml
+<fetch>
+  <entity name="workflow">
+    <attribute name="workflowid" />
+    <attribute name="name" />
+    <attribute name="statecode" />
+    <filter>
+      <condition attribute="category" operator="eq" value="5" />
+      <condition attribute="clientdata" operator="like" value="%[table]%" />
+    </filter>
+  </entity>
+</fetch>
+```
+
+A flow that only names the table in an action — a create or update from elsewhere — is a write path too. If the platform refuses the `like` on the definition, list the category 5 flows by name and ask the person which write to the table; never report "no flows" from the `primaryentity` query alone.

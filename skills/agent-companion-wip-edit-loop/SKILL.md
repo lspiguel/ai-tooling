@@ -1,6 +1,6 @@
 ---
 name: agent-companion-wip-edit-loop
-description: Used together with the Agent Companion MCP - the XrmToolBox plugin that gives a coding agent person-approved access to Dynamics 365 CE / Dataverse environments - and needs a plugin tab bound to the development environment. Runs the local edit loop for a shaped WIP solution - PAC export and unpack (XML layout) into a work folder outside every repository, a baseline of component versions, local edits to forms, views, ribbon diffs, sitemaps, web resources and metadata, offline validation of forms, ribbon references and the customization schema, the pre-import overwrite check against the baseline, then pack and import one WIP at a time in transport order. Use when a WIP solution created through the Agent Companion MCP holds its components and they need editing, or when an edited WIP is ready to validate and import.
+description: Used together with the Agent Companion MCP - the XrmToolBox plugin that gives a coding agent person-approved access to Dynamics 365 CE / Dataverse environments - and needs a plugin tab bound to the development environment. Runs the local edit loop for a shaped WIP solution - PAC export and unpack (XML layout) into a work folder outside every repository, a baseline of component versions, local edits to forms, views, ribbon diffs, sitemaps, web resources and metadata, and plug-in registration - a new build of an assembly, new or changed steps and images, custom APIs with their parameters and response properties - offline validation of forms, ribbon references and the customization schema, the pre-import overwrite check against the baseline, then pack and import one WIP at a time in transport order. Use when a WIP solution created through the Agent Companion MCP holds its components and they need editing, when plug-in code needs registering or updating in the development environment, or when an edited WIP is ready to validate and import.
 ---
 
 # The WIP edit loop with the Agent Companion MCP
@@ -100,6 +100,7 @@ Edit in `src\` only, and only the components the change needs.
 | Sitemap, app module | `AppModuleSiteMaps\`, `AppModules\` | |
 | Web resource | `WebResources\…` with its `.data.xml` | Edit the source copy if the project keeps one, then copy it in |
 | Table and column metadata | `Entities\<Table>\Entity.xml` | Only for a table added as `metadata`, or a column in the WIP |
+| Plug-in assembly, plug-in types, steps and images, custom APIs | `PluginAssemblies\`, `SdkMessageProcessingSteps\`, the custom API folders | A new build, new registrations and changes — [plugin-registration.md](./references/plugin-registration.md). Shapes are copied from an export holding the same type (G1); the new build keeps every registered plug-in type (G2) |
 
 **Anything new authored here** — a column added to `Entity.xml`, a new web resource — is a new component with no transport home. Add it to the ledger as **placement**: the WIP can no longer end as in place (W10), and the next read-back after import will show it. Tell the person.
 
@@ -178,7 +179,7 @@ Add `--async --max-async-wait-time 20` for a large WIP, and do not run it on a s
 
 ### 8. Read back and verify
 
-1. `list_solution_components` on the WIP (R1). New components authored in step 3 are expected now; anything else is not.
+1. `list_solution_components` on the WIP (R1). New components authored in step 3 are expected now; anything else is not. For plug-in registration, also query the steps, images and custom APIs against the plan (G4, [plugin-registration.md](./references/plugin-registration.md#6-read-back-g4)).
 2. Optionally export again and compare with `src\` to see what landed and what the platform normalized.
 3. The person checks the behaviour in the app — the import's success is not the change's success.
 

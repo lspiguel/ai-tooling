@@ -1,6 +1,6 @@
 ---
 name: d365ce-planning
-description: Produces implementation plans for Microsoft Dynamics 365 Customer Engagement and Dataverse work. Covers researching the solution extract before planning, separating artefacts authored in source from changes made directly in the environment, splitting delivery into manual and agentic tasks, scaling plan depth to the size of the change, and tracking open points to resolution. Use when planning, scoping, or breaking down D365CE or Dataverse changes - plugins, custom APIs, web resources, forms, views, solutions, schema - or when turning a user story into an implementation plan.
+description: Produces implementation plans for Microsoft Dynamics 365 Customer Engagement and Dataverse work. Covers researching the live environment and the solution extract before planning - through the Agent Companion MCP when it is connected, otherwise through whatever environment tooling is available - separating artefacts authored in source from changes made in the environment, deciding which environment changes the agent can carry out (WIP solutions, plug-in registration) and which need a person, settling the close-out strategy for WIP solutions before writing tasks, recording settled delivery facts in the project's delivery-facts.md, splitting delivery into manual and agentic tasks, scaling plan depth to the size of the change, and tracking open points to resolution. Use when planning, scoping, or breaking down D365CE or Dataverse changes - plugins, custom APIs, web resources, forms, views, solutions, schema - or when turning a user story into an implementation plan.
 ---
 
 # Planning D365CE Work
@@ -27,6 +27,20 @@ The ground rules below hold at any size - a one-line fix can still target a gene
 
 ---
 
+## Know your tooling before you plan
+
+What the plan can rely on, and what the agent can carry out itself, depends on the tools connected to the session. Check before research. Some clients list MCP tools as deferred - only their names are visible until they are searched for or loaded - so search for them before concluding they are not there.
+
+| Available | Research from | Environment changes the agent can carry out |
+|---|---|---|
+| **Agent Companion MCP**, with a tab bound to the development environment | The live environment through the plugin's read tools - first, and as much as possible. The extract for what the plugin does not show | Whatever a WIP solution can carry with the plugin and PAC CLI: schema and metadata, forms, views, ribbons, sitemaps, web resources, solution membership, plugin assemblies, steps, images and custom APIs. Apply `agent-companion-context` before writing those tasks (see "Delivery context for environment changes") |
+| Another MCP server or tool with access to the environment, or PAC CLI alone | That tooling, read-only, and the extract | Only what that tooling can carry out end to end and verify afterwards. Name the tool in the task |
+| Neither | The extract and the repository. Anything that needs the environment becomes a technical confirmation | None - environment changes are manual |
+
+**Use it now.** A question the tools can answer is answered while planning, not written into the plan as a check for later. When the user says to verify something with a tool, that means now. Say what each check showed, and which tool showed it.
+
+---
+
 ## Ground rules
 
 ### 1. Unpacked solution folders are generated. Treat them as read-only
@@ -35,12 +49,15 @@ Most D365CE repositories contain an unpacked solution tree produced by an export
 
 **Never plan to create, edit, or delete a file in that tree.** A hand-edit is overwritten by the next extract at best, and conflicts with the pipeline at worst.
 
-This splits every deliverable into one of two channels, and a plan is not finished until each component is assigned to one:
+This splits every deliverable into one of three channels, and a plan is not finished until each component is assigned to one:
 
 - **Authored in source and committed by us** - plugin C# and unit tests, JavaScript and other web resource source, project files, PCF controls, build scripts.
-- **Changed directly in the environment, and reaching the repo only via the extract** - the compiled plugin assembly, plugin step registrations and images, published web resources, form and view XML, schema, security roles, solution membership.
+- **Changed in the environment by the agent, through a WIP solution** - when the tooling can carry the change out and verify it (see "Know your tooling before you plan"): schema and metadata, form and view XML, published web resources, solution membership, the compiled plugin assembly, plugin step registrations and images, custom APIs. It reaches the repo via the extract, after close-out.
+- **Changed in the environment by a person** - what the tooling cannot do, and what the user keeps manual. It reaches the repo only via the extract.
 
-Put that split in the plan explicitly - a routing table when several components are in play, a single line when there is one. It determines the whole task list: channel one is agentic work, channel two is manual work followed by waiting for an extract.
+Put that split in the plan explicitly - a routing table when several components are in play, a single line when there is one. It determines the whole task list: channels one and two are agentic work, channel three is manual work, and both environment channels end with close-out and an extract.
+
+An unpacked WIP solution in a work folder outside the repository is not the generated tree. Editing it is how the second channel works.
 
 A useful corollary: when JavaScript exists both in a source folder and inside the extract, the source copy is the one to edit. The extract copy appears after the web resource is published. Plan a diff of the two as a verification step, since a divergence means the wrong file was uploaded.
 
@@ -48,7 +65,7 @@ A useful corollary: when JavaScript exists both in a source folder and inside th
 
 A component registered in the environment but never added to a solution has no XML in the extract. Searching and finding nothing therefore means one of two things - it does not exist, or it exists and is unsolutioned - and those have opposite consequences.
 
-**Never state that a component is missing. State that it is not in the extract and ask the user to confirm.** If an MCP server with read access to the environment is connected — such as the Agent Companion MCP — use it to check, and say what it showed; it does not replace the user's confirmation. An unsolutioned component is also a finding worth reporting: it means the behaviour has never promoted past the environment it was registered in, which is usually news to the business.
+**Never state that a component is missing on the extract's evidence alone.** Check the environment with the tooling you have (see "Know your tooling before you plan") and report both results - "not in the extract; not in the development environment, per the Agent Companion MCP". Only when nothing can check the environment, state that it is not in the extract and ask the user to confirm. An unsolutioned component is also a finding worth reporting: it means the behaviour has never promoted past the environment it was registered in, which is usually news to the business.
 
 ### 3. Confirm which component is actually in use
 
@@ -82,17 +99,39 @@ Resist new columns for values that can be computed at runtime. A total that Java
 
 Do this first. Every item below has changed a plan's design at least once, and each applies only when the plan touches what it checks - a plan that writes no columns has no writability to confirm, and a change with no client-side surface needs no form research.
 
-**Column writability.** Read the entity XML for each column the plan writes. A column with `SourceType 2` is a rollup and a plan that writes it is invalid; `SourceType 1` is calculated; only `SourceType 0` with `ValidForUpdateApi 1` is a plain writable column. Note existing rollups on the same table and whether they filter by status - an unfiltered rollup next to a status-aware plan is a contradiction to resolve.
+Start from the project's `delivery-facts.md` (see "Record what you settle"). Then, wherever the environment is reachable, check it live: the extract lags the environment, misses whatever was never put in a solution, and may not be in the workspace at all - say so when it is not. With the Agent Companion MCP, the queries for steps, images, custom APIs and flows on a table are in `agent-companion-wip-shaping`'s [queries.md](../agent-companion-wip-shaping/references/queries.md#research--what-already-runs-on-a-table).
 
-**Existing plugin steps on the tables involved.** For each: message, stage, mode, rank, filtering attributes, and registered images. Filtering attributes decide what the Target carries, and images decide what else is available without a retrieve. A redundant `Retrieve` in existing code is usually evidence that no image is registered.
+**Column writability.** Read each column the plan writes: its type and required level from the environment where it is reachable, and its `SourceType` from the entity XML. A column with `SourceType 2` is a rollup and a plan that writes it is invalid; `SourceType 1` is calculated; only `SourceType 0` with `ValidForUpdateApi 1` is a plain writable column. Note existing rollups on the same table and whether they filter by status - an unfiltered rollup next to a status-aware plan is a contradiction to resolve.
+
+**Option values.** When code maps or branches on choice values, read the values and labels from the environment and record them in the plan with their source.
+
+**Existing plugin steps on the tables involved.** For each: message, stage, mode, rank, filtering attributes, and registered images - from the environment where it is reachable, since an unsolutioned step has no XML in the extract. Filtering attributes decide what the Target carries, and images decide what else is available without a retrieve. A redundant `Retrieve` in existing code is usually evidence that no image is registered.
 
 **Pre-validation and validation plugins that could block the change.** A step that rejects updates to a column under some status will reject the very edit your test script asks a tester to make. Find these before writing test steps, and state the precondition in the step rather than letting a tester log a defect against correct behaviour.
 
-**Every write path to the tables involved.** Model-driven forms, ribbon and command bar handlers, custom APIs, portals, integrations, bulk operations. Plugins registered on the message cover all of them automatically, which is an argument for server-side logic - but each path still belongs in the test pass.
+**Every write path to the tables involved.** Model-driven forms, ribbon and command bar handlers, custom APIs, cloud flows, portals, integrations, bulk operations. A cloud flow names its table in its definition, not in `primaryentity`, so a query on `primaryentity` alone finds none - never report "no flows" from it. Plugins registered on the message cover all of them automatically, which is an argument for server-side logic - but each path still belongs in the test pass.
 
 **The client-side surface.** Which web resource libraries are registered on the form, which handlers are wired to which events, and the existing namespace structure and comment-block layout of the file you plan to extend. New members go where the file's existing organisation says they go.
 
 **Form structure.** Tab and section names, subgrid names, default visibility and expansion. A tab that defaults to hidden or collapsed means controls inside it do not resolve on first load, which shapes any event registration plan.
+
+---
+
+## Delivery context for environment changes
+
+When the plan changes the environment through WIP solutions, settle how those changes leave development before writing the task list - the close-out strategy decides the tasks. With the Agent Companion MCP connected, apply `agent-companion-context`: it derives the facts from what the user has said, the project's delivery facts, the repositories and the environments, and asks only for what is left. Without it, settle the same facts yourself.
+
+| Strategy | Agentic tasks end at | Then |
+|---|---|---|
+| **A - Promote to build** | The WIP imported and validated in development, left for promotion | A person runs the promotion; the extract is taken from build; the agent verifies the build environment and deletes the development WIP |
+| **B - Consolidate in development** | New components added to the transport solution in development and verified; the WIP deleted | The extract from development ships them |
+
+- **What the user says settles it.** "We promote to build", "close-out with build environment" and "transport solutions are only consolidated through promotion" all mean A. Never rewrite a task the user wrote in those terms into the other strategy; if something contradicts it, say what.
+- **Never assume it.** When nothing settles it, ask once, with a recommendation and the evidence - earlier WIPs in development named `... - PROMOTED` are evidence of A. It is not an unnecessary question: a plan built on the wrong strategy puts work where it never ships.
+- **Promotion is not a deployment of the WIP.** A WIP is never deployed to test, UAT or production. Promoting it to a build environment is how it reaches its transport solution under A.
+- **Use the WIP names the user gives**, or the project's convention from earlier WIPs.
+
+Write the delivery context into section 0 of the plan.
 
 ---
 
@@ -123,15 +162,17 @@ Write the plan as markdown, stored with the work item it implements and named fo
 
 ## 0. Ground rules
 The read-only generated tree, the artefact routing table, and any convention
-this plan overrides.
+this plan overrides. When the plan changes the environment, the delivery
+context: connection, close-out strategy per destination, WIP names.
 
 ## 1. Solution approach
 A capability-to-component table: capability, layer, component, new or existing.
 A mermaid data-flow diagram. Then design decisions taken, each with its reason.
 
 ## 2. Existing schema (no changes required)
-Only what the plan touches, with the extract path as read-only reference.
-Note writability and existing rollups. Identify the live form by name and id.
+Only what the plan touches, with the extract path as read-only reference and
+what the environment showed, naming the tool. Note writability and existing
+rollups. Identify the live form by name and id.
 
 ## 3. New functionality
 Per component: file path, registration block, logic as numbered steps,
@@ -141,8 +182,8 @@ and the test cases it must satisfy.
 Per component: what changes and why. Call out defects found in passing.
 
 ## 5. Full component inventory
-Files we author and commit. Changes made directly in the environment, each
-with its landing solution. Schema names touched, with read or write.
+Files we author and commit. Changes made in the environment, each with its
+WIP, its landing solution and who makes it. Schema names touched, with read or write.
 Close with what is explicitly not created.
 
 ## 6. Assumptions and open points
@@ -162,10 +203,12 @@ Sections 5 and 6 carry most of the review value. An inventory that ends with "no
 
 Note the performer by **who or what can perform the task**, not by layer.
 
-- **Manual (`M1`, `M2`, ...)** - anything in a browser or a desktop tool: maker portal edits, plugin step registration, publishing, solution membership, functional testing.
-- **Agentic (`A1`, `A2`, ...)** - anything that is a file edit in the repository.
+- **Agentic (`A1`, `A2`, ...)** - file edits in the repository, including unit tests and running them, and environment changes the agent carries out with the tooling it has: shaping, editing and importing WIP solutions through the Agent Companion MCP and PAC CLI, a new plugin assembly build, and step, image and custom API registration through a WIP.
+- **Manual (`M1`, `M2`, ...)** - what needs a person: maker portal or desktop-tool work the tooling cannot do, every pipeline run - promotion, extract and commit, deployment - and functional testing.
 
-Cross-reference the two, note prerequisites on each, and sequence the tasks in a unified, ordered way. 
+The same environment change is agentic when the tooling is there and manual when it is not; a manual one says which tool would make it agentic. Cross-reference the two, note prerequisites on each, and sequence the tasks in a unified, ordered way.
+
+**Agentic environment tasks name their means.** The connection, the WIP, the tools, the read-back that verifies the change, and where the close-out strategy hands over to a person.
 
 **Manual tasks are written for someone who is not you.** Number every step. Name the tool, the solution, the component and its id, and the exact control or checkbox. State how to confirm the right component is open before editing it. End with a verification step phrased as an observable outcome - what the user should see on screen, not "confirm it worked".
 
@@ -185,7 +228,7 @@ Update it in place as implementation progresses, so the plan itself is the progr
 
 ## Open points
 
-Number them and keep them in the plan as it evolves. Zero is a valid count - when research left no genuine unknowns, one line saying so closes the section, and an open point invented to fill it obliges someone to resolve it. Each real one needs the assumption, the consequence if it is wrong, and the cost of changing course. Quantify that cost concretely - "one extra condition in the query method" tells a reader how much is at stake in a way that "may require rework" does not.
+Number them and keep them in the plan as it evolves. A question the connected tools can answer is not an open point - answer it. Zero is a valid count - when research left no genuine unknowns, one line saying so closes the section, and an open point invented to fill it obliges someone to resolve it. Each real one needs the assumption, the consequence if it is wrong, and the cost of changing course. Quantify that cost concretely - "one extra condition in the query method" tells a reader how much is at stake in a way that "may require rework" does not.
 
 When one is settled, mark it resolved in place with the date and what was decided, rather than deleting it. The trail of what was considered and rejected is worth more than a clean list.
 
@@ -193,13 +236,24 @@ Distinguish what needs a **business decision** from what needs a **technical con
 
 ---
 
+## Record what you settle
+
+The project's `delivery-facts.md` - in `<client>-Context/`, or next to the segmentation map in `<client>-d365/` when there is no context repository - is its memory of how it delivers. Read it before research, and check what it says against the environment before relying on it.
+
+Whenever planning settles a fact a later plan would need again and it is not recorded, add it - or update the row that changed - and tell the user in one line. Typical facts: the close-out strategy and transport source of each transport solution, the WIP naming convention, who runs which pipeline, the plugin assembly and its transport home, the live main form of a table, a convention the user stated. The shape is in `agent-companion-context`'s [delivery-facts.md](../agent-companion-context/references/delivery-facts.md#recording); without it, a table of fact, value, date confirmed and source. You write the file; the user commits it. No secrets, tokens or record data.
+
+---
+
 ## Quality bar
 
 Before presenting a plan:
 
-- [ ] Every component is assigned to a channel - authored in source, or changed in the environment
+- [ ] Every component is assigned to a channel - authored in source, changed in the environment by the agent, or by a person
+- [ ] Facts the connected tools could check were checked while planning, not left as open points or later tasks
+- [ ] Environment changes the tooling can carry out are agentic; the rest are manual and say which tool would change that
+- [ ] Every WIP task follows a settled close-out strategy, and no task the user wrote was rewritten to another
 - [ ] No file in the generated solution tree is created, edited, or deleted
-- [ ] Every column the plan writes is confirmed writable from the entity XML
+- [ ] Every column the plan writes is confirmed writable - type and required level from the environment where reachable, `SourceType` from the entity XML
 - [ ] Existing plugin steps on the affected tables are enumerated with their filters and images
 - [ ] Any filter or image change has been checked against the existing handler code
 - [ ] The live form is identified by name and id, and other forms are declared out of scope
@@ -210,3 +264,4 @@ Before presenting a plan:
 - [ ] Open points state the consequence and the cost of changing course
 - [ ] Plan depth matches the size of the change - no section, open point, or risk exists only to complete the skeleton
 - [ ] Findings that are defects or gaps, rather than planned work, are called out as such
+- [ ] Facts settled while planning are added to `delivery-facts.md`

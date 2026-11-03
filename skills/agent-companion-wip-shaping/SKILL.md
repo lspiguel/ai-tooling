@@ -1,6 +1,6 @@
 ---
 name: agent-companion-wip-shaping
-description: Used together with the Agent Companion MCP - the XrmToolBox plugin that gives a coding agent person-approved access to Dynamics 365 CE / Dataverse environments - and needs a plugin tab bound to the development environment. Shapes segmented work-in-progress (WIP) solutions for a change - classifies each component a change touches with the project's segmentation map, finds its existing transport home, routes it (placement for a component with no transport home, in place for one that has one), names and creates one WIP per transport group, adds components with no required components and no subcomponents (MCP or PAC path per component type), verifies every add by reading the solution back, removes strays and orphaned table shells, and checks overlap with other open WIPs and dependencies against the transport order. Use when a change touches a Dataverse component - new, out-of-box, or already in a transport solution - and it is to be edited through a WIP solution with the Agent Companion MCP.
+description: Used together with the Agent Companion MCP - the XrmToolBox plugin that gives a coding agent person-approved access to Dynamics 365 CE / Dataverse environments - and needs a plugin tab bound to the development environment. Shapes segmented work-in-progress (WIP) solutions for a change - classifies each component a change touches with the project's segmentation map, finds its existing transport home, routes it (placement for a component with no transport home, in place for one that has one), names and creates one WIP per transport group (the project's own naming convention where it has one), adds components with no required components and no subcomponents (MCP or PAC path per component type), verifies every add by reading the solution back, removes strays and orphaned table shells, and checks overlap with other open WIPs and dependencies against the transport order. Use when a change touches a Dataverse component - new, out-of-box, or already in a transport solution, plug-in assemblies, steps and custom APIs to be registered included - and it is to be edited through a WIP solution with the Agent Companion MCP.
 ---
 
 # Shaping WIP solutions with the Agent Companion MCP
@@ -20,7 +20,7 @@ A WIP solution holds exactly the components a change touches, so they can be exp
 | A WIP's lifetime | Lives until close-out if it holds any placement component; otherwise ends once its edit reaches the transport source (W9). Carried out by `agent-companion-wip-close-out` |
 | A second WIP for one group | Only when the person chooses to end part of the group's work early (W12) |
 | MCP or PAC to add a component | By component type — table below |
-| The WIP's name | `<initials>_Agent_WIP_<work item id>_<Group>[_<n>]` |
+| The WIP's name | The name the person gives, or the project's own convention from the delivery facts; otherwise `<initials>_Agent_WIP_<work item id>_<Group>[_<n>]` |
 
 Changing a component's route never changes its group (W11). A component is in at most one of a story's WIPs (W12).
 
@@ -34,6 +34,8 @@ Changing a component's route never changes its group (W11). A component is in at
 | Relationship | 10 | MCP (preferred) or PAC | The platform adds parent table shells — and for a 1:N the referencing lookup column — which the read-back shows as unexpected (see step 8). An out-of-box N:N whose intersect table is not customizable is held but **not exported** |
 | Model-driven app | 80 | **MCP only** | PAC cannot add it. Its export can list no app components even when the app has some — see step 8 |
 | Anything else — workflows and cloud flows, plug-in assemblies and steps, security roles, environment variables, custom APIs, connection references, canvas apps, charts | other | PAC, one command per component | The plugin refuses these types. Never pass `--AddRequiredComponents` |
+
+**Plug-in registration.** Only what already exists in development can be added. For a new build of an existing assembly, add the assembly; for a changed step or custom API, add it too. A new step, image, custom API or assembly is not added here — it is authored in the unpacked WIP by `agent-companion-wip-edit-loop`, so the WIP needs only a component of its group to export (usually the assembly). Record each planned new component in the ledger as **placement**.
 
 MCP is preferred where it is accepted: one approval for a list, required components and subcomponents forced off, parent shells recognized, and every call in the plugin's log. Type codes and the subtype rules the map uses are in [component-types.md](./references/component-types.md). What the platform and PAC actually do when components are added, removed and read back — parent shells, silent PAC messages, unnamed components — is in [platform-behaviour.md](./references/platform-behaviour.md).
 
@@ -67,7 +69,7 @@ Stop and ask the person when any of these finds something:
 |---|---|---|
 | Never in a WIP | Record creation and update rules and the flows they generated; a managed table with all subcomponents; a custom component carrying a prefix other than its WIP's publisher's — typically one created by mistake under the environment's default publisher (`new_`, `cr<…>_`) or a partner's. Out-of-box and installed-app components are not affected; the shared-library WIP uses the library's publisher (W3) | W8 |
 | Inactive form | `formactivationstate` is 0. It will not export, so there is nothing to edit; the person activates it or picks another form | X10 |
-| Overlap with other open WIPs | For every whole document — form, view, sitemap, web resource, workflow, app module, **and every table, for its ribbon** — the same `solutioncomponent` query: any other unmanaged solution that is neither a transport solution nor this task's WIP. Report it; the person sequences or reviews | W7, X1, X6 |
+| Overlap with other open WIPs | For every whole document — form, view, sitemap, web resource, workflow, app module, plug-in assembly (G3), **and every table, for its ribbon** — the same `solutioncomponent` query: any other unmanaged solution that is neither a transport solution nor this task's WIP. Report it; the person sequences or reviews | W7, X1, X6 |
 | Dependencies against the order | `get_required_components` for the components. A requirement is in place when it is managed and from an installed app, in a transport solution of the same or an earlier group, or in this story's WIP for the same or an earlier group. Held only by a later group → stop for a placement decision. Held by no solution → it needs placing too (X5) — with two exceptions the tool cannot see: a column of a table held in such a solution with `includeSubcomponents` (the tool lists only direct rows), and the system columns a custom table gets when it is created (`<table>id`, `ownerid`, `statecode`, `statuscode`, `createdon` and the like). A custom table's **primary name column is not** one of them: a metadata-only table exports no columns, so place it explicitly with the table | W6, X5 |
 
 ### 4. Decide the WIPs
@@ -79,6 +81,8 @@ Stop and ask the person when any of these finds something:
 Hand the list — WIP, group, route, publisher, components — to the steps for the person to confirm before the first Write call (T3, owned by `agent-companion-context`).
 
 ### 5. Name
+
+When the person names the WIP, or the delivery facts record the project's own convention — earlier WIPs such as `<initials> <work item> <Group>` — use it: check it against `create_solution`'s rules (letters, digits and underscores, starting with a letter, at most 65 characters, for the unique name) and the protected prefixes (W4), then go to step 3. Otherwise:
 
 1. `who_am_i`. If `firstName` or `lastName` is empty, `isApplicationUser` is true or `impersonating` is true, ask the person for their initials — the WIP belongs to the person doing the work.
 2. Build the name with the script, which also checks length, characters and protected prefixes (W4):

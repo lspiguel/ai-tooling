@@ -64,6 +64,22 @@ Exit criterion (SPEC §11 Phase 5). Use the data-free sandbox and a fresh agent 
 8. **Tool Library.** A person adds the nuget.org trusted-publishing policy for `Lspiguel.Xrm.D365AgentCompanionMcp`; the merge to `main` publishes; install from the Tool Library, open, uninstall — no locked file; install again.
 9. **README.** The tool table and settings match `tools/list` and the panel.
 
+### Field use — 2026-11-02
+
+A planning session on a client project, with another vendor's agent in a code editor, the plugin connected and the companion skills installed. The plan was for two plug-in steps and one column's required level, delivered through WIPs promoted to a build environment. Findings, each written back into the spec and the skills:
+
+| # | Finding | Change |
+|---|---|---|
+| U1 | The agent researched from repository files only and wrote "confirm in the environment" as open points, though the read tools were available. The client listed them as deferred tools — names only — and no skill tied research to the plugin. "Use the MCP to verify" became a plan step until the person said *now* | K7: `d365ce-planning` reads the environment through the plugin when it is connected; `agent-companion-context` gains a research section and planning triggers |
+| U2 | The agent read every companion skill and still wrote close-out B into the plan, and put "establish the delivery context" into a later task. T3 was tied to the first Write call, which a planning session never reaches | §9.8: the context is established while planning; T3: in a plan the steps are the task list |
+| U3 | The agent argued that promotion contradicts R11 and rewrote the person's promotion task into an extract from development. It ignored earlier WIPs in development named `… - PROMOTED`, and the person's own statement of the strategy | R11 says what *downstream* means; T1: the person's statement is a source; §9.8: earlier WIPs are evidence |
+| U4 | `d365ce-planning` defined agentic tasks as repository file edits, so a column change and plug-in registration were planned as manual | K7 and §9.10: registration through a WIP is agentic when the tooling can carry it out |
+| U5 | The project names WIPs `<initials> <work item> <Group>`, so the leftover and reconcile searches for `_Agent_WIP_` would miss them | §9.5: a project's own naming convention wins and is searched for |
+
+**Not verified live:** §9.10 — a new build of an existing assembly, a new step with an image, and a new custom API authored in an unpacked WIP and imported with PAC CLI. Until it runs on the sandbox, the person confirms the first use on a project against the read-back. `Test-UnpackedSolution.ps1` checks no packager anchors for these types yet.
+
+The skills changed, so publishing them needs a version bump (two-file rule).
+
 ---
 
 ## Phase 4 — execution
