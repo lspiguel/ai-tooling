@@ -1,6 +1,6 @@
 ---
 name: d365ce-planning
-description: Produces implementation plans for Microsoft Dynamics 365 Customer Engagement and Dataverse work. Covers researching the live environment and the solution extract before planning - through the Agent Companion MCP when it is connected, otherwise through whatever environment tooling is available - separating artefacts authored in source from changes made in the environment, deciding which environment changes the agent can carry out (WIP solutions, plug-in registration) and which need a person, settling the close-out strategy for WIP solutions before writing tasks, recording settled delivery facts in the project's delivery-facts.md, splitting delivery into manual and agentic tasks, scaling plan depth to the size of the change, and tracking open points to resolution. Use when planning, scoping, or breaking down D365CE or Dataverse changes - plugins, custom APIs, web resources, forms, views, solutions, schema - or when turning a user story into an implementation plan.
+description: Produces implementation plans for Microsoft Dynamics 365 Customer Engagement and Dataverse work. Covers researching the live environment and the solution extract before planning - through the Agent Companion MCP when it is connected, otherwise through whatever environment tooling is available - separating artefacts authored in source from changes made in the environment, deciding which environment changes the agent can carry out (WIP solutions) and which need a person, settling the close-out strategy for WIP solutions before writing tasks, recording settled delivery facts in the project's delivery-facts.md, splitting delivery into manual and agentic tasks, scaling plan depth to the size of the change, and tracking open points to resolution. Use when planning, scoping, or breaking down D365CE or Dataverse changes - plugins, custom APIs, web resources, forms, views, solutions, schema - or when turning a user story into an implementation plan.
 ---
 
 # Planning D365CE Work
@@ -33,7 +33,7 @@ What the plan can rely on, and what the agent can carry out itself, depends on t
 
 | Available | Research from | Environment changes the agent can carry out |
 |---|---|---|
-| **Agent Companion MCP**, with a tab bound to the development environment | The live environment through the plugin's read tools - first, and as much as possible. The extract for what the plugin does not show | Whatever a WIP solution can carry with the plugin and PAC CLI: schema and metadata, forms, views, ribbons, sitemaps, web resources, solution membership, plugin assemblies, steps, images and custom APIs. Apply `agent-companion-context` before writing those tasks (see "Delivery context for environment changes") |
+| **Agent Companion MCP**, with a tab bound to the development environment | The live environment through the plugin's read tools - first, and as much as possible. The extract for what the plugin does not show | Whatever a WIP solution can carry with the plugin and PAC CLI: schema and metadata, forms, views, ribbons, sitemaps, web resources, solution membership. Apply `agent-companion-context` before writing those tasks (see "Delivery context for environment changes") |
 | Another MCP server or tool with access to the environment, or PAC CLI alone | That tooling, read-only, and the extract | Only what that tooling can carry out end to end and verify afterwards. Name the tool in the task |
 | Neither | The extract and the repository. Anything that needs the environment becomes a technical confirmation | None - environment changes are manual |
 
@@ -52,8 +52,8 @@ Most D365CE repositories contain an unpacked solution tree produced by an export
 This splits every deliverable into one of three channels, and a plan is not finished until each component is assigned to one:
 
 - **Authored in source and committed by us** - plugin C# and unit tests, JavaScript and other web resource source, project files, PCF controls, build scripts.
-- **Changed in the environment by the agent, through a WIP solution** - when the tooling can carry the change out and verify it (see "Know your tooling before you plan"): schema and metadata, form and view XML, published web resources, solution membership, the compiled plugin assembly, plugin step registrations and images, custom APIs. It reaches the repo via the extract, after close-out.
-- **Changed in the environment by a person** - what the tooling cannot do, and what the user keeps manual. It reaches the repo only via the extract.
+- **Changed in the environment by the agent, through a WIP solution** - when the tooling can carry the change out and verify it (see "Know your tooling before you plan"): schema and metadata, form and view XML, published web resources, solution membership. It reaches the repo via the extract, after close-out.
+- **Changed in the environment by a person** - what the tooling cannot do, and what the user keeps manual: among them the compiled plugin assembly, plugin step registrations and images, and custom APIs. It reaches the repo only via the extract.
 
 Put that split in the plan explicitly - a routing table when several components are in play, a single line when there is one. It determines the whole task list: channels one and two are agentic work, channel three is manual work, and both environment channels end with close-out and an extract.
 
@@ -203,8 +203,8 @@ Sections 5 and 6 carry most of the review value. An inventory that ends with "no
 
 Note the performer by **who or what can perform the task**, not by layer.
 
-- **Agentic (`A1`, `A2`, ...)** - file edits in the repository, including unit tests and running them, and environment changes the agent carries out with the tooling it has: shaping, editing and importing WIP solutions through the Agent Companion MCP and PAC CLI, a new plugin assembly build, and step, image and custom API registration through a WIP.
-- **Manual (`M1`, `M2`, ...)** - what needs a person: maker portal or desktop-tool work the tooling cannot do, every pipeline run - promotion, extract and commit, deployment - and functional testing.
+- **Agentic (`A1`, `A2`, ...)** - file edits in the repository, including unit tests and running them, and environment changes the agent carries out with the tooling it has: shaping, editing and importing WIP solutions through the Agent Companion MCP and PAC CLI.
+- **Manual (`M1`, `M2`, ...)** - what needs a person: maker portal or desktop-tool work the tooling cannot do - plugin assembly, step, image and custom API registration among them - every pipeline run - promotion, extract and commit, deployment - and functional testing.
 
 The same environment change is agentic when the tooling is there and manual when it is not; a manual one says which tool would make it agentic. Cross-reference the two, note prerequisites on each, and sequence the tasks in a unified, ordered way.
 

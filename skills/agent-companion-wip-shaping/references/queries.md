@@ -214,23 +214,6 @@ For planning and for checks before an edit: what is registered on a table now, w
 </fetch>
 ```
 
-**Plug-in types of an assembly, and the steps registered on them** — the comparison a new build must pass before import (G2).
-
-```xml
-<fetch>
-  <entity name="plugintype">
-    <attribute name="plugintypeid" />
-    <attribute name="typename" />
-    <filter>
-      <condition attribute="assemblyname" operator="eq" value="[AssemblyName]" />
-    </filter>
-    <link-entity name="sdkmessageprocessingstep" from="eventhandler" to="plugintypeid" link-type="outer" alias="s">
-      <attribute name="name" />
-    </link-entity>
-  </entity>
-</fetch>
-```
-
 **Custom APIs bound to a table.**
 
 ```xml

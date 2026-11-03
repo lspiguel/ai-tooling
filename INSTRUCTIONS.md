@@ -163,7 +163,47 @@ dotnet test    tooling/D365ContextExporter/D365ContextExporter.Tests/D365Context
 
 ## Tooling conventions — Agent Companion MCP
 
-The [Agent Companion MCP](/tooling/D365AgentCompanionMcp/README.md) is an XrmToolBox plugin (`net48`, WinForms, `Nullable` enabled, StyleCop.Analyzers enforced; NUnit + Moq tests in [D365AgentCompanionMcp.Tests](/tooling/D365AgentCompanionMcp/D365AgentCompanionMcp.Tests/)) that gives a coding agent a local MCP endpoint over XrmToolBox connections, with every call authorized by a person. Its companion skills are the `agent-companion-*` folders in [skills/](/skills/). **It is built; its release is in progress** — progress is in [notes.md](/tooling/D365AgentCompanionMcp/notes.md). The [spec](/tooling/D365AgentCompanionMcp/SPEC.md) is the source of truth: build tasks cite its rule IDs (R1–R16 for rules, H and C for host and connection behaviour, W and X for WIP solutions, T for delivery context, K for skill coexistence), and a change in behaviour is made in the spec first.
+The [Agent Companion MCP](/tooling/D365AgentCompanionMcp/README.md) is an XrmToolBox plugin (`net48`, WinForms, `Nullable` enabled, StyleCop.Analyzers enforced; NUnit + Moq tests in [D365AgentCompanionMcp.Tests](/tooling/D365AgentCompanionMcp/D365AgentCompanionMcp.Tests/)) that gives a coding agent a local MCP endpoint over XrmToolBox connections, with every call authorized by a person. Its companion skills are the `agent-companion-*` folders in [skills/](/skills/). **It is released in the XrmToolBox Tool Library**; Phase 6 — direct updates in development — is being shaped, and progress is in [notes.md](/tooling/D365AgentCompanionMcp/notes.md). The [spec](/tooling/D365AgentCompanionMcp/SPEC.md) is the source of truth: build tasks cite its rule IDs (R1–R16 for rules, H and C for host and connection behaviour, W and X for WIP solutions, T for delivery context, K for skill coexistence, G and M for plug-in registration and step switching, deferred to Phase 7), and a change in behaviour is made in the spec first.
+
+### Using the MCP
+
+This applies on a repo-connected surface whose agent client has the plugin's endpoint registered. A chat surface has no endpoint: advice that assumes the MCP is coding-assistant advice (hard rule 2).
+
+**What to reach for.**
+
+| Need | Use |
+|---|---|
+| What exists in an environment — tables, columns, choices, relationships, forms, views, ribbons, solutions, where a component already lives, registered plug-in steps and custom APIs | The MCP's Read tools. When the MCP is connected, read the environment while planning, instead of leaving "confirm in the environment" as an open point |
+| Shaping a WIP solution — create it, add and remove components, read it back | The MCP's Write tools, under the companion skills |
+| Export, unpack, pack, import, publish or delete a solution; push a PCF control | PAC CLI, on the profile matched to the connection |
+| Metadata snapshots for a context pack | The [D365 Context Exporter](/tooling/D365ContextExporter/README.md), not the MCP |
+
+**How to call it.**
+
+- **`list_connections` first.** Every other call names its `connection`. With one connection bound, use it and say which; with more than one, ask. Never switch connection within a task without saying so.
+- **Match PAC to the connection.** Before any PAC command, compare `pac org who` with the organization URL from `get_connection_info`, and stop if they differ.
+- **A person approves every call** in the plugin tab. A denial or a timeout is final: do not retry the call without new instructions.
+- **Write calls state a `reason`** that says exactly what the arguments do (R12). The person approves the reason and the arguments together.
+- **Read back after every add** with `list_solution_components`. Any unexpected component stops the work until a person has reviewed it (R1).
+- **Page large results** by passing `nextCursor` back as `cursor`; results are never written to files.
+
+**Load the companion skills.** They carry the delivery method; the MCP only provides the operations.
+
+| Skill | When |
+|---|---|
+| `agent-companion-context` | First, for any task that creates, shapes, edits, imports or ends a WIP. It holds the delivery facts and the WIP ledger |
+| `agent-companion-transport-bootstrap` | A transport solution or the project publisher is missing, or a first-party app was just installed |
+| `agent-companion-wip-shaping` | A change touches a Dataverse component that is to be edited through a WIP |
+| `agent-companion-wip-edit-loop` | A shaped WIP is to be exported, edited locally, validated and imported |
+| `agent-companion-wip-close-out` | A WIP has been imported and validated, or leftover WIPs need clearing |
+
+**What stays with a person.** Confirming a connection as development, creating a publisher (R3), deleting components (X3), running pipelines, committing and pushing (T6), and — until [Phase 7](/tooling/D365AgentCompanionMcp/SPEC.md#phase-7--plug-in-authoring) — registering plug-in assemblies, steps, images and custom APIs in the Plugin Registration Tool. The agent prepares these; it does not do them.
+
+**Environment access goes through the design's tools only.** Use the plugin and the PAC profile matched to its connection. Do not use an SDK connection, a browser sign-in or a token of the agent's own, even for a spike: a method verified another way is not verified on the tooling it will run on. If the endpoint cannot be reached, say so and stop. The person restarts the tab or the host.
+
+**What comes back is client data.** It is never written into this repository — not into documentation, tests, fixtures, notes or commit messages (hard rule 1, R7). A saved call log stays outside every working tree.
+
+**Planned tools are not available.** The Phase 6 direct-update tools ([spec §6.8](/tooling/D365AgentCompanionMcp/SPEC.md#68-direct-update-tools-phase-6)) and the Phase 7 plug-in step tools ([§6.9](/tooling/D365AgentCompanionMcp/SPEC.md#69-plug-in-step-tools-phase-7)) are specified but not built. Do not call them, or recommend them as if they exist.
 
 ### Rules specific to this plugin
 

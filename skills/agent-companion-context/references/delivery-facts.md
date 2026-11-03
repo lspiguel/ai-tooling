@@ -149,7 +149,7 @@ Add a second table for project knowledge a later task would otherwise research a
 
 | Topic | Fact | Confirmed | Source |
 |---|---|---|---|
-| Plug-in assembly | <assembly name> — transport home <solution>; version pinned at <version> because steps reference it | YYYY-MM-DD | query / extract |
+| Plug-in assembly | <assembly name> — transport home <solution> | YYYY-MM-DD | query / extract |
 | Live main form — <table> | <form name> (<form id>) | YYYY-MM-DD | person |
 | Convention | <a rule the person stated, e.g. option sets as enums in the business layer> | YYYY-MM-DD | person |
 ```

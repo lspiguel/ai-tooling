@@ -102,7 +102,8 @@ The same loop serves every moment above: a small set of WIP solutions per user s
 | Excluded | Handled by / reason |
 |---|---|
 | Solution export, unpack, pack, import, publish, delete | PAC CLI |
-| Creating or changing components directly (columns, forms, views, ribbons, plug-in assemblies, steps and images, custom APIs and their parameters) | Authored locally in the unpacked solution and imported through PAC CLI ([§9.10](#910-plug-in-assemblies-steps-and-custom-apis-through-a-wip)). Phase 6 makes three exceptions for speed in development — web resource content, mirrored plug-in steps and their state, and a custom API's plug-in type ([§6.8](#68-direct-update-tools-phase-6), [§9.11](#911-direct-updates-in-development)) |
+| Creating or changing components directly (columns, forms, views, ribbons) | Authored locally in the unpacked solution and imported through PAC CLI. Phase 6 makes one exception for speed in development — web resource content ([§6.8](#68-direct-update-tools-phase-6), [§9.11](#911-direct-updates-in-development)) |
+| Registering plug-in assemblies, plug-in types, steps and images, custom APIs and their parameters | A person, in the Plugin Registration Tool. Plug-in authoring by the agent — through a WIP, with `pac plugin push`, and by mirroring and switching steps — is deferred to [Phase 7](#phase-7--plug-in-authoring) ([§6.9](#69-plug-in-step-tools-phase-7), [§9.10](#910-plug-in-assemblies-steps-and-custom-apis-phase-7)) |
 | A general SDK facade (arbitrary `OrganizationRequest` execution) | Not needed for the workflow; large risk surface |
 | Record create, update, delete | Not needed for the workflow |
 | Modern commanding | R4 |
@@ -358,7 +359,7 @@ State that spans calls — the `connection` and paging `cursor` handles — trav
 | `not_found` | A named solution, publisher, table, column, option set, relationship or component does not exist. `details` names it | Check the name |
 | `already_exists` | Unique name already taken | Choose another name, or reuse the existing one |
 | `managed_solution` | Add or remove against a managed solution | Use an unmanaged solution |
-| `version_conflict`, `managed_component`, `not_in_solution` | *Phase 6* direct-update tools — see [§6.8](#68-direct-update-tools-phase-6) | See §6.8 |
+| `version_conflict`, `managed_component`, `not_in_solution` | *Phase 6* direct-update tools and *Phase 7* step tools — see [§6.8](#68-direct-update-tools-phase-6) | See §6.8 |
 | `invalid_cursor` | The cursor is unknown, expired, or belongs to another connection or tool | Start again from the first page |
 | `server_stopping` | The host is stopping; the call did not run | Wait for the person |
 | `cancelled_by_client` | The client closed the request, or cancelled it, before the call ran ([§6.1](#61-protocol-surface)). Written to the call log only — the agent never receives it | — |
@@ -454,10 +455,10 @@ Example `inputSchema`, showing `connection` first and required:
 | `remove_solution_component` | Write | Remove a component from a solution (the component itself is kept) |
 | `create_publisher` | Publisher | New publisher — disabled by default |
 | `update_web_resources` | Write | *Phase 6.* Create or update web resources from local files in a WIP, and publish them |
-| `mirror_steps` | Write | *Phase 6.* Copy plug-in steps and their images to the same plug-in types in another assembly, created disabled |
-| `disable_steps` | Write | *Phase 6.* Disable plug-in steps |
-| `enable_steps` | Write | *Phase 6.* Enable plug-in steps |
-| `rebind_custom_apis` | Write | *Phase 6.* Point custom APIs at the plug-in type of the same name in another assembly |
+| `mirror_steps` | Write | *Phase 7.* Copy plug-in steps and their images to the same plug-in types in another assembly, disabled |
+| `disable_steps` | Write | *Phase 7.* Disable plug-in steps |
+| `enable_steps` | Write | *Phase 7.* Enable plug-in steps |
+| `rebind_custom_apis` | Write | *Phase 7.* Point custom APIs at the plug-in type of the same name in another assembly |
 
 The Read tools were checked against the Microsoft Dataverse MCP server in spike S5 (2026-10-29); none is replaced. Findings are in [notes.md](notes.md#s5--overlap-with-the-dataverse-mcp-server).
 
@@ -868,7 +869,7 @@ Rules:
 - **Record detection.** The root entity and every `link-entity` are checked against the configuration allow-list. Anything outside it marks the query as touching records: the approval dialog and the log say so, and the call fails with `tool_disabled` when record queries are switched off for the connection. Approval is the same single Read approval as every other read ([§7](#7-authorization-model)).
 - **Values.** Columns without a value are omitted. Aliased values (link-entity columns) are keyed by the name the platform returns (`alias.column`) and serialized by the same rules, without the `AliasedValue` wrapper. `label`, `labels`, `name` and `formatted` are present only when `includeFormattedValues` is true.
 
-Configuration allow-list (v1): `publisher`, `solution`, `solutioncomponent`, `systemform`, `savedquery`, `sitemap`, `appmodule`, `appmodulecomponent`, `webresource`, `ribboncustomization`, `organization`, `workflow`, `customcontrol`, `environmentvariabledefinition`, `connectionreference`, `pluginassembly`, `plugintype`, `sdkmessage`, `sdkmessagefilter`, `sdkmessageprocessingstep`, `sdkmessageprocessingstepimage`, `customapi`, `customapirequestparameter`, `customapiresponseproperty`, `role`, `fieldsecurityprofile`. The entries from `workflow` onwards let the agent read the subtype and name columns that the segmentation map uses ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)). The plug-in and custom API tables let it read what is registered on a table — steps by message and table, their images, the plug-in types of an assembly, a custom API's parameters — for planning and for the checks in [§9.10](#910-plug-in-assemblies-steps-and-custom-apis-through-a-wip); they hold registration metadata, not business records.
+Configuration allow-list (v1): `publisher`, `solution`, `solutioncomponent`, `systemform`, `savedquery`, `sitemap`, `appmodule`, `appmodulecomponent`, `webresource`, `ribboncustomization`, `organization`, `workflow`, `customcontrol`, `environmentvariabledefinition`, `connectionreference`, `pluginassembly`, `plugintype`, `sdkmessage`, `sdkmessagefilter`, `sdkmessageprocessingstep`, `sdkmessageprocessingstepimage`, `customapi`, `customapirequestparameter`, `customapiresponseproperty`, `role`, `fieldsecurityprofile`. The entries from `workflow` onwards let the agent read the subtype and name columns that the segmentation map uses ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)). The plug-in and custom API tables let it read what is registered on a table — steps by message and table, their images, the plug-in types of an assembly, a custom API's parameters — for planning and research; they hold registration metadata, not business records.
 
 #### `list_solution_components`
 
@@ -1007,10 +1008,31 @@ type ComponentSelector =
   | { type: 1; logicalName: string }                    // table
   | { type: 2; table: string; logicalName: string }     // column
   | { type: 9; name: string }                           // global option set
-  | { type: 10; schemaName: string };                   // relationship
+  | { type: 10; schemaName: string }                    // relationship
+  // Phase 6 — plug-in components (below)
+  | { type: 91; name: string; version?: string }        // plug-in assembly
+  | { componentTable: PluginComponentTable; id: Guid }  // custom API, request parameter, response property
+  | { componentTable: "customapi"; uniqueName: string }
+  | { componentTable: "customapirequestparameter" | "customapiresponseproperty"; customApi: string; uniqueName: string };
+
+type PluginComponentTable = "customapi" | "customapirequestparameter" | "customapiresponseproperty";
 ```
 
 Component type codes accepted in v1 (confirmed against the `solutioncomponent` type option set in spike S2): table `1`, column `2`, global option set `9`, relationship `10`, view `26`, form `60`, web resource `61`, sitemap `62`, app module `80`. Any other type fails with `invalid_argument` naming the entry. The application ribbon customization is not accepted until its type code is confirmed live; S2 did not settle it.
+
+**Plug-in components (Phase 6).** Accepting them is not plug-in authoring, which stays in [Phase 7](#phase-7--plug-in-authoring): each component must already be registered in development, by a person in the Plugin Registration Tool, and the tool only puts it in a WIP. Until Phase 6 is built, these types are refused as above and are added with PAC (Path B).
+
+| Component | Type code | Selected by |
+|---|---|---|
+| Plug-in assembly | `91` | ID, or `name` — with `version` when several versions of the name are registered; an ambiguous name fails with `invalid_argument` listing the versions |
+| Plug-in step | `92` | ID only — step names are not unique |
+| Custom API | Per environment | `componentTable: "customapi"` with ID or `uniqueName` |
+| Custom API request parameter, response property | Per environment | `componentTable` with ID, or `customApi` (the custom API's unique name) and the parameter's or property's `uniqueName` |
+
+- **Codes that vary by environment.** Custom API types have codes of 10000 and above, assigned per organization (10038 in S9). The tool reads the code for the connection's organization from `solutioncomponentdefinition` by table name and reports it in `results`. A numeric `type` of 10000 or above is refused with `invalid_argument`, because the same number means something else elsewhere.
+- **Fixed behaviour is unchanged (R1).** Adding a step adds neither its plug-in type nor its assembly; `get_required_components` checks that they are in place (W6).
+- **What travels with what.** Adding an assembly does not add its steps[^5]: every step the WIP should carry is added on its own. A step's images are not separate solution components and travel with the step (S9); its secure configuration is never exported. Whether adding a custom API also adds its request parameters and response properties is checked at Phase 6 exit. Until it is, the read-back shows it, and anything added that was not requested is reported as `unexpected`.
+- **The same selectors** apply to `get_required_components` and `remove_solution_component`.
 
 ```ts
 interface AddComponentsResult {
@@ -1156,15 +1178,22 @@ Sequence:
 
 1. **Prepare** (before the dialog). Read every file and resolve every name. The web resource type comes from the file extension (`.htm`/`.html` 1, `.css` 2, `.js` 3, `.xml` 4, `.png` 5, `.jpg`/`.jpeg` 6, `.gif` 7, `.xsl`/`.xslt` 9, `.ico` 10, `.svg` 11, `.resx` 12). An unknown extension, or a type different from an existing resource's, is `invalid_argument`. Fail the whole call before the dialog on: a file outside **File roots**; a file over the organization's maximum upload size; an existing resource that is managed (`managed_component`), outside the WIP (`not_in_solution`), or without `expectedVersion` (`invalid_argument`), or whose `versionNumber` differs from it (`version_conflict`); a new resource whose name does not start with the WIP publisher's prefix and `_` (`invalid_argument`).
 2. **Approve.** One dialog listing each item: create or update, name, path, size, SHA-256 and versions.
-3. **Write** in request order. An item whose content matches the environment byte for byte is `unchanged`. Before each update the version is read again; a change since preparation fails the item with `version_conflict`. The first failure stops the run; later entries are `notAttempted`.
-4. **Publish** the resources written, when `publish` is true and at least one was written.
+3. **Write** in request order. An item whose content matches the environment's *unpublished* content (`RetrieveUnpublishedRequest`) byte for byte is `unchanged` and is not written: every update raises `versionNumber`, identical content included (S10). Before each update the version is read again; a change since preparation fails the item with `version_conflict`. The first failure stops the run; later entries are `notAttempted`.
+4. **Publish** the resources written, when `publish` is true and at least one was written. Publishing raises `versionNumber` again (S10), so `versionAfter` is read after the publish and is the baseline for the next call.
 5. **Read back** the WIP and report anything unexpected, as `add_solution_components` does.
+
+Measured in S10 on a near-empty trial environment: an update takes 0.3–0.5 s and a targeted publish about 3 s. Exporting and importing a one-resource WIP takes 14–21 s before its publish-all (11–31 s), and before PAC's unpack and pack.
 
 Not covered: registering a script on a form, a command or an app. Those are edits to a form, ribbon diff or app module and stay on the import path.
 
+### 6.9 Plug-in step tools (Phase 7)
+
+> [!NOTE]
+> **Deferred to [Phase 7](#phase-7--plug-in-authoring), not built.** Specified with Phase 6 on 2026-11-03 and moved out of it the same day, with the rest of plug-in authoring ([§9.10](#910-plug-in-assemblies-steps-and-custom-apis-phase-7)). Phase 7's spike may reshape them. They follow §6.8's conventions: Write tier, `reason`, dev-environment confirmation, per-call approval, the log, a WIP that records the work, and §6.8's error codes.
+
 #### `mirror_steps`
 
-Copies plug-in steps from one assembly to another that contains the same plug-in types — a developer's side-loaded build, or the new registration after a major or minor version change. Mirrors are **always created disabled**. Switching which copy runs is a separate, deliberate call to `disable_steps` and `enable_steps`.
+Copies plug-in steps from one assembly to another that contains the same plug-in types — a developer's side-loaded build, or the new registration after a major or minor version change. Mirrors **start disabled**. Switching which copy runs is a separate, deliberate call to `disable_steps` and `enable_steps`.
 
 | Input | Type | Required | Notes |
 |---|---|---|---|
@@ -1197,7 +1226,8 @@ interface MirrorStepsResult {
 - **What is copied.** Message, message filter (table), stage, mode, rank, deployment, filtering attributes, unsecure configuration, impersonating user, async auto-delete and description, each image with its type, alias, name, attributes and message property, and the secure configuration as a new `sdkmessageprocessingstepsecureconfig` row. A secure configuration the connection cannot read fails the step.
 - **Marker.** The mirror's description records `Mirror of <source step ID> from <source assembly>`. That is how the tool, the leftover check and the person find mirrors.
 - **Refused before the dialog:** a source step already mirrored to the target assembly (`already_exists`); a target assembly that is managed or is the source step's own assembly (`invalid_argument`).
-- **Disabled at creation.** Whether a step can be created with `statecode` 1 is spike S9's question. If it cannot, the tool creates the step and disables it at once, and the dialog says the mirror runs for that moment.
+- **Disabled straight after creation.** A step cannot be created disabled (S9): `statecode` 1 on create is ignored, and with `statuscode` 2 the create is refused. The tool creates each mirror and disables it in the next request. For that moment both copies run, and the dialog says so.
+- **What the platform adds.** Creating a step in the WIP adds only the step (92, behaviour 0); its images and secure configuration are not separate solution components (S9). The same `typename` may be registered in two assemblies (S9).
 
 #### `disable_steps` and `enable_steps`
 
@@ -1221,11 +1251,11 @@ interface StepStateResult {
 }
 ```
 
-A managed step fails the whole call with `managed_component` before the dialog. The dialog lists each step with its message, table, stage, assembly and current state. For each step, the dialog also shows every other step with the same message, table and stage and its state, so a switch that would leave both copies running, or neither, is visible before approval. A step already in the requested state is `unchanged`. These tools change no solution membership. State alone is not reliable across imports ([§9.11](#911-direct-updates-in-development), M3).
+A managed step fails the whole call with `managed_component` before the dialog. The dialog lists each step with its message, table, stage, assembly and current state. For each step, the dialog also shows every other step with the same message, table and stage and its state, so a switch that would leave both copies running, or neither, is visible before approval. A step already in the requested state is `unchanged`. These tools change no solution membership. State alone is not reliable across imports ([§9.10](#step-state-is-not-transported), M3).
 
 #### `rebind_custom_apis`
 
-A custom API's main operation is its `plugintypeid`, not a step, so it is switched by pointing it at another plug-in type. The platform allows that column to change after creation[^5].
+A custom API's main operation is its `plugintypeid`, not a step, so it is switched by pointing it at another plug-in type. The platform allows that column to change after creation[^5], and the change takes effect on the next call — within a second in S9.
 
 | Input | Type | Required | Notes |
 |---|---|---|---|
@@ -1259,7 +1289,7 @@ The plugin's approval is the authoritative gate. The agent client's own tool-app
 |---|---|---|---|
 | **Host** | `list_connections` | None | No dialog; logged on every tab (R2) |
 | **Read** | Every read tool — connection info, identity, publishers, solutions, metadata, ribbons, queries (configuration and records), component state, solution components, required components | One prompt for all reads, scoped *once*, *session*, *environment* or *always* | Record queries can be switched off per connection |
-| **Write** | `create_solution`, `add_solution_components`, `remove_solution_component`; in Phase 6 also `update_web_resources`, `mirror_steps`, `disable_steps`, `enable_steps`, `rebind_custom_apis` | Once, per call | Requires dev-environment confirmation and a `reason` (R12) |
+| **Write** | `create_solution`, `add_solution_components`, `remove_solution_component`; in Phase 6 also `update_web_resources`; in Phase 7 `mirror_steps`, `disable_steps`, `enable_steps`, `rebind_custom_apis` | Once, per call | Requires dev-environment confirmation and a `reason` (R12) |
 | **Publisher** | `create_publisher` | Once, with typed confirmation | Disabled by default (R3); requires a `reason` (R12) |
 
 ### Read approval
@@ -1608,7 +1638,7 @@ Projects vary — some import Security directly after Base. The fixed part is th
 | `<work item id>` | The work item's numeric ID |
 | `<Group>` | The transport group's name in the segmentation map — `Resources`, `Base`, `Assemblies`, `Processes`, `Apps`, `Security`, or the map's name for the shared-library solution |
 | `_<n>` | Optional. A sequence number starting at 2, used only for a story's second or later WIP for the same group (W12). The first WIP has no suffix |
-| `_Sideload` | *Phase 6.* Only after `Assemblies`, for the WIP that holds a developer's side-loaded assembly and its mirror steps. It feeds no transport solution and is never imported (M2, [§9.11](#911-direct-updates-in-development)) |
+| `_Sideload` | *Phase 7.* Only after `Assemblies`, for the WIP that holds a developer's side-loaded assembly and its mirror steps. It feeds no transport solution and is never imported (M2, [§9.10](#plug-in-assemblies--side-loading)) |
 | Friendly name | The unique name with each underscore replaced by a space — `[XY] Agent WIP 1234 Base` |
 
 **A project's own convention wins.** Where the project already names its WIPs another way — recorded in its delivery facts (T5), or visible in the WIPs earlier stories left in development — or the person names the WIP, that name is used. It still passes `create_solution`'s rules and W4. Searches for open and leftover WIPs (K6, X9) then look for the project's pattern as well as `_Agent_WIP_`.
@@ -1623,7 +1653,7 @@ The agent stops and asks the person for initials when `firstName` or `lastName` 
 | W4 | **WIP names never start with a protected prefix.** A promotion pipeline can refuse WIP names that start with the project's, a partner's or the platform's prefix, so that no transport solution is promoted as if it were WIP. Leading with initials makes a clash unlikely, but the agent still checks the name against the project's protected prefixes and asks the person if one matches | A transport solution promoted as WIP would be copied into another transport solution and then deleted from the build environment |
 | W5 | **Work in transport order.** Create, import and close out a story's WIPs in transport order — Resources before Base, Base before Assemblies, and so on | Each WIP excludes required components (R1), so the target must already hold what it depends on |
 | W6 | **Dependencies point down the order.** No component may require one in a later group. Where one does — for example a Base form embedding a canvas app that the map places in Apps — stop and ask the person. `get_required_components` finds these. The fix is a placement decision, not a workaround | A dependency pointing up breaks the import of the earlier solution in every downstream environment |
-| W7 | **Check overlap with other open WIPs.** Before adding a whole-document component (form, view, sitemap, web resource, workflow, app module, plug-in assembly, table), the agent queries `solutioncomponent` for the same object in other WIP solutions and reports any overlap | Two stories editing one document ship each other's in-flight changes (X1) |
+| W7 | **Check overlap with other open WIPs.** Before adding a whole-document component (form, view, sitemap, web resource, workflow, app module, table), the agent queries `solutioncomponent` for the same object in other WIP solutions and reports any overlap | Two stories editing one document ship each other's in-flight changes (X1) |
 | W8 | **Never in a WIP:** record creation and update rules and their generated cloud flows; managed tables with all subcomponents (also R1); components carrying another publisher's prefix | Known managed-deployment failures; validator rejections; layering |
 | W9 | **Route per component, lifetime per WIP.** Each component is routed when it is classified: *placement* when it has no transport home yet, *in place* when it already has one (W2). A WIP holding any placement component lives until close-out. A WIP holding only in-place components ends as soon as its edit has reached the transport source ([§9.9](#99-routes--placing-a-component-or-editing-it-in-place)) | The route decides what close-out has to do. Deciding it per component lets one story mix new and existing components without forcing one onto the other's lifetime |
 | W10 | **Re-check before ending an in-place WIP.** After import, run `list_solution_components` on the WIP. Every component in it must already have a transport home. A component authored locally during the edit, such as a new column or web resource, has none, so the WIP becomes a placement WIP | Deleting the WIP would leave that component in development with no transport home. It never ships, and the next downstream import that needs it fails (X5) |
@@ -1637,7 +1667,7 @@ How the plugin supports this: `list_solutions` finds open WIPs and the transport
 
 | # | Issue | Effect | Mitigation |
 |---|---|---|---|
-| X1 | **In-flight changes leak through whole documents.** A WIP export carries each component's current state in development, not the story's change. Forms, views, sitemaps, ribbon diffs, web resources, workflows, app modules and plug-in assemblies are whole documents | Closing out story A ships story B's unfinished edits to the same form | Overlap check (W7); sequence stories that share a document; a person reviews shared documents at close-out |
+| X1 | **In-flight changes leak through whole documents.** A WIP export carries each component's current state in development, not the story's change. Forms, views, sitemaps, ribbon diffs, web resources, workflows and app modules are whole documents | Closing out story A ships story B's unfinished edits to the same form | Overlap check (W7); sequence stories that share a document; a person reviews shared documents at close-out |
 | X2 | **A WIP isolates only what is not yet in a transport solution.** Where transport solutions are exported from the development environment (strategies B, C, and D sourced from development), a component already in one ships on the next export whatever its WIP state | The WIP holds back new components only; edits to existing ones go out with the next extract | Use a build environment as the source of transport (A) where isolation matters; otherwise treat every edit to an existing component as released at the next extract |
 | X3 | **Deletions are not carried.** A WIP carries additions and updates only. Deleting a column, view, web resource or plug-in step in development is reflected by no WIP | Deleted components survive in the build environment or transport solution and are redeployed | A deletion is a separate, person-run task in each environment that transport is extracted from, followed by the managed upgrade that removes it downstream. The plugin does not delete ([§3](#3-scope)) |
 | X4 | **Moving a component between transport solutions.** Correcting a placement means removing it from one managed solution and adding it to another | If the losing solution is upgraded first, the platform deletes the component downstream — for tables and columns, with their data | Classify right the first time (W1, W2). When a move cannot be avoided, the receiving solution must be imported before the losing one is upgraded — staged import with reverse-order apply, or a dedicated release a person plans |
@@ -1792,9 +1822,12 @@ Under A, step 5 waits for the WIP to be promoted, and the build environment's tr
 
 **When the WIP's lifetime matters.** Under B, an in-place edit ships at the next extract from development whatever happens to its WIP (X2); ending the WIP early only removes clutter (X9). Under A, the lifetime is the release: an in-place edit ships when its WIP is promoted, so promoting early ships early.
 
-### 9.10 Plug-in assemblies, steps and custom APIs through a WIP
+### 9.10 Plug-in assemblies, steps and custom APIs (Phase 7)
 
-Registering plug-in code is a change to Assemblies-group components, and it travels like any other: through a WIP, authored in the unpacked solution, imported with PAC CLI (R14). The plugin reads assemblies, plug-in types, steps, images and custom APIs through `query`; it does not register them, and PAC CLI has no step-registration command. In Phase 6 it mirrors existing steps, switches their state and rebinds custom APIs ([§6.8](#68-direct-update-tools-phase-6)), but new registrations still go through the WIP.
+> [!IMPORTANT]
+> **Deferred to [Phase 7](#phase-7--plug-in-authoring) (2026-11-03).** Field use found that the path below does not work as written, and the quirks need a spike before anything is built or put in a skill. Until Phase 7, a person registers plug-in assemblies, plug-in types, steps, images and custom APIs in the Plugin Registration Tool, and a plan treats that work as manual (K7). The agent may still read registrations with `query` ([§6.5](#65-read-tools)), build and unit-test plug-in code, and add an assembly, step or custom API that is already registered to a WIP — with PAC (Path B), or from Phase 6 with `add_solution_components` ([§6.6](#add_solution_components)) — reading it back (R1). Whether such a WIP exports and imports its steps is one of spike S12's questions, so the person checks the export. What follows is the design Phase 7 starts from, not a procedure to follow now.
+
+Registering plug-in code is a change to Assemblies-group components, and it travels like any other: through a WIP, authored in the unpacked solution, imported with PAC CLI (R14). The plugin reads assemblies, plug-in types, steps, images and custom APIs through `query`; it does not register them, and PAC CLI has no step-registration command. The step tools ([§6.9](#69-plug-in-step-tools-phase-7)) mirror existing steps, switch their state and rebind custom APIs, but new registrations still go through the WIP.
 
 **A new build of a registered assembly goes through `pac plugin push`** (decided 2026-11-03, replacing the WIP path for this one case). The assembly is still held by a WIP (91, added with PAC), so W7 and close-out see it. The push skips the import's overwrite check, so the agent runs G5 first. A build that adds a plug-in type is followed by registering the type in the Plugin Registration Tool, or it takes the WIP path below.
 
@@ -1811,34 +1844,11 @@ Registering plug-in code is a change to Assemblies-group components, and it trav
 | G2 | **The new build keeps every registered plug-in type.** Before import, the plug-in types in the exported `.dll.data.xml` — and every step registered against them in development, found with `query` — are compared with the types in the new build. A type missing from the build stops the import: it is in use, possibly by another story's step |
 | G3 | **An assembly is a whole document** (X1). The overlap check (W7) covers it: another open WIP holding the same assembly carries a different build of it |
 | G4 | **Read back after import.** `list_solution_components` on the WIP (R1), and `query` over `sdkmessageprocessingstep`, `sdkmessageprocessingstepimage` and `customapi` to confirm message, table, stage, mode, rank, filtering attributes and images as planned |
-| G5 | **Check before `pac plugin push`.** The PAC profile matches the connection ([§4](#keeping-pac-cli-on-the-same-environment)). `query` reads the target `pluginassembly`: its name matches the built file's assembly name; its major and minor version match the build's (a change in either is a new registration — [§9.11](#911-direct-updates-in-development), version change); its `modifiedon` and `modifiedby` match the baseline taken when the work started, else someone else pushed and the person decides. G2 holds. For the project's shared assembly, the build is the Release configuration from merged source, not a developer branch. Afterwards `query` confirms the new `modifiedon` and version |
+| G5 | **Check before `pac plugin push`.** The PAC profile matches the connection ([§4](#keeping-pac-cli-on-the-same-environment)). `query` reads the target `pluginassembly`: its name matches the built file's assembly name; its major and minor version match the build's (a change in either is a new registration — [version change](#plug-in-assemblies--major-or-minor-version-change)); its `modifiedon` and `modifiedby` match the baseline taken when the work started, else someone else pushed and the person decides. G2 holds. For the project's shared assembly, the build is the Release configuration from merged source, not a developer branch. Afterwards `query` confirms the new `modifiedon` and version |
 
-Not yet verified live. Until it is ([notes](notes.md)), the person confirms the first use on a project against the read-back.
+Not verified live, and field use contradicts parts of it: `pac plugin push` did not register new plug-in types, and steps were neither exported nor created by an import ([Phase 7](#phase-7--plug-in-authoring)).
 
-### 9.11 Direct updates in development
-
-> [!NOTE]
-> **Phase 6.** Decided 2026-11-03 from field use; the analysis and decisions are in [notes](notes.md#phase-6--preparation). Nothing here is built until the Phase 6 spikes have run.
-
-Export, unpack, pack and import are the slowest part of the edit loop. For four kinds of component, updating development in place was weighed against that loop. Where it is adopted, the WIP still holds the components, for overlap checks, W10 and close-out. It is no longer how the edit gets into development.
-
-| Component | Decision | Path |
-|---|---|---|
-| Web resources | **Direct update** — one row per resource, content plus a targeted publish, and no PAC command does it | `update_web_resources` ([§6.8](#68-direct-update-tools-phase-6)) |
-| Plug-in assemblies, steps, custom APIs | **Push the build; mirror and switch steps with tools.** `pac plugin push` already updates a registered assembly; the step work around it is what takes time and goes wrong | `pac plugin push` after G5 ([§9.10](#910-plug-in-assemblies-steps-and-custom-apis-through-a-wip)); `mirror_steps`, `disable_steps`, `enable_steps`, `rebind_custom_apis` |
-| Code components (PCF) | **Guidance only** — PAC already updates a control in place and can put it in the WIP | `pac pcf push` (below) |
-| Power Pages | **Not pursued** | — (below) |
-
-#### Web resources
-
-1. Shape as usual: the web resource is in the story's Resources WIP, placed or in place (W9). A new one is created by the tool in that WIP.
-2. Baseline its `versionNumber` with `get_component_state`.
-3. Edit the file in source.
-4. `update_web_resources` with `expectedVersion`. It publishes the resources it wrote.
-5. Test, and repeat steps 3–4 with `versionAfter` from the result as the new baseline.
-6. End the WIP as its route says: W10 then deletion for an in-place WIP under B; close-out for a placement WIP; promotion under A.
-
-Adding a script to a form's libraries or events is a form edit and stays on the import path.
+**Faster iteration in development.** `pac plugin push` already updates a registered assembly; the step work around it is what takes time and goes wrong. The step tools ([§6.9](#69-plug-in-step-tools-phase-7)) cover it for side-loaded builds and for version changes. Where they are used, the WIP still holds the components, for overlap checks, W10 and close-out.
 
 #### Plug-in assemblies — side-loading
 
@@ -1850,7 +1860,7 @@ Some projects give each developer a **side-loaded build**. It is the same source
 4. **Iterate.** Build the side-loaded configuration and `pac plugin push` it to the side-loaded assembly (G5, without the shared-assembly checks).
 5. **Restore.** `disable_steps` on the mirrors, `enable_steps` on the originals, and `rebind_custom_apis` back to the shared assembly.
 6. **Update the shared assembly.** After the source is merged: Release build, G5, `pac plugin push` to the shared assembly, which its own Assemblies WIP holds.
-7. **Remove.** Delete the mirror steps and then the side-loaded assembly — an assembly cannot be deleted while steps depend on it. Then `pac solution delete` the side-load WIP. Deletion is the person's, in the Plugin Registration Tool, until Q14 is decided.
+7. **Remove.** Delete the mirror steps and then the side-loaded assembly — an assembly cannot be deleted while steps depend on it. Then `pac solution delete` the side-load WIP. Deletion is the person's, in the Plugin Registration Tool (Q14).
 
 **While a switch is open, it affects everyone.** Every user of the shared development environment runs the side-loaded code for the switched steps, not only the developer.
 
@@ -1865,27 +1875,59 @@ A change to an assembly's major or minor version makes it a new registration nex
 
 #### Step state is not transported
 
-A solution import that activates plug-ins enables every step in the solution being imported. PAC's `--activate-plugins` does this; the edit-loop helper passes it, and deployment pipelines commonly set it. A disabled step therefore stays disabled only until the next import that carries it, in development or downstream. This has already caused problems in field use.
+An import sets the state of every step the solution carries. With plug-in activation (`ImportSolutionRequest.PublishWorkflows`, PAC's `--activate-plugins`) they all end enabled; without it, they all end **disabled**. Their state at export, and in the target before the import, play no part: the exported step XML has no state element. Steps the solution does not carry are left alone. All of this was confirmed in spike S9, reproducing what field use had already run into. The edit-loop helper passes `--activate-plugins`, and deployment pipelines commonly set it. A step's state is therefore never carried by a solution — in development or downstream.
 
 | # | Rule | Why |
 |---|---|---|
-| M1 | **Mirrors are created disabled.** Which copy runs changes only through an explicit `disable_steps` / `enable_steps` call | Switching is a decision, not a side effect of mirroring |
-| M2 | **A side-load WIP is never exported, imported, closed out or promoted.** It feeds no transport solution, and it ends by deletion after the restore. It is the one WIP outside R10 | Importing it would enable its mirrors next to the originals; nothing in it ships |
-| M3 | **Re-check open switches after every import into development** that carries a switched step — a WIP, or the alignment import under A (A8). The agent re-reads every step in the ledger's open switches and restores the intended state with the tools | Import re-enables the disabled originals, and both copies run |
-| M4 | **No open switch at an extract or a close-out.** Before transport is extracted from development (B) or a WIP is promoted (A), every switch is restored and every custom API is bound to the shared assembly | A step's state and a custom API's plug-in type are exported. A custom API bound to a side-loaded type makes the transport solution depend on an assembly that never ships |
-| M5 | **Retire a step by deleting it, not by disabling it** | A disabled step is enabled by the next import that carries it, and downstream it ships enabled (X3 for the deletion) |
+| M1 | **Mirrors start disabled.** The tool disables each mirror straight after creating it (a step cannot be created disabled — S9). Which copy runs changes only through an explicit `disable_steps` / `enable_steps` call | Switching is a decision, not a side effect of mirroring |
+| M2 | **A side-load WIP is never exported, imported, closed out or promoted.** It feeds no transport solution, and it ends by deletion after the restore. It is the one WIP outside R10 | Imported with activation it would enable its mirrors next to the originals — S9 saw both copies run. Without activation it would disable them all |
+| M3 | **Re-check open switches after every import into development** that carries a switched step — a WIP, or the alignment import under A (A8). The agent re-reads every step in the ledger's open switches and restores the intended state with the tools. A WIP carrying steps is imported with activation unless the person decides otherwise | An import with activation re-enables the disabled originals, and both copies run; one without disables every step it carries |
+| M4 | **No open switch at an extract or a close-out.** Before transport is extracted from development (B) or a WIP is promoted (A), every switch is restored and every custom API is bound to the shared assembly | A custom API's plug-in type is exported: bound to a side-loaded type, it makes the transport solution depend on an assembly that never ships. Step state is not exported, but an open switch at close-out is one nobody is watching any more |
+| M5 | **Retire a step by deleting it, not by disabling it** | No import carries a disabled state: the next one enables the step or, without activation, disables every step it carries (X3 for the deletion) |
 | M6 | **One switch per step at a time.** When a step's original is already disabled, or a mirror of it is enabled, the agent stops and asks the person | Two side-loads of one step would both run |
 | M7 | **Open switches are in the WIP ledger** with source and mirror step IDs and custom API bindings. The leftover check (X9) also looks for mirrors by their description marker and for disabled originals | A forgotten switch leaves a shared step disabled for everyone |
 
+### 9.11 Direct updates in development
+
+> [!NOTE]
+> **Phase 6.** Decided 2026-11-03 from field use; the analysis and decisions are in [notes](notes.md#phase-6--preparation). Nothing here is built yet. Plug-ins were part of this analysis and moved to Phase 7 the same day ([§9.10](#910-plug-in-assemblies-steps-and-custom-apis-phase-7)).
+
+Export, unpack, pack and import are the slowest part of the edit loop. For four kinds of component, updating development in place was weighed against that loop. Where it is adopted, the WIP still holds the components, for overlap checks, W10 and close-out. It is no longer how the edit gets into development.
+
+| Component | Decision | Path |
+|---|---|---|
+| Web resources | **Direct update** — one row per resource, content plus a targeted publish, and no PAC command does it | `update_web_resources` ([§6.8](#68-direct-update-tools-phase-6)) |
+| Plug-in assemblies, steps, custom APIs | **Deferred to Phase 7** with the rest of plug-in authoring. The proposal: push the build, and mirror and switch steps with tools | [§9.10](#910-plug-in-assemblies-steps-and-custom-apis-phase-7) |
+| Code components (PCF) | **Guidance only** — PAC already updates a control in place and can put it in the WIP | `pac pcf push` (below) |
+| Power Pages | **Not pursued** | — (below) |
+
+#### Web resources
+
+1. Shape as usual: the web resource is in the story's Resources WIP, placed or in place (W9). A new one is created by the tool in that WIP.
+2. Baseline its `versionNumber` with `get_component_state`.
+3. Edit the file in source.
+4. `update_web_resources` with `expectedVersion`. It publishes the resources it wrote.
+5. Test, and repeat steps 3–4 with `versionAfter` from the result as the new baseline.
+6. End the WIP as its route says: W10 then deletion for an in-place WIP under B; close-out for a placement WIP; promotion under A.
+
+Adding a script to a form's libraries or events is a form edit and stays on the import path.
+
 #### Code components (PCF)
 
-`pac pcf push` updates a control without a solution build. With `--incremental` it sends only the files that changed, as entity updates, and `--solution-unique-name` puts the control in a named solution[^6].
+`pac pcf push` updates a control without a solution build. With `--incremental` it sends only the files that changed, as entity updates, and `--solution-unique-name` puts the control in a named solution[^6]. Spike S11 (PAC 2.14.1, trial environment):
+
+| Push | What it did | Time |
+|---|---|---|
+| First, `--solution-unique-name <WIP>` | Built and imported a temporary wrapper solution, added the control to the WIP, published all customizations. No `PowerAppsTools_<prefix>` solution was left behind | 48 s |
+| Later, `--solution-unique-name <WIP> --incremental` | Updated only the control's changed resource web resource (`cc_<namespace>.<control>/bundle.js`), then published all customizations | 24 s |
+
+`--solution-unique-name` and `--publisher-prefix` cannot be combined; with the solution named, the prefix comes from its publisher. The solution must already exist — push does not create it.
 
 1. **Iterate without deploying where possible.** The test harness (`npm start watch`), and inside the app, a Fiddler AutoResponder rule that serves the local build output[^6].
 2. **Build.** `npm run build`. A push that other people will test uses a production build (`<PcfBuildMode>production</PcfBuildMode>` in the `.pcfproj`).
 3. **Version.** Push bypasses the version requirement, but a later solution import of the control needs the patch version raised. Raise it before the WIP is closed out with `pac pcf version --strategy manifest`, keeping the manifest and solution versions in step as the project's PCF convention says.
-4. **Push.** After the PAC profile check ([§4](#keeping-pac-cli-on-the-same-environment)), the first push is `pac pcf push --publisher-prefix <WIP publisher prefix> --solution-unique-name <Resources WIP>`, followed by `list_solution_components` on the WIP (R1). Later pushes add `--incremental`. Without `--solution-unique-name`, the push creates a `PowerAppsTools_<prefix>` solution that holds the control: a stray solution that the overlap check (W7) then reports.
-5. **Publish when needed.** If the change does not show after a hard refresh, publish. `pac solution publish` publishes every pending customization, and in a shared development environment others' too (X11). Spike S11 settles whether the push publishes on its own.
+4. **Push.** After the PAC profile check ([§4](#keeping-pac-cli-on-the-same-environment)), the first push is `pac pcf push --solution-unique-name <Resources WIP>` — the WIP exists already and gives the publisher — followed by `list_solution_components` on the WIP (R1). Later pushes add `--incremental`. Without `--solution-unique-name`, the push creates a `PowerAppsTools_<prefix>` solution that holds the control: a stray solution that the overlap check (W7) then reports.
+5. **Publishing is part of the push.** Every push publishes all customizations — in a shared development environment, others' pending changes too (X11). No separate publish is needed; if the change does not show, hard-refresh the browser.
 
 #### Power Pages — not pursued
 
@@ -2019,7 +2061,7 @@ Agent-side work that helps an agent use the plugin safely. Skills decide between
 | `agent-companion-context` | The delivery context and the steps ([§9.8](#98-delivery-context), T1–T6): connection and PAC match, publishers, segmentation map, transport solutions present and their sources, each WIP's close-out strategy, pipelines, protected prefixes. Also the WIP ledger's shape (K5) | A task will shape, edit or end a WIP, a change that will go through WIPs is being planned, a plan or a question needs a fact from the environment, or another skill needs a delivery fact it does not have | Any |
 | `agent-companion-transport-bootstrap` | Creating the transport solutions the work needs that do not exist yet, in order and under the right publisher; pulling in a first-party app's components ([§9.1](#91-cold-start--first-base-solution), [§9.3](#93-a-first-party-app-joins-the-solution)) | A transport solution or publisher the work needs is missing, or a first-party app has been installed | `agent-companion-wip-shaping` |
 | `agent-companion-wip-shaping` | Classification (W1, W2, T4); routes and WIP lifetimes (W9–W12); WIP names; create; add by Path A or B; read-back (R1); removal with shell cleanup (W13); overlap and dependency checks (W6, W7, X5) | A change touches a component — new, out-of-box, or already in transport | `agent-companion-wip-edit-loop` |
-| `agent-companion-wip-edit-loop` | Export; unpack outside the repository; baseline; local edits, plug-in registration included ([§9.10](#910-plug-in-assemblies-steps-and-custom-apis-through-a-wip)); validation scripts; overwrite check; pack; import in transport order (W5, X11) | A WIP holds its components and they need editing | `agent-companion-wip-close-out` |
+| `agent-companion-wip-edit-loop` | Export; unpack outside the repository; baseline; local edits; validation scripts; overwrite check; pack; import in transport order (W5, X11) | A WIP holds its components and they need editing | `agent-companion-wip-close-out` |
 | `agent-companion-wip-close-out` | Ending each WIP by its route: W10 for in-place WIPs; close-out by A or B with the X issues; promotion requests under T6; R1 after close-out; deletion; stragglers (X9) | A WIP has been imported and validated, or the person asks to end a WIP or a story | — |
 
 **Decision ownership.** Each decision belongs to one skill (K2):
@@ -2048,7 +2090,7 @@ Agent-side work that helps an agent use the plugin safely. Skills decide between
 | K4 | **No skill-local defaults for delivery facts.** No skill assumes a strategy, a build environment, a pipeline or a transport source; they come from the delivery context (R15) |
 | K5 | **One shared record of the work.** A task's WIPs are kept in one shape that every skill reads and updates — the *WIP ledger*: for each WIP its name, connection, group, route, components, baseline, import state and how it will end — next to the delivery context and the confirmed steps. The shape is defined once, in `agent-companion-context`'s references. The ledger lives in the conversation and, where the person wants it kept, in the task's implementation plan |
 | K6 | **The environment wins over the ledger.** A skill entering a task already under way — a hand-off from another skill, or a new session — re-reads the WIPs with `list_solutions` and `list_solution_components` and reconciles the ledger before acting |
-| K7 | **Existing skills keep their procedures and keep working without the plugin; when it is connected, they use it.** `power-automate-flow-editing` and the other existing skills gain at most a short note that the agent may use it — for example to create the WIP. `d365ce-planning` goes further, because a plan made without the environment or the delivery context is wrong in ways the plan cannot show: when the plugin is connected, research reads the development environment through it; environment changes the agent can carry out through a WIP with the plugin and PAC CLI — plug-in registration included ([§9.10](#910-plug-in-assemblies-steps-and-custom-apis-through-a-wip)) — are agentic tasks; and before writing the tasks for WIP work it applies `agent-companion-context` for the delivery context, the close-out strategy first (§9.8). Without the plugin it uses the tooling that is available — another MCP server with access to the environment, PAC CLI, the extract — and plans as agentic only what that tooling can carry out and verify. Otherwise, fitting together is the companion skills' job. Where an existing skill covers a step, the companion skills defer to it for that step and supply only what it leaves open. For example, `power-automate-flow-editing` owns a cloud flow's edit and its import flags for that WIP, while `agent-companion-wip-shaping` can supply the WIP (cloud flows are type 29, not among `add_solution_components`' v1 types, so Path B). A plan from `d365ce-planning` that names WIPs or routes is taken as a proposal, still subject to classification |
+| K7 | **Existing skills keep their procedures and keep working without the plugin; when it is connected, they use it.** `power-automate-flow-editing` and the other existing skills gain at most a short note that the agent may use it — for example to create the WIP. `d365ce-planning` goes further, because a plan made without the environment or the delivery context is wrong in ways the plan cannot show: when the plugin is connected, research reads the development environment through it; environment changes the agent can carry out through a WIP with the plugin and PAC CLI are agentic tasks, while plug-in registration stays manual until [Phase 7](#phase-7--plug-in-authoring); and before writing the tasks for WIP work it applies `agent-companion-context` for the delivery context, the close-out strategy first (§9.8). Without the plugin it uses the tooling that is available — another MCP server with access to the environment, PAC CLI, the extract — and plans as agentic only what that tooling can carry out and verify. Otherwise, fitting together is the companion skills' job. Where an existing skill covers a step, the companion skills defer to it for that step and supply only what it leaves open. For example, `power-automate-flow-editing` owns a cloud flow's edit and its import flags for that WIP, while `agent-companion-wip-shaping` can supply the WIP (cloud flows are type 29, not among `add_solution_components`' v1 types, so Path B). A plan from `d365ce-planning` that names WIPs or routes is taken as a proposal, still subject to classification |
 | K8 | **When two instructions still differ, stop.** If active skills give different instructions for the same step, the agent follows neither silently. It tells the person and follows the stricter one if the person agrees. The difference is then a defect to fix in the companion skills |
 
 **Scripts**
@@ -2074,7 +2116,7 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 
 ### Phase 5 — Release
 
-**Status (2026-10-31): built; live exit checks pending.** The setup wizard, the GitHub workflow, the package manifest and the README are in place, and the repository pages describe the plugin as built. Waiting on a person: the nuget.org trusted-publishing policy, the Tool Library install and uninstall, and the wizard's live checks. The column-3 guide changes wait for the release. Implementation choices and the exit-check steps are in [notes.md](notes.md#phase-5--execution).
+**Status (2026-11-03): released.** The plugin is published in the XrmToolBox Tool Library. The column-3 guide changes listed below were to follow the release and are still to be made. Implementation choices and the exit-check steps are in [notes.md](notes.md#phase-5--execution).
 
 - Tooling README with installation, client configuration (snippets in [Spikes/README.md](https://github.com/lspiguel/ai-tooling/blob/643fe93/tooling/AgentCompanionMcp/Spikes/README.md#client-registration-s4)), minimum client versions, what to do when a client shows an OAuth prompt, tool table, the one-tab-per-connection behaviour, settings, and the companion skills in [skills/](../../skills/) with how to install them for an agent client.
 - First-run setup wizard ([§8.7](#87-first-run-setup-wizard)): introduction, preconditions with copy-prompt and skill-export buttons, and a test prompt; the companion skills embedded as resources for export. After an update, a **Plugin updated** page offers the optional reinstall of the skills and the MCP configuration through agent prompts.
@@ -2096,7 +2138,7 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 ### Phase 6 — Planned enhancements
 
 > [!NOTE]
-> **Not to be built before release.** Phase 6 starts only after Phase 5 has shipped and feedback from real use has been reviewed, and that feedback may reshape or drop these items. They are listed now so that Phases 1 to 5 leave room for them, without building them.
+> **Phase 5 has shipped (2026-11-03).** Phase 6 is being explored and shaped from real use before main development starts, and that may still reshape or drop these items. Spikes S10 and S11 ran on 2026-11-03; their results are written into [§6.8](#68-direct-update-tools-phase-6) and [§9.11](#911-direct-updates-in-development). Plug-in authoring, step mirroring and switching included, moved to [Phase 7](#phase-7--plug-in-authoring) the same day.
 
 | Enhancement | Behaviour | What v1 does to leave room |
 |---|---|---|
@@ -2104,18 +2146,48 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 | **Token in the Active Approvals window** | The bearer token moves off the main panel into the Active Approvals window, so the credentials and grants that decide what an agent can do sit in one place. The window shows the token masked, with **Copy** and **Regenerate**. **Copy client config** stays on the main panel for setup | Build the token display, **Copy** and **Regenerate** as one self-contained control backed by the token store (D8), so it can move without change. H4 is unchanged: one host-level token, and regenerating it affects every client |
 | **Scoped approvals for every tier but Publisher** | Every approval dialog except publisher creation offers the same four scopes: **Once**, **Session only**, **Per environment** and **Always** — Write calls included, and *Always* offered in the dialog rather than only in settings. Publisher creation stays once, with typed confirmation, and never for a session (R3). A scoped Write grant still leaves every Write call subject to the dev-environment confirmation, a non-blank reason (R12) and the fixed add flags (R1), and every call is still logged (R13). Grants are listed in Active Approvals with their tier | Keep the approval store keyed by tier as well as scope and organization, and route every dialog's choice through one scope selector, so Write grants become store entries rather than a new path. A scope other than *Once* authorizes later Write calls in advance — and that remains a person's decision, made in the dialog for one organization or, with *Always*, for all. It stays within R2 the way read scopes do today; when this is built, R2 and the instructions file's fixed safety behaviour are reworded to name scoped Write approvals explicitly |
 | **Direct web resource updates** | `update_web_resources` ([§6.8](#68-direct-update-tools-phase-6)): create or update web resources from local files in a WIP, with the overwrite check inside the tool and a targeted publish; the **File roots** tab setting. An edit-and-push loop calls it often, so scoped Write approvals make it practical | Specified after v1 was built (2026-11-03); v1 is unchanged |
-| **Step mirroring and switching** | `mirror_steps`, `disable_steps`, `enable_steps` and `rebind_custom_apis` ([§6.8](#68-direct-update-tools-phase-6)); side-load WIP naming; rules M1–M7 ([§9.11](#911-direct-updates-in-development)); G5 before `pac plugin push` ([§9.10](#910-plug-in-assemblies-steps-and-custom-apis-through-a-wip)) | Specified after v1 was built (2026-11-03); v1 is unchanged |
-| **Skill changes for direct updates** | `agent-companion-wip-edit-loop`: web resources through `update_web_resources`; the PCF push guidance; assemblies through G5 and `pac plugin push`; M3 after every import. `agent-companion-wip-shaping`: side-load WIPs and `Get-WipName.ps1`'s `_Sideload` suffix. `agent-companion-context`: open switches in the ledger (M7). `agent-companion-wip-close-out`: M4 before close-out, mirrors and disabled originals in the leftover check | — |
+| **Plug-in components in `add_solution_components`** | Plug-in assemblies, steps, custom APIs and their request parameters and response properties accepted, already registered, with the same fixed behaviour, one approval for the list, read-back and log entry as the other types ([§6.6](#add_solution_components)). Custom API codes resolved per environment. Registration stays with a person until [Phase 7](#phase-7--plug-in-authoring) | v1 refuses these types with `invalid_argument`; PAC adds them (Path B). `get_required_components` and `remove_solution_component` take the wider selector too |
+| **Skill changes for direct updates** | `agent-companion-wip-edit-loop`: web resources through `update_web_resources`; the PCF push guidance. `agent-companion-wip-shaping`: the MCP path for plug-in assemblies, steps, custom APIs, request parameters and response properties, each step added on its own | — |
 
-**Spikes before the direct-update tools.** Run on the data-free sandbox, as Phase 0's were:
+**Spikes before the direct-update tools.** Run 2026-11-03 on a data-free trial environment; details in [notes](notes.md#spikes-s9s11--2026-11-03). S9, on plug-in steps, ran with them and now belongs to [Phase 7](#phase-7--plug-in-authoring).
 
-| ID | Question | Feeds |
-|---|---|---|
-| S9 | Steps: can a step be created with `statecode` 1, or only disabled after creation? Can two assemblies register the same `typename`? Do images and a secure configuration copy as specified? Does an import with `--activate-plugins` enable only the steps in the imported solution? Does changing a custom API's `plugintypeid` take effect at once? | `mirror_steps`, M1, M3, `rebind_custom_apis` |
-| S10 | Web resources: does an update raise `versionNumber` every time? Does `PublishXmlRequest` for only the written resources make them current in the app? Time a small WIP export–import round trip against a direct update of the same resource | `update_web_resources`; whether the gain justifies it |
-| S11 | PCF: do `--incremental` and `--solution-unique-name` behave as documented together? Does `pac pcf push` publish, or is a publish needed? | §9.11 PCF guidance |
+| ID | Question | Result | Feeds |
+|---|---|---|---|
+| S10 | Web resources: version behaviour, targeted publish, and the time against a WIP round trip | `versionNumber` rises on every update, identical content included, and again on publish. A targeted publish makes the content current. Direct ≈ 3.5 s against 25–50 s for export, import and publish-all | `update_web_resources`; the gain justifies it |
+| S11 | PCF: `--incremental` with `--solution-unique-name`; does push publish? | Both work together; the solution must exist and excludes `--publisher-prefix`. Every push publishes all customizations. First push 48 s, incremental 24 s | §9.11 PCF guidance |
 
-**Exit:** with grants of every scope in place for two organizations, each grant is listed in its section, revoking one or resetting a section takes effect on the next call, and the main panel no longer shows the token. A Write call approved *Per environment* runs the next Write to that organization without a dialog but with its log line pair; a publisher creation still prompts every time. For the direct-update tools: on the sandbox, a web resource edit is written, published and visible in the app without an import, and a stale `expectedVersion` is refused. A step is mirrored to a side-loaded assembly disabled, switched, restored and its mirror removed. An import with `--activate-plugins` of a WIP holding a switched original is caught by M3.
+S10 ran through a throwaway SDK console with its own sign-in, not through the plugin. It establishes platform behaviour only: the tool itself is verified through the plugin at Phase 6 exit. Later spikes use the plugin and the person's PAC profile only.
+
+**Exit:** with grants of every scope in place for two organizations, each grant is listed in its section, revoking one or resetting a section takes effect on the next call, and the main panel no longer shows the token. A Write call approved *Per environment* runs the next Write to that organization without a dialog but with its log line pair; a publisher creation still prompts every time. For the direct-update tools: on the sandbox, a web resource edit is written, published and visible in the app without an import, and a stale `expectedVersion` is refused. For plug-in components: an assembly, two of its steps — one with an image — and a custom API with a request parameter and a response property, all registered beforehand, are added to a WIP by name, unique name or ID in one call. The read-back shows what the platform added with each, recorded in [notes](notes.md); nothing unexpected is left unreported. An export of the WIP carries the steps with their image and the custom API with its parameter and property. This also answers part of spike S12.
+
+### Phase 7 — Plug-in authoring
+
+> [!NOTE]
+> **Deferred (2026-11-03), at the person's choice, to prioritize other work.** Starts with spike S12. Until then plug-in registration is a person's, in the Plugin Registration Tool: the companion skills do not carry it, and `d365ce-planning` plans it as manual ([§9.10](#910-plug-in-assemblies-steps-and-custom-apis-phase-7)).
+
+Specified with Phase 6 and split off when field use showed that plug-in authoring has quirks the design does not account for. On a project, an agent added plug-ins to an existing assembly with `pac plugin push`:
+
+| Seen | Against the design |
+|---|---|
+| `pac plugin push` did not register the new plug-in types in the assembly | §9.10 already sends a build that adds types to the Plugin Registration Tool or to the WIP path; nothing in the agent's path did either |
+| Steps were missing from the solutions exported | Steps are not added to a solution with their assembly[^5]; whether they had been added on their own is not known |
+| After importing, the steps were not created | The WIP path (G1–G4) has not been verified live |
+
+| Enhancement | Behaviour |
+|---|---|
+| **Plug-in registration through a WIP** | New and changed assemblies, plug-in types, steps, images and custom APIs authored in the unpacked WIP and imported with PAC; rules G1–G4 ([§9.10](#910-plug-in-assemblies-steps-and-custom-apis-phase-7)) |
+| **`pac plugin push` for a registered assembly** | A new build pushed after G5, with the assembly still held by its WIP; a build that adds plug-in types needs them registered by another route |
+| **Step mirroring and switching** | `mirror_steps`, `disable_steps`, `enable_steps` and `rebind_custom_apis` ([§6.9](#69-plug-in-step-tools-phase-7)); side-load WIP naming (`_Sideload`, [§9.5](#95-transport-solutions-and-segmented-wip-solutions)); rules M1–M7 |
+| **Skill changes** | `agent-companion-wip-edit-loop`: registration through the WIP, G1–G5, `pac plugin push`, M3 after every import. `agent-companion-wip-shaping`: what a WIP must hold for registration, plug-in assemblies in the overlap check (G3), side-load WIPs and `Get-WipName.ps1`'s `_Sideload` suffix. `agent-companion-context`: the G and M rules in its rule index, open switches in the ledger (M7). `agent-companion-wip-close-out`: M4 before close-out, mirrors and disabled originals in the leftover check. `d365ce-planning`: registration as agentic work once the path is verified (K7) |
+
+**Spikes.** S9 ran on 2026-11-03 with Phase 6's spikes; S12 comes first when Phase 7 starts. S12 uses the plugin and the person's PAC profile only, on a data-free environment.
+
+| ID | Question | Result | Feeds |
+|---|---|---|---|
+| S9 | Steps: created disabled? Same `typename` in two assemblies? Images and secure configuration copied? What does an import do to step state? Custom API rebinding? | Not creatable disabled — create, then disable. Same `typename` allowed. Images, unsecure and secure configuration copied, and the mirror ran with identical inputs. An import sets every step it carries — enabled with activation, disabled without — and leaves others alone; no state in the export. Custom API rebinding effective within a second. Ran through a throwaway SDK console, not the plugin ([notes](notes.md#spikes-s9s11--2026-11-03)) | `mirror_steps`, M1–M5, `rebind_custom_apis` |
+| S12 | Registration round trip, starting from the field findings above. Does `pac plugin push` ever register new plug-in types, and if not, which route does — a WIP import with new `PluginType` entries in `.dll.data.xml`, or only the Plugin Registration Tool? What must a WIP hold for its export to carry steps, images and custom APIs — each step added as 92, the assembly with its subcomponents, or something else? Does importing a WIP with a new step file and its `RootComponent` create the step, with which import flags, and what makes the packager or the import skip it silently — a missing `Customizations.xml` anchor node, an unregistered plug-in type? The same for a custom API with request parameters and response properties | — | §9.10, G1–G5, the skill changes |
+
+**Exit:** on the sandbox, through the plugin and PAC only: a story adds a plug-in type and a step with an image to an existing assembly, and a new custom API, by the path S12 settles; the read-back shows each as planned (G4); an export of the WIP carries them, and importing that export where they do not exist creates them. A step is mirrored to a side-loaded assembly disabled, switched, restored and its mirror removed. An import with `--activate-plugins` of a WIP holding a switched original is caught by M3.
 
 ---
 
@@ -2139,9 +2211,9 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 | After import | Components behave as intended in the app; the WIP solution contains only what the story touched |
 | Ribbon changes | Button rules and commands reviewed against the base ribbon, not only the diff |
 | A direct web resource update *(Phase 6)* | Each path, size and SHA-256 is the file intended; the WIP is the story's Resources WIP ([§6.8](#68-direct-update-tools-phase-6)) |
-| A step switch *(Phase 6)* | Exactly one copy of each step will run after the switch, and the people sharing the development environment know their steps run side-loaded code meanwhile (M6, [§9.11](#911-direct-updates-in-development)) |
-| Before an extract from development, a promotion or a close-out *(Phase 6)* | No open switch: originals enabled, mirrors disabled or removed, custom APIs bound to the shared assembly (M4) |
-| `pac plugin push` to a shared assembly *(Phase 6)* | Release build from merged source; G2 and G5 passed |
+| A step switch *(Phase 7)* | Exactly one copy of each step will run after the switch, and the people sharing the development environment know their steps run side-loaded code meanwhile (M6, [§9.10](#step-state-is-not-transported)) |
+| Before an extract from development, a promotion or a close-out *(Phase 7)* | No open switch: originals enabled, mirrors disabled or removed, custom APIs bound to the shared assembly (M4) |
+| `pac plugin push` to a shared assembly *(Phase 7)* | Release build from merged source; G2 and G5 passed |
 | Ending an in-place WIP | Every component in it already has a transport home; under A it has been promoted (W10) |
 | Aligning development from build | The transport solution was exported unmanaged from the build environment and carries no local edits; the open WIPs' shared whole documents were reviewed; nothing managed from the project is imported into development (A8, R14, R16) |
 | Close-out | All of the story's placement WIPs, in transport order; the strategy fits each destination's transport source ([§9.7](#97-close-out-strategies)); no dependency points up the order; deletions handled by hand; no WIP deployed downstream (W5, W6, X3, X8, R11) |
@@ -2153,7 +2225,6 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 | # | Question | Raised by |
 |---|---|---|
 | Q13 | A model-driven app in a WIP exports with an empty `AppModuleComponents` even when the app has components. What does importing that WIP do to the app's component list? To be tested on a test app, never a real one | E4 |
-| Q14 | Removing mirror steps and a side-loaded assembly at the end of a side-load ([§9.11](#911-direct-updates-in-development) step 7) is the person's, in the Plugin Registration Tool. Should a `delete_mirror_steps` tool do it — limited to steps carrying the mirror marker, and to an assembly with no steps left — given that the plugin otherwise never deletes (X3)? | Analysis 2026-11-03 |
 
 ### Resolved
 
@@ -2171,6 +2242,7 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 | Q10 | Two routes per component — placement and in place — mixed freely. An in-place WIP is deleted once its edit has reached the transport source; a transport solution is never the edit vehicle, though under A it may be imported unmanaged from build to align development (A8); no managed project solution is ever imported into development (R16) | [§9.9](#99-routes--placing-a-component-or-editing-it-in-place), R14 |
 | Q11 | Phase 4 skills are new `agent-companion-*` skills in `skills/`, whose frontmatter states they are used with this plugin; they are split by concern, apply on conditions rather than project phases, and share one delivery context and WIP ledger. Existing skills keep their procedures and are not made to depend on the plugin | [Phase 4](#phase-4--agent-skills-and-scripts) |
 | Q12 | A relationship's parent table shells, and a 1:N's referencing lookup column, are expected platform additions: the tool reports them as the relationship's parents rather than as unexpected (plugin change, not yet built). Unless the change customizes them, the agent removes them afterwards; when in doubt it asks the person | [§6.6](#add_solution_components) step 5; shaping skill |
+| Q14 | No delete tool. Removing mirror steps and a side-loaded assembly at the end of a side-load stays with the person, in the Plugin Registration Tool; the plugin never deletes (X3) | [§9.10](#plug-in-assemblies--side-loading) step 7 |
 
 ---
 

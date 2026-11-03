@@ -43,6 +43,26 @@ The full playbook is the **[Activity × Tooling Matrix](workflows/ai-augmented-d
 
 ---
 
+## Spotlight: Agent Companion MCP
+
+**[D365 Agent Companion MCP](tooling/D365AgentCompanionMcp/README.md)** is an XrmToolBox plugin, available in the XrmToolBox Tool Library, that gives a local coding agent live, person-approved access to a Dataverse environment over the Model Context Protocol.
+
+**The gap it closes.** A coding agent can read and edit everything already in a solution export. It cannot see what is not in one yet — an out-of-box form nobody has customized, the view a story has to change, a table's ribbon — and PAC CLI can neither create an empty solution nor add a table without all its subcomponents.
+
+| It gives the agent | It keeps with a person |
+|---|---|
+| Discovery: connections, publishers, solutions and their components, tables, relationships, choices, forms, views, classic ribbons, FetchXML over configuration tables, and component state for the overwrite check | Approving **every call**, in the plugin tab bound to that environment, with the agent's stated reason beside the arguments |
+| Solution shaping: empty unmanaged work-in-progress (WIP) solutions, and existing components added **without required components or subcomponents** — then read back | Confirming which connection is development; Write calls refuse anywhere else |
+| A visible log of every call and its outcome, per environment | Publisher creation (off by default), deletions, pipeline runs, commits and pushes |
+
+**How it is used.** PAC CLI exports, unpacks, packs and imports; the plugin covers what PAC cannot. Five `agent-companion-*` [skills](skills/) carry the delivery method: delivery context and a WIP ledger, segmented WIPs per story and transport group, a local edit loop with an overwrite check before every import, and close-out into transport solutions. The plugin's setup wizard exports the skills and copies the client configuration; Claude Code and GitHub Copilot in VS Code are tested.
+
+**Where it is going.** Phase 6 is being shaped from field use: direct updates in development for web resources, so that common edits skip the slow solution round trip. Plug-in authoring — registration through WIP solutions, and mirroring and switching steps for side-loaded assemblies — is deferred to Phase 7, which starts with a spike. See the [spec](tooling/D365AgentCompanionMcp/SPEC.md#phase-6--planned-enhancements).
+
+Install: XrmToolBox → *Tool Library* → search for *D365 Agent Companion MCP*. Conventions for agents using it are in [INSTRUCTIONS.md](INSTRUCTIONS.md#using-the-mcp).
+
+---
+
 ## Where the AI runs: the tool taxonomy
 
 The workflows are organized by a six-category taxonomy of **deployment context and execution model** — where the AI runs, not which model:
@@ -67,7 +87,7 @@ Categories 1 and 3 carry the developed workflows today; the rest are still in fl
 | [workflows/3-coding-assistants](workflows/3-coding-assistants/README.md) | Workflows using IDE-embedded and CLI/agentic coding AI (e.g., GitHub Copilot, Claude Code, Cursor) |
 | workflows/[2](workflows/2-desktop-automation-agents/) · [4](workflows/4-platform-embedded-copilots/) · [5](workflows/5-agent-builder-frameworks/) · [6](workflows/6-ai-augmented-specialty-tools/) | Pending: desktop automation agents, platform-embedded copilots, agent builder frameworks, AI-augmented specialty tools |
 | [docs/](docs/) | Reference documentation, including the [AI Tool Taxonomy](docs/ai-tool-taxonomy.md), architecture notes, and decision records |
-| [tooling/](tooling/) | Custom tooling: the [D365 Context Exporter](tooling/D365ContextExporter/README.md), and the [Agent Companion MCP](tooling/D365AgentCompanionMcp/README.md) — an XrmToolBox plugin giving a coding agent person-approved Dataverse operations, release in progress |
+| [tooling/](tooling/) | Custom tooling: the [D365 Context Exporter](tooling/D365ContextExporter/README.md), and the [Agent Companion MCP](tooling/D365AgentCompanionMcp/README.md) — an XrmToolBox plugin giving a coding agent person-approved Dataverse operations, available in the XrmToolBox Tool Library ([spotlight](#spotlight-agent-companion-mcp)) |
 | [skills/](skills/) | Reusable skills and reference guides for AI assistants |
 | [scripts/](scripts/) | Utility scripts supporting AI-assisted tasks and automation |
 | [INSTRUCTIONS.md](INSTRUCTIONS.md) | Conventions, hard rules, and working agreements for AI tools contributing to this repository |

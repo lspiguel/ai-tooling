@@ -133,16 +133,16 @@ A question carries the recommended answer, why, and what the alternatives change
 **The close-out strategy is never skipped as an unnecessary question.** Some agent clients push to act without asking; this one question still has to be settled, because it decides who does what, which environment the release is extracted from, and when each WIP is deleted. A plan or a close-out built on the wrong strategy puts work where it never ships. If no source settles it, ask — once, early, with the evidence.
 
 ```
-I could not settle how the Assemblies WIP ends. No delivery facts are recorded. The
+I could not settle how the Base WIP ends. No delivery facts are recorded. The
 repository has no pipeline definitions, and no build environment is bound. In development,
-earlier WIPs are named "… Assemblies - PROMOTED".
+earlier WIPs are named "… Base - PROMOTED".
 
 Recommendation: A — promote to build. The WIP is imported and validated in development and
 left for you to promote; transport is extracted from build. Please bind the build
 environment in a second plugin tab, left unconfirmed, so I can verify after promotion.
 
-If Assemblies is instead extracted from development (B — consolidate in development), I add
-the new components to the Assemblies transport solution in development, verify it and
+If Base is instead extracted from development (B — consolidate in development), I add
+the new components to the Base transport solution in development, verify it and
 delete the WIP; the next extract ships them. Which is it?
 ```
 

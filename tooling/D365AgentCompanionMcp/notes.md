@@ -13,8 +13,9 @@
 | [2 — Discovery](SPEC.md#phase-2--discovery) | **Done** (2026-10-31) — built, unit-tested (176 tests), and the live exit checks passed against the sandbox; four findings (L1–L4) fixed on the way. See [Phase 2 — execution](#phase-2--execution) | See spec |
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | **Done** (2026-10-31) — built, unit-tested (207 tests), and the cold-start workflow (§9.1) ran end to end on the sandbox; two findings (P1, P2) for the Phase 4 skills. See [Phase 3 — execution](#phase-3--execution) | See spec |
 | [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | **In progress** (2026-10-31) — five companion skills and their scripts built; script self-tests pass (35 + 11). Live exit checks: I31 verified; scenarios 1–4 pass; scenario 5 desk-checked; scenario 6 partial — the imported flow did not fire (E13). Findings E1–E13. See [Phase 4 — execution](#phase-4--execution) | See spec |
-| [5 — Release](SPEC.md#phase-5--release) | **In progress** (2026-10-31) — built: setup wizard (§8.7) with embedded skills and prompts, GitHub workflow, nuspec, icons, README; repository pages describe the plugin as built; 245 tests. Remaining, a person's: nuget.org trusted-publishing policy, Tool Library install, the wizard's live checks. Column-3 guide changes wait for the release. See [Phase 5 — execution](#phase-5--execution) | See spec |
-| [6 — Planned enhancements](SPEC.md#phase-6--planned-enhancements) | **Not started.** Direct updates in development specified (2026-11-03): web resources, step mirroring and switching, custom API rebinding, PCF guidance; Power Pages not pursued. Spikes S9–S11 first. See [Phase 6 — preparation](#phase-6--preparation) | See spec |
+| [5 — Release](SPEC.md#phase-5--release) | **Done** (2026-11-03) — published in the XrmToolBox Tool Library. Still to follow the release: the column-3 guide changes. See [Phase 5 — execution](#phase-5--execution) | See spec |
+| [6 — Planned enhancements](SPEC.md#phase-6--planned-enhancements) | **Exploring** (2026-11-03) — direct updates in development specified: web resources, PCF guidance; Power Pages not pursued. Spikes S10–S11 done. Shaping continues before main development. See [Phase 6 — preparation](#phase-6--preparation) | See spec |
+| [7 — Plug-in authoring](SPEC.md#phase-7--plug-in-authoring) | **Not started** (2026-11-03) — split from Phase 6 after field use (U10): registration through a WIP, `pac plugin push`, step mirroring and switching, custom API rebinding. Spike S9 done; S12 first when it starts. Deferred at the person's choice | See spec |
 
 Status values: *Not started* · *In progress* · *Blocked* (say on what) · *Done*.
 
@@ -47,13 +48,67 @@ Cross-cutting points that shaped the tools:
 |---|---|---|
 | U7 | **Imports re-enable disabled steps.** Solution import with plug-in activation enables every step in the imported solution, so a disabled step does not stay disabled — reported by the person from field use, where it has already caused problems. The edit-loop helper passes `--activate-plugins` (`Invoke-EditLoopStep.ps1`), as pipelines commonly do | Rules M1–M7 in SPEC §9.11: mirrors created disabled, switching only by explicit calls, a side-load WIP never imported, open switches re-checked after every import and closed before extract or close-out, retire by deleting |
 | U8 | **Environment manifest tracked in git.** On a client project, the Power Pages environment manifest (`<org-url>-manifest.yml`) is committed. Microsoft says to git-ignore it; tracked, each developer's delta upload is computed against another's download | Recorded in SPEC §9.11 (Power Pages, not pursued); raise with the project, not a plugin change |
-| U9 | **Step mirroring also serves version changes.** A major or minor version change registers a new assembly beside the old one; mirroring the steps to it is the same operation as for a side-load | `mirror_steps` takes any target assembly; version-change flow in SPEC §9.11 |
+| U9 | **Step mirroring also serves version changes.** A major or minor version change registers a new assembly beside the old one; mirroring the steps to it is the same operation as for a side-load | `mirror_steps` takes any target assembly; version-change flow in SPEC §9.11 (§9.10 since U10) |
+| U10 | **Plug-in authoring does not work as specified.** The person tested another agent (not Claude) adding plug-ins to an existing assembly with `pac plugin push`. The push did not register the new plug-in types; steps were missing from the solutions exported; after import, the steps were not created. The quirks need a spike before anything is built or put in a skill | Plug-in authoring moved to SPEC Phase 7, starting with spike S12: §9.10 (now with side-loading, version change and M1–M7), the step tools in §6.9, G1–G5. The plug-in edits on this branch's skills removed — `plugin-registration.md`, the G rules, the plug-in rows in edit loop and shaping; `d365ce-planning` plans registration as manual again. The research queries and the allow-list (U6) stay |
+
+### Spikes S9–S11 — 2026-11-03
+
+On a data-free trial environment the person provided for spikes. Its URL stays out of this file (R7).
+
+**Method.** S9 and S10 ran through a throwaway SDK console in the session scratchpad, with its own interactive sign-in. A minimal plug-in assembly was registered twice: as `Spike.S9.Plugins` and, compiled under a suffixed name, as `Spike.S9.Plugins.XY` — the side-load pattern. Its step plug-in throws a message naming the assembly that ran and the configuration and image it received; its custom API plug-in returns the assembly name. The person stopped the console's sign-in prompts as outside the design: environment access is through the plugin and PAC profiles only. S11 ran with PAC on the person's profile. The results below are platform behaviour; the tools are still to be verified through the plugin.
+
+**S9 — steps and custom APIs**
+
+| Check | Result |
+|---|---|
+| Same `typename` in two assemblies | Allowed |
+| Create a step with `statecode` 1 and `statuscode` 2 | Refused: *2 is not a valid status code for state code Enabled* — the create treats the step as enabled |
+| Create with `statecode` 1 only | Accepted, but the step is **enabled** — `statecode` is ignored on create |
+| Create then disable | Works; both copies can run for the moment in between |
+| Secure configuration | Readable by a System Administrator; copied to a new `sdkmessageprocessingstepsecureconfig` row |
+| Mirror inputs | After the switch the mirror ran with the same unsecure configuration, secure configuration and pre-image as the original |
+| Step created with `SolutionUniqueName` | Only the step (92, behaviour 0) is added; images and secure configuration are not separate components. Assemblies created the same way are added (91); the custom API was added with an environment-specific type code (10038 there) |
+| Export | The step XML has no state element. It carries configuration, images and the plug-in type; the secure configuration is never exported |
+| Import, step disabled, no activation (T1) | Disabled |
+| Import, activation (T2) | Original enabled; the mirror, not in the solution, untouched |
+| Import, step enabled in the environment, no activation (T3, T5, T6) | **Disabled** — also with a zip exported while the step was enabled |
+| Import with activation while a switch is open (T4) | Original enabled, mirror still enabled: **both run** |
+| Custom API rebinding | `plugintypeid` changed by update; the next call ran the other assembly within 0.3–0.7 s, and back the same. `description` is required to create a custom API and its response properties |
+| Import times (one-step solution) | 6.5–15.6 s |
+
+**S10 — web resources**
+
+| Check | Result |
+|---|---|
+| `versionNumber` | Rises on every update — identical content included — and again on publish |
+| Published vs unpublished content | `Retrieve` returns the published content until the publish; `RetrieveUnpublishedRequest` returns the new content at once |
+| Direct update | Update 0.3–0.5 s; targeted `PublishXmlRequest` 2.9–3.8 s |
+| Round trip, one-resource WIP | Export 6.6–8.2 s; import 7.2–12.8 s; publish-all 11.5–31.2 s. Unpack and pack not included |
+
+**S11 — PCF with PAC 2.14.1**
+
+| Check | Result |
+|---|---|
+| `--solution-unique-name` with `--publisher-prefix` | Refused: only one of the two |
+| `--solution-unique-name` for a solution that does not exist | Refused; push does not create it |
+| First push into the named solution | Wrapper solution built and imported, control added to the solution, publish-all; no `PowerAppsTools_new` left. 48 s |
+| `--incremental` after a code change | Only `cc_S11Spike.Probe/bundle.js` updated, then publish-all. 24 s |
+
+**Changes:** SPEC §6.8 (version handling, unpublished comparison, create-then-disable, what the platform adds), §9.11 (import sets every carried step's state; M1–M5 reworded; PCF push guidance), Phase 6 spike table.
+
+**Left in the trial environment.** Solutions `S9Spike`, `S9Import`, `S10Spike` and `S11Spike`. Under them: the two spike assemblies with their types, the original and mirror steps on *Update of account* with images and secure configurations, the custom API `new_S9Api`, the web resource `new_/s10spike/probe.js` and the control `S11Spike.Probe`. Outside any solution: an account named *S9 spike account*. **The original step is enabled and throws on every account name change.** Removing these needs the Plugin Registration Tool or XrmToolBox, not PAC — the person's to do.
 
 ### Open for Phase 6
 
-- **Spikes S9–S11** ([SPEC Phase 6](SPEC.md#phase-6--planned-enhancements)): above all, whether a step can be created disabled (M1), and whether a direct web resource update saves enough time over a small WIP round trip to justify the tool.
-- **Q14** — whether removing mirrors and a side-loaded assembly gets a tool or stays with the person in the Plugin Registration Tool.
-- **Skill changes** listed in the Phase 6 table, including `Get-WipName.ps1`'s `_Sideload` suffix. Not started; the skills ship in the package, so they wait for the tools.
+- **Shaping** continues before main development (person's decision, 2026-11-03).
+- **Plug-in components in `add_solution_components`** (person's request, 2026-11-03): assemblies, steps, custom APIs, request parameters and response properties, already registered — not authoring, which stays in Phase 7. Custom API codes are per environment, resolved through `solutioncomponentdefinition`; to confirm live, with what the platform adds with a custom API. SPEC §6.6.
+- **Q14** — decided: no delete tool; removal stays with the person.
+- **Skill changes** listed in the Phase 6 table. Not started; the skills ship in the package, so they wait for the tools.
+
+### Open for Phase 7
+
+- **Spike S12** first ([SPEC Phase 7](SPEC.md#phase-7--plug-in-authoring)), starting from U10: what registers new plug-in types, what a WIP must hold for its export to carry steps, and what makes an import create them. Through the plugin and the person's PAC profile only.
+- **Skill changes** listed in the Phase 7 table, including `Get-WipName.ps1`'s `_Sideload` suffix.
 
 ---
 
@@ -111,11 +166,11 @@ A planning session on a client project, with another vendor's agent in a code ed
 | U1 | The agent researched from repository files only and wrote "confirm in the environment" as open points, though the read tools were available. The client listed them as deferred tools — names only — and no skill tied research to the plugin. "Use the MCP to verify" became a plan step until the person said *now* | K7: `d365ce-planning` reads the environment through the plugin when it is connected; `agent-companion-context` gains a research section and planning triggers |
 | U2 | The agent read every companion skill and still wrote close-out B into the plan, and put "establish the delivery context" into a later task. T3 was tied to the first Write call, which a planning session never reaches | §9.8: the context is established while planning; T3: in a plan the steps are the task list |
 | U3 | The agent argued that promotion contradicts R11 and rewrote the person's promotion task into an extract from development. It ignored earlier WIPs in development named `… - PROMOTED`, and the person's own statement of the strategy | R11 says what *downstream* means; T1: the person's statement is a source; §9.8: earlier WIPs are evidence |
-| U4 | `d365ce-planning` defined agentic tasks as repository file edits, so a column change and plug-in registration were planned as manual | K7 and §9.10: registration through a WIP is agentic when the tooling can carry it out |
+| U4 | `d365ce-planning` defined agentic tasks as repository file edits, so a column change and plug-in registration were planned as manual | K7 and §9.10: registration through a WIP is agentic when the tooling can carry it out. **Reversed by U10:** registration is manual until Phase 7; a column change through a WIP stays agentic |
 | U5 | The project names WIPs `<initials> <work item> <Group>`, so the leftover and reconcile searches for `_Agent_WIP_` would miss them | §9.5: a project's own naming convention wins and is searched for |
 | U6 | The query for steps on a table joined `sdkmessagefilter`, `sdkmessage` and `plugintype`, outside the configuration allow-list, so it was flagged as touching records and would fail with record queries off | §6.5: the plug-in and custom API registration tables joined the allow-list; `FetchXmlQuery`, the `query` description and tests (251 pass); version 1.2026.11.1 |
 
-**Not verified live:** §9.10 — a new build of an existing assembly, a new step with an image, and a new custom API authored in an unpacked WIP and imported with PAC CLI. Until it runs on the sandbox, the person confirms the first use on a project against the read-back. `Test-UnpackedSolution.ps1` checks no packager anchors for these types yet.
+**Not verified live:** §9.10 — a new build of an existing assembly, a new step with an image, and a new custom API authored in an unpacked WIP and imported with PAC CLI. `Test-UnpackedSolution.ps1` checks no packager anchors for these types yet. Field use then contradicted it (U10), and it moved to Phase 7.
 
 The skills and the allow-list changed; the version is bumped to 1.2026.11.1 (two-file rule).
 
@@ -618,8 +673,8 @@ Raised by the desk research, the live spikes and field use. All closed.
 | D8 | **Stable bearer token and clearer 401** | Token kept across restarts, DPAPI-protected in the plugin settings, changed only by **Regenerate**; plain-text `401` body; README guidance for OAuth prompts | [SPEC §5](SPEC.md#host) (Authentication, H4), §6.2, §7, §11 |
 | D9 | **Cancelling a call when the client goes away** (Phase 1) | **Whitespace keep-alive**: a `tools/call` reply not ready within 2 s is committed as `200` with a chunked `application/json` body, and a space is written every 2 s until the JSON follows. A failed write cancels a queued or pending call and withdraws its dialog (`cancelled_by_client`, log only). A running call completes. `notifications/cancelled` does the same in handshake sessions. Chosen over SSE keep-alive comments, which would have amended the no-SSE rule, and over no detection | [SPEC §6.1](SPEC.md#61-protocol-surface), §6.2, §10, §11 |
 | D10 | **Web resources updated directly** (Phase 6) | `update_web_resources`: create or update from local files in a WIP, overwrite check inside the tool, targeted publish, files by path under **File roots** | [SPEC §6.8](SPEC.md#68-direct-update-tools-phase-6), §9.11, §11 |
-| D11 | **Assemblies and steps** (Phase 6) | A new build of a registered assembly goes through `pac plugin push` after G5. Three separate step tools: `mirror_steps` only mirrors, and always creates disabled; `disable_steps` and `enable_steps` switch, on purpose. The person's choice over one combined switch tool, so that which copy runs is never a side effect. Side-load WIP named `…_Assemblies_Sideload`, never imported (M2) | [SPEC §6.8](SPEC.md#68-direct-update-tools-phase-6), §9.5, §9.10 (G5), §9.11 (M1–M7) |
-| D12 | **Custom APIs** (Phase 6) | `rebind_custom_apis` — a custom API's main operation is its `plugintypeid`, which mirroring cannot cover; steps on its message use `mirror_steps` | [SPEC §6.8](SPEC.md#68-direct-update-tools-phase-6) |
+| D11 | **Assemblies and steps** (Phase 7 since U10) | A new build of a registered assembly goes through `pac plugin push` after G5. Three separate step tools: `mirror_steps` only mirrors, and always creates disabled; `disable_steps` and `enable_steps` switch, on purpose. The person's choice over one combined switch tool, so that which copy runs is never a side effect. Side-load WIP named `…_Assemblies_Sideload`, never imported (M2) | [SPEC §6.9](SPEC.md#69-plug-in-step-tools-phase-7), §9.5, §9.10 (G5, M1–M7) |
+| D12 | **Custom APIs** (Phase 7 since U10) | `rebind_custom_apis` — a custom API's main operation is its `plugintypeid`, which mirroring cannot cover; steps on its message use `mirror_steps` | [SPEC §6.9](SPEC.md#69-plug-in-step-tools-phase-7) |
 | D13 | **Power Pages** | Not pursued for now, at the person's choice: standard-model configuration is records outside solutions, and `pac pages upload` already uploads changes in place. A read-only drift check is the candidate if the topic returns | [SPEC §9.11](SPEC.md#911-direct-updates-in-development) |
 | D14 | **PCF** | Guidance only: build, raise the patch version, `pac pcf push --solution-unique-name <WIP>` (then `--incremental`), publish when the change does not show | [SPEC §9.11](SPEC.md#911-direct-updates-in-development) |
 
@@ -965,3 +1020,6 @@ Spike solutions left in the sandbox: `AgentSpikeS2A`, `AgentSpikeS2B`, `AgentSpi
 | 2026-10-31 | Spec §8.7: the wizard records the plugin version it was completed for; after an update a one-time **Plugin updated** page offers an optional reinstall of the skills and the MCP configuration through agent prompts (**Skip** or **Done** record the new version). Phase 5 bullet and exit updated; README gained a *Plugin upgrades* section |
 | 2026-10-31 | Phase 5 built. Setup wizard (§8.7): version gate on `SetupCompletedVersion`, three pages and the **Plugin updated** page laid over the main panel, seven prompts as text resources, the five companion skills embedded from `skills/` and exported one zip per skill; **Copy client config** shared with the MCP prompts and now names the endpoint and token. GitHub workflow `build-and-pack-d365-agent-companion-mcp.yml`, with the skills' script self-tests (11 and 31 pass locally). INSTRUCTIONS.md, CLAUDE.md, root README and matrix describe the plugin as built, release in progress; column-3 guides wait for the release. Release build 0 warnings; 245 tests pass. Choices I37–I45 recorded; live exit checks next |
 | 2026-11-03 | Phase 6 prepared in the spec from field use: direct updates in development analysed per component (notes, *Phase 6 — preparation*). D10–D14 decided: `update_web_resources`; `pac plugin push` after G5 for a registered assembly; `mirror_steps` (always disabled), `disable_steps`, `enable_steps`; `rebind_custom_apis`; PCF guidance only; Power Pages not pursued. U7 (imports re-enable disabled steps) gave rules M1–M7. SPEC §3, §6.2, §6.3, §6.8 (new), §7, §9.5 (`_Sideload`), §9.10 (G5), §9.11 (new), Phase 6 (S9–S11, exit), §12, Q14, references 5–7. Nothing built |
+| 2026-11-03 | Phase 5 done: the plugin is published in the XrmToolBox Tool Library. Q14 decided: no delete tool. Spikes S9–S11 run on a trial environment (S9, S10 through a throwaway SDK console — its sign-in prompts stopped by the person as outside the design; S11 through PAC). Key results: steps cannot be created disabled; an import sets every carried step enabled with activation and disabled without, with no state in the export; custom API rebinding is immediate; web resource version rises on every update and on publish; direct update ≈ 3.5 s against 25–50 s for a round trip; `pac pcf push` publishes all and needs an existing solution. Spec §6.8, §9.11, Phase 5 status, Phase 6 note and spike table updated. Spike components left in the trial environment for the person to remove |
+| 2026-11-03 | Plug-in authoring moved to a new Phase 7 after field use (U10): `pac plugin push` did not register new plug-in types, and steps were neither exported nor created by import. Spec: §3 (registration is a person's until Phase 7), §6.9 (step tools, split from §6.8), §7, §9.5 (`_Sideload` is Phase 7), §9.10 (Phase 7 notice; side-loading, version change and M1–M7 moved in from §9.11), §9.11, Phase 4 row, K7, Phase 6 (S9 and the step rows out), Phase 7 (new: field findings, enhancements, S9 and S12, exit), §12. W7 and X1 back to their wording without plug-in assemblies (G3 is Phase 7). Skills: the plug-in edits of this branch removed; research queries kept |
+| 2026-11-03 | Phase 6 gains plug-in components in `add_solution_components` (person's request): plug-in assembly 91 by name and version, step 92 by ID, custom API, request parameter and response property by `componentTable` with codes resolved per environment; registration stays a person's (Phase 7). Spec §6.6 (selectors, table, behaviour), §9.10 notice, Phase 6 table, skill-change row and exit |

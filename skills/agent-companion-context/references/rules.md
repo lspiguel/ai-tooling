@@ -44,7 +44,7 @@ The rules of the Agent Companion MCP specification (`tooling/D365AgentCompanionM
 
 | ID | Issue |
 |---|---|
-| X1 | In-flight changes leak through whole documents (forms, views, sitemaps, ribbon diffs, web resources, workflows, app modules, plug-in assemblies) |
+| X1 | In-flight changes leak through whole documents (forms, views, sitemaps, ribbon diffs, web resources, workflows, app modules) |
 | X2 | A WIP isolates only what is not yet in a transport solution when transport is extracted from development |
 | X3 | Deletions are not carried; they are separate, person-run tasks |
 | X4 | Moving a component between transport solutions risks deleting it downstream |
@@ -84,15 +84,6 @@ The rules of the Agent Companion MCP specification (`tooling/D365AgentCompanionM
 | B3 | Under B the transport solution is verified with `list_solution_components` after close-out |
 
 Strategies C (Git-linked solutions) and D (Power Platform pipelines) are not supported by these skills.
-
-## Plug-in registration through a WIP (G)
-
-| ID | Rule | Applied by |
-|---|---|---|
-| G1 | New files, `RootComponent` entries and `Customizations.xml` anchors for assemblies, steps, images and custom APIs are copied from an export that holds the same type, never written from memory; without one, the person decides | edit loop |
-| G2 | A new build keeps every plug-in type registered in development; a missing type stops the import | edit loop |
-| G3 | A plug-in assembly is a whole document; the overlap check covers it | shaping |
-| G4 | After import, read back the WIP and query steps, images and custom APIs against the plan | edit loop |
 
 ## Skill coexistence (K)
 
