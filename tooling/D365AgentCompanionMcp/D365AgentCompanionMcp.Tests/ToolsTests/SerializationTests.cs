@@ -109,6 +109,33 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
             Assert.That(query.Document.Root!.Attribute("count"), Is.Null);
         }
 
+        [Test]
+        public void FetchXml_PluginRegistrationTables_AreConfiguration()
+        {
+            var query = FetchXmlQuery.Parse(StepsOnATableFetch);
+
+            Assert.That(query.Tables, Is.EquivalentTo(new[] { "sdkmessageprocessingstep", "sdkmessagefilter", "sdkmessage", "plugintype" }));
+            Assert.That(query.TouchesRecords, Is.False);
+        }
+
+        [TestCase("sdkmessageprocessingstepimage")]
+        [TestCase("customapirequestparameter")]
+        [TestCase("customapiresponseproperty")]
+        public void FetchXml_PluginRegistrationRoot_IsConfiguration(string table)
+        {
+            var query = FetchXmlQuery.Parse($"<fetch><entity name=\"{table}\"><attribute name=\"name\" /></entity></fetch>");
+
+            Assert.That(query.TouchesRecords, Is.False);
+        }
+
+        [Test]
+        public void QueryDescription_NamesEveryConfigurationTable()
+        {
+            var description = QueryTool.QueryToolDefinition().Description;
+
+            Assert.That(FetchXmlQuery.ConfigurationTables.Where(t => !description.Contains(t)), Is.Empty);
+        }
+
         [TestCase("not xml")]
         [TestCase("<query />")]
         [TestCase("<fetch />")]
@@ -121,5 +148,11 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
             Assert.That(ex!.Code, Is.EqualTo(ToolErrorCodes.InvalidArgument));
             Assert.That(ex.Details!["argument"]!.ToString(), Is.EqualTo("fetchXml"));
         }
+
+        internal const string StepsOnATableFetch = "<fetch><entity name=\"sdkmessageprocessingstep\"><attribute name=\"name\" /><attribute name=\"stage\" />"
+            + "<link-entity name=\"sdkmessagefilter\" from=\"sdkmessagefilterid\" to=\"sdkmessagefilterid\"><filter><condition attribute=\"primaryobjecttypecode\" operator=\"eq\" value=\"10001\" /></filter></link-entity>"
+            + "<link-entity name=\"sdkmessage\" from=\"sdkmessageid\" to=\"sdkmessageid\" alias=\"m\"><attribute name=\"name\" /></link-entity>"
+            + "<link-entity name=\"plugintype\" from=\"plugintypeid\" to=\"eventhandler\" link-type=\"outer\" alias=\"t\"><attribute name=\"typename\" /></link-entity>"
+            + "</entity></fetch>";
     }
 }

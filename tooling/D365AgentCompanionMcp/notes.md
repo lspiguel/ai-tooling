@@ -75,10 +75,11 @@ A planning session on a client project, with another vendor's agent in a code ed
 | U3 | The agent argued that promotion contradicts R11 and rewrote the person's promotion task into an extract from development. It ignored earlier WIPs in development named `… - PROMOTED`, and the person's own statement of the strategy | R11 says what *downstream* means; T1: the person's statement is a source; §9.8: earlier WIPs are evidence |
 | U4 | `d365ce-planning` defined agentic tasks as repository file edits, so a column change and plug-in registration were planned as manual | K7 and §9.10: registration through a WIP is agentic when the tooling can carry it out |
 | U5 | The project names WIPs `<initials> <work item> <Group>`, so the leftover and reconcile searches for `_Agent_WIP_` would miss them | §9.5: a project's own naming convention wins and is searched for |
+| U6 | The query for steps on a table joined `sdkmessagefilter`, `sdkmessage` and `plugintype`, outside the configuration allow-list, so it was flagged as touching records and would fail with record queries off | §6.5: the plug-in and custom API registration tables joined the allow-list; `FetchXmlQuery`, the `query` description and tests (251 pass); version 1.2026.11.1 |
 
 **Not verified live:** §9.10 — a new build of an existing assembly, a new step with an image, and a new custom API authored in an unpacked WIP and imported with PAC CLI. Until it runs on the sandbox, the person confirms the first use on a project against the read-back. `Test-UnpackedSolution.ps1` checks no packager anchors for these types yet.
 
-The skills changed, so publishing them needs a version bump (two-file rule).
+The skills and the allow-list changed; the version is bumped to 1.2026.11.1 (two-file rule).
 
 ---
 

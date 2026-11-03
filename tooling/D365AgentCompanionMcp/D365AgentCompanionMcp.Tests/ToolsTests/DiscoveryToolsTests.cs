@@ -291,6 +291,18 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
             Assert.That(_tab.CallLog.Snapshot().First().OutcomeLine, Does.StartWith("  → error tool_disabled"));
         }
 
+        [Test]
+        public async Task Query_OnPluginRegistration_WhenRecordsSwitchedOff_StillRuns()
+        {
+            _binding.RecordQueriesEnabled = false;
+
+            var result = await Call(QueryTool.Query, Args(new JObject { ["fetchXml"] = SerializationTests.StepsOnATableFetch }));
+
+            Assert.That(result.IsError, Is.False, result.Payload.ToString());
+            Assert.That(result.Payload["touchesRecords"]!.Value<bool>(), Is.False);
+            Assert.That(_tab.Requests.Single().TouchesRecords, Is.False);
+        }
+
         // ---- solutions ----
 
         [Test]
