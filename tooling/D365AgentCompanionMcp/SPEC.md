@@ -521,6 +521,7 @@ interface ConnectionInfo {
   settings: {
     recordQueriesEnabled: boolean;   // per connection
     publisherCreationEnabled: boolean; // per connection
+    fileRoot: string | null;         // per organization (Phase 6, §6.8); null: not set yet
     maxPageSize: number;             // host
     responseCapBytes: number;        // host
     approvalTimeoutSeconds: number;  // host
@@ -1131,7 +1132,38 @@ These tools change components in development without a solution export and impor
 - **The overwrite check runs inside the tool.** Each item carries the version the agent baselined, and the tool refuses an item whose current version differs, before the dialog and again just before writing.
 - **The WIP still records the work.** A component the tool creates is created in the named WIP (`SolutionUniqueName`) and an existing one must already be in it, so W7 overlap checks, W10 and close-out see it. Creating in a solution adds no required components (R1); the read-back still follows.
 
-**Files are passed by path, never by content.** The host runs on the person's machine, so the agent passes a local path and the plugin reads the file. Paths must sit under a folder the person listed in the tab's **File roots** setting; anything else fails with `invalid_argument`. The dialog shows each path with its size and SHA-256, so the person approves the bytes that will be written.
+**Files are passed by path, never by content.** The host runs on the person's machine, so the agent passes a local path and the plugin reads the file. Every path is resolved against the organization's **File root** ([below](#file-root)). The dialog shows the File root once and each item's path relative to it, with its size and SHA-256, so the person approves the bytes that will be written.
+
+#### File root
+
+Each organization has one **File root**: the root folder of the git repository that holds the source files the agent is working on. It belongs to the organization, not to a tab, so every tab bound to that organization, now or later, uses the same folder (C8). It is kept in the plugin settings ([§7](#7-authorization-model)), returned by `get_connection_info` as `settings.fileRoot`, and shown and changed in the Active Approvals window ([Phase 6](#phase-6--planned-enhancements)).
+
+A file item's `path` takes one of two forms:
+
+| Form | Example | The file read is | Accepted when |
+|---|---|---|---|
+| Relative | `Webresources/scripts/account.form.js` | File root + `path` | The result is inside the File root |
+| Absolute | `C:\Repos\[ClientName]-d365\Webresources\scripts\account.form.js` | `path` | `path` is inside the File root |
+
+The check runs while the call is preparing, before any dialog:
+
+- **Normalized first.** `/` and `\` are both accepted. The path is made full — `.` and `..` resolved — before it is compared, so a relative path that climbs out of the root with `..` is outside it.
+- **Inside means under the root.** The full path must start with the File root followed by a separator, compared without regard to case. A path on another folder, drive or share is outside.
+- **No links.** The file, and every folder between the File root and the file, must not be a symbolic link or junction. A link can lead outside the root while the path text stays inside it.
+- **The file must exist** and be readable.
+
+A path that fails any of these fails the whole call with `invalid_argument`. `details.argument` names the item, and `details` gives the File root and the full path it resolved to.
+
+**When no File root is set.** If the organization has no File root when a call that takes files is preparing, the plugin asks the person to choose one before the approval dialog. Like the approval dialog, the prompt is owned by the XrmToolBox main window (C9). It explains the rules above:
+
+- the folder should be the root of the git repository that holds the source files the agent edits;
+- a relative path from the agent is read from that folder;
+- an absolute path must lie inside it;
+- the choice is kept for this organization and can be changed in Active Approvals.
+
+The prompt lists the paths in the call. When they are absolute, the folder picker starts at the root of the git working tree that holds the first one, if there is one. A folder that is not the root of a git working tree (no `.git` entry) gets a warning but is not refused. Once a folder is chosen, the plugin saves it and preparation continues. **Cancel** fails the call with `denied_by_user`. No choice within the approval timeout fails it with `denied_no_response`. In both cases nothing is written and the File root stays unset.
+
+The prompt appears even when a scoped Write grant would skip the approval dialog, because the File root is a setting, not an approval. A change to the File root applies from the next call. A call already running finishes under the root it resolved its paths with.
 
 New error codes for these tools, added to [§6.2](#62-conventions):
 
@@ -1152,7 +1184,7 @@ New error codes for these tools, added to [§6.2](#62-conventions):
 
 ```ts
 interface WebResourceItem {
-  path: string;              // local file under a File roots folder
+  path: string;              // relative to the File root, or absolute inside it
   name: string;              // web resource name, e.g. "[prefix]_/scripts/account.form.js"
   displayName?: string;      // new resources only; default: the file name
   expectedVersion?: string;  // versionNumber from get_component_state; required for an existing resource
@@ -1176,7 +1208,7 @@ interface UpdateWebResourcesResult {
 
 Sequence:
 
-1. **Prepare** (before the dialog). Read every file and resolve every name. The web resource type comes from the file extension (`.htm`/`.html` 1, `.css` 2, `.js` 3, `.xml` 4, `.png` 5, `.jpg`/`.jpeg` 6, `.gif` 7, `.xsl`/`.xslt` 9, `.ico` 10, `.svg` 11, `.resx` 12). An unknown extension, or a type different from an existing resource's, is `invalid_argument`. Fail the whole call before the dialog on: a file outside **File roots**; a file over the organization's maximum upload size; an existing resource that is managed (`managed_component`), outside the WIP (`not_in_solution`), or without `expectedVersion` (`invalid_argument`), or whose `versionNumber` differs from it (`version_conflict`); a new resource whose name does not start with the WIP publisher's prefix and `_` (`invalid_argument`).
+1. **Prepare** (before the dialog). If the organization has no File root, prompt for one ([File root](#file-root)). Read every file and resolve every name. The web resource type comes from the file extension (`.htm`/`.html` 1, `.css` 2, `.js` 3, `.xml` 4, `.png` 5, `.jpg`/`.jpeg` 6, `.gif` 7, `.xsl`/`.xslt` 9, `.ico` 10, `.svg` 11, `.resx` 12). An unknown extension, or a type different from an existing resource's, is `invalid_argument`. Fail the whole call before the dialog on: a path the File root does not accept; a file over the organization's maximum upload size; an existing resource that is managed (`managed_component`), outside the WIP (`not_in_solution`), or without `expectedVersion` (`invalid_argument`), or whose `versionNumber` differs from it (`version_conflict`); a new resource whose name does not start with the WIP publisher's prefix and `_` (`invalid_argument`).
 2. **Approve.** One dialog listing each item: create or update, name, path, size, SHA-256 and versions.
 3. **Write** in request order. An item whose content matches the environment's *unpublished* content (`RetrieveUnpublishedRequest`) byte for byte is `unchanged` and is not written: every update raises `versionNumber`, identical content included (S10). Before each update the version is read again; a change since preparation fails the item with `version_conflict`. The first failure stops the run; later entries are `notAttempted`.
 4. **Publish** the resources written, when `publish` is true and at least one was written. Publishing raises `versionNumber` again (S10), so `versionAfter` is read after the publish and is the baseline for the next call.
@@ -1319,7 +1351,7 @@ The confirmation that lets Write tools run on a connection ([§5](#host)) has th
 
 *Always* is set only in settings, never from the binding prompt. It carries a warning and is shown on every tab while it is on. Write and Publisher calls still need their own per-call approval.
 
-Environment and always scopes persist between sessions in XrmToolBox's plugin settings, which record only organization IDs, friendly names and scopes, plus the host's bearer token encrypted with DPAPI for the current Windows user — no arguments or results.
+Environment and always scopes persist between sessions in XrmToolBox's plugin settings, which record only organization IDs, friendly names and scopes, each organization's File root (Phase 6, [§6.8](#file-root)), plus the host's bearer token encrypted with DPAPI for the current Windows user — no arguments or results.
 
 ### Rules
 
@@ -1342,6 +1374,7 @@ Each tab shows its own connection on top and the shared host below it.
 │              https://<org>.crm.dynamics.com                       │
 │ Dev env    : Confirmed — this environment, remembered  [Clear]    │
 │ Settings   : [x] Record queries   [ ] Publisher creation          │
+│ File root  : C:\Repos\[ClientName]-d365   (read-only)             │
 │ Reads      : Approved — this environment, remembered              │
 │                                                      [Revoke]     │
 ├─ Host — shared by all tabs ───────────────────────────────────────┤
@@ -1370,6 +1403,8 @@ Each tab shows its own connection on top and the shared host below it.
 ```
 
 The log lines are cut at the panel's edge here only; in the plugin they scroll horizontally. Their format, and **Save as…**, are in [§8.6](#86-call-log-format). `⚠` lines name components a call added unexpectedly. An unbound tab shows only the host section and a **Connect** prompt.
+
+**File root** (Phase 6) shows the File root of the tab's organization ([§6.8](#file-root)), or *Not set — asked for on first use*. It is read-only here. It is set, changed and cleared in the Active Approvals window ([§8.8](#88-active-approvals-window-phase-6)), and the line updates when that happens.
 
 ### 8.2 Approval dialog
 
@@ -1539,6 +1574,57 @@ The first time the plugin opens in an XrmToolBox installation, the tab shows a s
 | Check | **Copy test prompt** — the page-3 test prompt |
 
 **Done** and **Skip** both record the new version and show the main panel, so the page appears once per update; **Skip** reinstalls nothing. A first run — no version recorded — always gets the full wizard instead.
+
+### 8.8 Active Approvals window (Phase 6)
+
+> [!NOTE]
+> **Planned, not built.** The behaviour is set out in the [Phase 6](#phase-6--planned-enhancements) table: Active Approvals, the token, scoped approvals and the File root. This section is the window's layout.
+
+The window opens from an **Active Approvals** button on the main panel of any tab. There is one window for all tabs. It lists every organization the plugin holds a grant or a File root for, whether or not a tab is bound to it now.
+
+```
+┌─ Active Approvals — every organization ───────────────────────────────────┐
+│ Token      : ●●●●●●●●●●●●●●●●  [Copy] [Regenerate]                        │
+│              One token for every client — regenerating affects all        │
+├─ Session only ────────────────────────────────────────────── [Reset all] ─┤
+│ Organization       Covers   Given             From tab                    │
+│ [ClientName] DEV2  Read     14:06             [ConnectionName]  [Revoke]  │
+│ [ClientName] DEV2  Dev env  14:05             [ConnectionName]  [Revoke]  │
+├─ Per environment ─────────────────────────────────────────── [Reset all] ─┤
+│ [ClientName] DEV   Read     2026-10-30 14:02  [ConnectionName]  [Revoke]  │
+│ [ClientName] DEV   Dev env  2026-10-30 13:58  [ConnectionName]  [Revoke]  │
+│ [ClientName] DEV   Write    2026-11-04 09:15  [ConnectionName]  [Revoke]  │
+├─ Always ──────────────────────────────────────────────────── [Reset all] ─┤
+│ All organizations  Read     2026-10-28 10:40  [ConnectionName]  [Revoke]  │
+├─ File roots — settings, not grants ───────────────────────────────────────┤
+│ Organization       Folder                                                 │
+│ [ClientName] DEV   C:\Repos\[ClientName]-d365            [Change] [Clear] │
+│ [ClientName] DEV2  Not set — asked for on first use      [Set]            │
+├───────────────────────────────────────────────────────────────────────────┤
+│ [Reset all approvals]                                           [Close]   │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Token.** It is shown masked, with **Copy** and **Regenerate** (H4, D8), and has moved here from the main panel.
+- **One section per scope.** There are sections for **Session only**, **Per environment** and **Always**, each with **Reset all** in its title bar. *Once* is not listed. Each row is one grant and shows:
+  - the organization's friendly name — *All organizations* for an *Always* grant;
+  - what the grant covers: *Read*, *Write* or *Dev env* confirmation;
+  - when it was given — only the time for a session grant;
+  - the tab it was given from;
+  - a **Revoke** button.
+
+  An empty section shows *None*. An *Always* dev-environment confirmation row carries the warning that the guard is off for every organization ([§7](#dev-environment-confirmation)).
+- **File roots.** There is one row for each organization that has a File root, and one for each bound organization that has none (*Not set*). **Set** and **Change** open the folder picker, which explains the rules in [§6.8](#file-root). **Clear** removes the File root, so the next call that takes files asks for it again. No reset clears a File root.
+- **Confirmation inside the window.** **Reset all**, **Reset all approvals** and **Clear** each replace the rows they affect with a question until the person answers:
+
+  ```
+  ├─ Per environment ─────────────────────────────────────────── [Reset all] ─┤
+  │ Revoke every Per environment grant, for every organization?               │
+  │ Calls already running finish under their approval.  [Reset] [Cancel]      │
+  ├─ Always ──────────────────────────────────────────────────── [Reset all] ─┤
+  ```
+
+- **Live.** The window updates when a grant is given or revoked, or a File root is set, from any tab. A change applies from the next call; a call already running finishes under its approval and its File root.
 
 ---
 
@@ -1972,6 +2058,7 @@ The decision is recorded so the question is not reopened without new facts:
 | Handshake sessions (issue, continue, expire, `DELETE`, unknown session) | Unit tests with a fake clock |
 | Keep-alive and cancellation (fast reply unchunked; slow reply chunked with leading spaces and still one JSON document; client disconnect withdraws a pending approval; `notifications/cancelled` in a session) | Tests against a real `HttpListener` on a loopback port |
 | Token store (generate once, DPAPI round trip, regenerate, missing or corrupt setting) | Unit tests over a fake settings store |
+| File root (Phase 6): relative and absolute paths inside; `..` escape; another folder, drive or share; a root that is a prefix of a sibling folder's name (`C:\repo` against `C:\repo2`); case; mixed separators; a symbolic link or junction on the path; a missing file; prompt when unset, cancel and timeout; per-organization isolation; change applied from the next call | Unit tests over a fake file system, fake UI and fake settings store |
 | Binding order (connection ID claimed synchronously in hook order; organization check after the identity call; `UpdateConnection` before `Load`) | Unit tests with fake instances and a controllable identity call |
 
 ---
@@ -2142,12 +2229,12 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 
 | Enhancement | Behaviour | What v1 does to leave room |
 |---|---|---|
-| **Active Approvals** | A button on the main panel opens one window showing every current grant across all organizations. Grants are grouped in three sections: **Session only**, **Per environment** and **Always**. Each entry shows the organization's friendly name, what the grant covers (Read approval or dev-environment confirmation, [§7](#7-authorization-model)), and when and from which tab it was given. A person can **Revoke** a single entry, use **Reset all** in one section to clear that scope, or use **Reset all approvals** to clear every section. Each reset asks for confirmation inside the window. A revocation applies from the next call, and a call that is already running finishes under its approval. *Once* scopes are not listed, because they end with their call or binding | Keep every grant in one approval store, held per organization. Each entry records its kind, scope, organization ID and friendly name, grant time and originating tab. The store can list its entries, remove one entry, and clear one scope. v1's **Revoke** in a tab, and the *always* setting, become calls on that store rather than separate paths |
+| **Active Approvals** | A button on the main panel opens one window showing every current grant across all organizations. Grants are grouped in three sections: **Session only**, **Per environment** and **Always**. Each entry shows the organization's friendly name, what the grant covers (Read approval or dev-environment confirmation, [§7](#7-authorization-model)), and when and from which tab it was given. A person can **Revoke** a single entry, use **Reset all** in one section to clear that scope, or use **Reset all approvals** to clear every section. Each reset asks for confirmation inside the window. A revocation applies from the next call, and a call that is already running finishes under its approval. *Once* scopes are not listed, because they end with their call or binding. A separate **File roots** section lists each organization's File root ([§6.8](#file-root)). It has **Change**, which opens a folder picker that explains the File root rules, and **Clear**. An organization bound in a tab but without a File root is listed as *Not set*, with **Set**. The reset buttons do not clear File roots, because a File root is a setting, not a grant. The layout is in [§8.8](#88-active-approvals-window-phase-6) | Keep every grant in one approval store, held per organization. Each entry records its kind, scope, organization ID and friendly name, grant time and originating tab. The store can list its entries, remove one entry, and clear one scope. v1's **Revoke** in a tab, and the *always* setting, become calls on that store rather than separate paths |
 | **Token in the Active Approvals window** | The bearer token moves off the main panel into the Active Approvals window, so the credentials and grants that decide what an agent can do sit in one place. The window shows the token masked, with **Copy** and **Regenerate**. **Copy client config** stays on the main panel for setup | Build the token display, **Copy** and **Regenerate** as one self-contained control backed by the token store (D8), so it can move without change. H4 is unchanged: one host-level token, and regenerating it affects every client |
 | **Scoped approvals for every tier but Publisher** | Every approval dialog except publisher creation offers the same four scopes: **Once**, **Session only**, **Per environment** and **Always** — Write calls included, and *Always* offered in the dialog rather than only in settings. Publisher creation stays once, with typed confirmation, and never for a session (R3). A scoped Write grant still leaves every Write call subject to the dev-environment confirmation, a non-blank reason (R12) and the fixed add flags (R1), and every call is still logged (R13). Grants are listed in Active Approvals with their tier | Keep the approval store keyed by tier as well as scope and organization, and route every dialog's choice through one scope selector, so Write grants become store entries rather than a new path. A scope other than *Once* authorizes later Write calls in advance — and that remains a person's decision, made in the dialog for one organization or, with *Always*, for all. It stays within R2 the way read scopes do today; when this is built, R2 and the instructions file's fixed safety behaviour are reworded to name scoped Write approvals explicitly |
-| **Direct web resource updates** | `update_web_resources` ([§6.8](#68-direct-update-tools-phase-6)): create or update web resources from local files in a WIP, with the overwrite check inside the tool and a targeted publish; the **File roots** tab setting. An edit-and-push loop calls it often, so scoped Write approvals make it practical | Specified after v1 was built (2026-11-03); v1 is unchanged |
+| **Direct web resource updates** | `update_web_resources` ([§6.8](#68-direct-update-tools-phase-6)): create or update web resources from local files in a WIP, with the overwrite check inside the tool and a targeted publish; the per-organization **File root** ([§6.8](#file-root)), asked for on first use and editable in Active Approvals. An edit-and-push loop calls it often, so scoped Write approvals make it practical | Specified after v1 was built (2026-11-03); v1 is unchanged |
 | **Plug-in components in `add_solution_components`** | Plug-in assemblies, steps, custom APIs and their request parameters and response properties accepted, already registered, with the same fixed behaviour, one approval for the list, read-back and log entry as the other types ([§6.6](#add_solution_components)). Custom API codes resolved per environment. Registration stays with a person until [Phase 7](#phase-7--plug-in-authoring) | v1 refuses these types with `invalid_argument`; PAC adds them (Path B). `get_required_components` and `remove_solution_component` take the wider selector too |
-| **Skill changes for direct updates** | `agent-companion-wip-edit-loop`: web resources through `update_web_resources`; the PCF push guidance. `agent-companion-wip-shaping`: the MCP path for plug-in assemblies, steps, custom APIs, request parameters and response properties, each step added on its own | — |
+| **Skill changes for direct updates** | `agent-companion-wip-edit-loop`: web resources through `update_web_resources`, with paths relative to the File root that `get_connection_info` returns; the PCF push guidance. `agent-companion-wip-shaping`: the MCP path for plug-in assemblies, steps, custom APIs, request parameters and response properties, each step added on its own | — |
 
 **Spikes before the direct-update tools.** Run 2026-11-03 on a data-free trial environment; details in [notes](notes.md#spikes-s9s11--2026-11-03). S9, on plug-in steps, ran with them and now belongs to [Phase 7](#phase-7--plug-in-authoring).
 
@@ -2158,7 +2245,7 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 
 S10 ran through a throwaway SDK console with its own sign-in, not through the plugin. It establishes platform behaviour only: the tool itself is verified through the plugin at Phase 6 exit. Later spikes use the plugin and the person's PAC profile only.
 
-**Exit:** with grants of every scope in place for two organizations, each grant is listed in its section, revoking one or resetting a section takes effect on the next call, and the main panel no longer shows the token. A Write call approved *Per environment* runs the next Write to that organization without a dialog but with its log line pair; a publisher creation still prompts every time. For the direct-update tools: on the sandbox, a web resource edit is written, published and visible in the app without an import, and a stale `expectedVersion` is refused. For plug-in components: an assembly, two of its steps — one with an image — and a custom API with a request parameter and a response property, all registered beforehand, are added to a WIP by name, unique name or ID in one call. The read-back shows what the platform added with each, recorded in [notes](notes.md); nothing unexpected is left unreported. An export of the WIP carries the steps with their image and the custom API with its parameter and property. This also answers part of spike S12.
+**Exit:** with grants of every scope in place for two organizations, each grant is listed in its section, revoking one or resetting a section takes effect on the next call, and the main panel no longer shows the token. A Write call approved *Per environment* runs the next Write to that organization without a dialog but with its log line pair; a publisher creation still prompts every time. For the direct-update tools: on the sandbox, a web resource edit is written, published and visible in the app without an import, and a stale `expectedVersion` is refused. With no File root set, the first call prompts for one, and Cancel fails it with `denied_by_user`. A relative path and an absolute path inside the root are both accepted. A `..` escape, an absolute path outside the root and a path through a junction are refused before the dialog. The File root is shown, changed and cleared in Active Approvals, and a change applies from the next call. For plug-in components: an assembly, two of its steps — one with an image — and a custom API with a request parameter and a response property, all registered beforehand, are added to a WIP by name, unique name or ID in one call. The read-back shows what the platform added with each, recorded in [notes](notes.md); nothing unexpected is left unreported. An export of the WIP carries the steps with their image and the custom API with its parameter and property. This also answers part of spike S12.
 
 ### Phase 7 — Plug-in authoring
 
