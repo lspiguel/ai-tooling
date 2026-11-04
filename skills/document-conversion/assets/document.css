@@ -1,0 +1,66 @@
+/* Default stylesheet for export_md_to_html.py and export_md_to_pdf.py.
+   Screen: a readable single column. Print: Letter/A4 margins, no page breaks inside tables, figures or code. */
+
+:root {
+  --text: #1f2328;
+  --text-muted: #59636e;
+  --surface: #ffffff;
+  --surface-raised: #f6f8fa;
+  --border: #d1d9e0;
+  --primary: #1f4e79;
+  --font-body: "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-code: "Cascadia Mono", Consolas, "Courier New", monospace;
+}
+
+html { background: var(--surface); }
+
+body {
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+  max-width: 52rem;
+  color: var(--text);
+  background: var(--surface);
+  font-family: var(--font-body);
+  font-size: 10.5pt;
+  line-height: 1.5;
+  hyphens: none;
+}
+
+h1, h2, h3, h4 { color: var(--primary); line-height: 1.25; margin: 1.6em 0 0.5em; break-after: avoid; }
+h1 { font-size: 1.9em; margin-top: 0; }
+h2 { font-size: 1.45em; padding-bottom: 0.2em; border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.2em; }
+h4 { font-size: 1em; }
+
+a { color: var(--primary); }
+
+p, ul, ol, table, pre, figure { margin: 0 0 1em; }
+
+img { max-width: 100%; height: auto; }
+figure { margin-left: 0; margin-right: 0; }
+figcaption { color: var(--text-muted); font-size: 0.9em; }
+
+table { border-collapse: collapse; width: 100%; font-size: 0.95em; }
+th, td { border: 1px solid var(--border); padding: 0.35em 0.6em; text-align: left; vertical-align: top; }
+thead th { background: var(--surface-raised); }
+
+code { font-family: var(--font-code); font-size: 0.9em; background: var(--surface-raised); padding: 0.1em 0.3em; border-radius: 3px; }
+pre { background: var(--surface-raised); padding: 0.8em 1em; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; }
+pre code { background: none; padding: 0; }
+
+blockquote { margin: 0 0 1em; padding: 0 1em; color: var(--text-muted); border-left: 3px solid var(--border); }
+
+header#title-block-header { margin-bottom: 2em; }
+nav#TOC { margin-bottom: 2em; padding: 0.8em 1.2em; background: var(--surface-raised); border-radius: 4px; }
+nav#TOC ul { margin: 0; padding-left: 1.2em; }
+
+/* Explicit page break for PDF output: <div class="page-break"></div> */
+.page-break { break-after: page; }
+
+@page { margin: 0.75in; }
+
+@media print {
+  body { max-width: none; padding: 0; }
+  table, figure, img, pre, blockquote { break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
+}

@@ -150,6 +150,16 @@ end {
             # Chrome reports progress on stderr; redirecting it here would make
             # Windows PowerShell treat a successful run as a failure.
             & $browser @args | Out-Null
+
+            # Edge can exit before the screenshot is on disk; wait for the file to appear and stop growing.
+            $deadline = (Get-Date).AddSeconds(60)
+            $lastSize = -1
+            while ((Get-Date) -lt $deadline) {
+                $size = if (Test-Path -LiteralPath $shot) { (Get-Item -LiteralPath $shot).Length } else { -1 }
+                if ($size -gt 0 -and $size -eq $lastSize) { break }
+                $lastSize = $size
+                Start-Sleep -Milliseconds 500
+            }
             if (-not (Test-Path -LiteralPath $shot)) {
                 throw "The browser produced no screenshot for $html."
             }
