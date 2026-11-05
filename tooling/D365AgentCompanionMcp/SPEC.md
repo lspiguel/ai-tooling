@@ -1691,46 +1691,62 @@ The window opens from an **Active Approvals** button on the main panel of any ta
 ┌─ Active Approvals — every environment and tenant ─────────────────────────┐
 │ Token      : ●●●●●●●●●●●●●●●●  [Copy] [Regenerate]                        │
 │              One token for every client — regenerating affects all        │
-├─ Session only ────────────────────────────────────────────── [Reset all] ─┤
-│ Applies to         Covers   Given             From tab                    │
-│ [ClientName] PRD   Read     14:06             [ConnectionName]  [Revoke]  │
-├─ Per environment ─────────────────────────────────────────── [Reset all] ─┤
-│ [ClientName] DEV   Dev env  2026-10-30 13:58  [ConnectionName]  [Revoke]  │
-│ [ClientName] DEV   Write    2026-11-04 09:15  [ConnectionName]  [Revoke]  │
-│ [ClientName] UAT   Records  2026-10-12 11:20  [ConnectionName]  [Revoke]  │
-│   ⚠ Stale — environment ID differs from the one granted; not applied      │
-├─ Per tenant ──────────────────────────────────────────────── [Reset all] ─┤
-│ Tenant 00000000…   Read     2026-10-30 14:02  [ConnectionName]  [Revoke]  │
-│   Seen: [ClientName] DEV, [ClientName] DEV2, [ClientName] UAT             │
-├─ Global ──────────────────────────────────────────────────── [Reset all] ─┤
+├─ Global ──────────────────────────────────────────────────────── [Reset] ─┤
 │ None                                                                      │
-├─ File roots — settings, not grants ───────────────────────────────────────┤
-│ Applies to       Level       Folder                                       │
-│ Tenant 00000000… Tenant      C:\Repos\[ClientName]-d365  [Change] [Clear] │
-│ [ClientName] SBX Environment C:\Repos\[ClientName]-poc   [Change] [Clear] │
-│ [ClientName] TRN —           Not set                     [Set]            │
+├─ Tenant 00000000… ────────────────────────────────────────────── [Reset] ─┤
+│ File root  C:\Repos\[ClientName]-d365                    [Change] [Clear] │
+│ Read     Per tenant      2026-10-30 14:02  [ConnectionName]  [Revoke]     │
+│ ▸ [ClientName] DEV                                    [File root] [Reset] │
+│   Write    Per environment 2026-11-04 09:15  [ConnectionName]  [Revoke]   │
+│   Dev env  Per environment 2026-10-30 13:58  [ConnectionName]  [Revoke]   │
+│   Records  Session only    14:06             [ConnectionName]  [Revoke]   │
+│ ▸ [ClientName] SBX                                    [File root] [Reset] │
+│   File root  C:\Repos\[ClientName]-poc                   [Change] [Clear] │
+│ ▸ [ClientName] UAT                                    [File root] [Reset] │
+│   Records  Per environment 2026-10-12 11:20  [ConnectionName]  [Revoke]   │
+│     ⚠ Stale — environment ID differs from the one granted; not applied    │
+├─ Tenant 11111111… ────────────────────────────────────────────── [Reset] ─┤
+│ File root  Not set                                                  [Set] │
+│ ▸ [ClientName2] DEV                                   [File root] [Reset] │
+│   Read     Session only    15:40             [ConnectionName]  [Revoke]   │
+├─ No tenant ───────────────────────────────────────────────────── [Reset] ─┤
+│ ▸ [ClientName] TRN                                                [Reset] │
+│   File root  Not set                                                [Set] │
+│   Read     Per environment 2026-09-02 10:11  [ConnectionName]  [Revoke]   │
 ├───────────────────────────────────────────────────────────────────────────┤
 │ [Reset all approvals]                                           [Close]   │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
 
 - **Token.** It is shown masked, with **Copy** and **Regenerate** (H4, D8), and has moved here from the main panel.
-- **One section per scope.** There are sections for **Session only**, **Per environment**, **Per tenant** and **Global**, each with **Reset all** in its title bar. *Once* is not listed. Each row is one grant and shows:
-  - what it applies to: the environment's friendly name, or the tenant ID shortened for a tenant grant; a Global grant has no name;
+- **One tree, in a fixed order.** Grants are grouped by where they apply, not by scope:
+  1. **Global** grants come first.
+  2. Each **tenant** follows: its File root, its *Per tenant* grants, then each of its environments. Under an environment come its own File root, if it has one, its *Per environment* grants, then its *Session only* grants. All the entries of one tenant come before the next tenant.
+  3. **No tenant** comes last. It holds the environments whose connection gave no tenant ID, ordered as if their tenant ID were empty.
+
+  Environments are in alphabetical order of their friendly name, and tenants in the order of their first environment's name. Within a group, grants are ordered by kind: *Read*, *Records*, *Write*, *Dev env*. *Once* is not listed. An empty Global shows *None*.
+- **Rows.** Each row is one grant and shows:
   - what it covers: *Read*, *Records*, *Write* or *Dev env* confirmation;
+  - its scope;
   - when it was given — only the time for a session grant;
   - the tab it was given from;
   - a **Revoke** button.
+- **What is listed.** A tenant is labelled by its shortened ID, and the environments listed under it tell the person which tenant it is. An environment is listed when it has a grant or a File root of its own, or when a tab is bound to it and no File root covers it, so that its *Not set* line shows. A grant is placed by the IDs it was saved with. A grant that matches on the organization ID but not on the environment or tenant ID is marked **Stale** and is not applied ([§7](#phase-6--scopes-and-grants)); it stays listed until it is revoked. A grant loaded from a v1 file knows only its organization ID, so it is listed under **No tenant** until a connection fills in its environment and tenant IDs, and then moves under its tenant.
+- **Reset.** Every heading has a **Reset**:
+  - on **Global**, it revokes every Global grant;
+  - on a tenant, it revokes the tenant's grants and the grants of every environment under it;
+  - on an environment, it revokes that environment's *Per environment* and *Session only* grants;
+  - **Reset all approvals** revokes every grant.
 
-  A tenant row lists, under it, the environments the plugin has seen in that tenant, because a tenant ID alone does not tell the person which tenant it is. A grant that matches on the organization ID but not on the environment or tenant ID is marked **Stale** and is not applied ([§7](#phase-6--scopes-and-grants)). It stays listed until it is revoked. An empty section shows *None*.
-- **File roots.** There is one row for each File root, showing the environment or tenant it applies to, its level and its folder. There is also a *Not set* row for each bound environment that has no File root of its own or through its tenant. **Set** and **Change** open the folder prompt, which explains the rules and asks for the level ([§6.8](#file-root)). **Clear** removes the File root; the environments it covered fall back to their tenant's File root, if any, or are asked again on the next call that takes files. No reset clears a File root.
-- **Confirmation inside the window.** **Reset all**, **Reset all approvals** and **Clear** each replace the rows they affect with a question until the person answers:
+  No reset clears a File root, because a File root is a setting, not a grant.
+- **File roots.** A tenant shows its File root on the line under its heading, or *Not set* with **Set**. An environment in a tenant shows a File root line only when it has its own, which takes precedence over the tenant's ([§6.8](#file-root)). An environment under **No tenant** always shows its File root line, or *Not set*. **File root** on an environment heading opens the folder prompt with *This environment only* selected; **Set** and **Change** on a tenant line open it with *Every environment in this tenant* selected. The prompt explains the rules and lets the person change the level. **Clear** removes the File root; the environments it covered fall back to their tenant's File root, if any, or are asked again on the next call that takes files.
+- **Confirmation inside the window.** **Reset**, **Reset all approvals** and **Clear** each replace the rows they affect with a question until the person answers:
 
   ```
-  ├─ Per tenant ──────────────────────────────────────────────── [Reset all] ─┤
-  │ Revoke every Per tenant grant, for every tenant?                          │
+  ├─ Tenant 00000000… ────────────────────────────────────────────── [Reset] ─┤
+  │ Revoke the grants of tenant 00000000… and of its 3 environments?          │
   │ Calls already running finish under their approval.  [Reset] [Cancel]      │
-  ├─ Global ──────────────────────────────────────────────────── [Reset all] ─┤
+  ├─ Tenant 11111111… ────────────────────────────────────────────── [Reset] ─┤
   ```
 
 - **Live.** The window updates when a grant is given or revoked, or a File root is set, from any tab. A change applies from the next call; a call already running finishes under its approval and its File root.
@@ -2157,7 +2173,7 @@ The decision is recorded so the question is not reopened without new facts:
 | Connection registry (bind, duplicate by connection ID, duplicate by organization ID, unbind on close and on change, routing, unknown connection) | Unit tests with fake instances |
 | Record-query detector (FetchXML tables against the configuration allow-list) | Unit tests over FetchXML samples, including link-entities and aliases |
 | FetchXML rewriting (page, count, cookie; reject `all-attributes`) | Unit tests |
-| Approval policy (read scopes and dev-confirmation scopes — once, session, environment, always; persistence; revoke; timeout; per-organization isolation). Phase 6: four kinds with their allowed scopes; tenant scope; Write and dev-environment confirmation capped at Environment; matching on organization, environment and tenant IDs, filling missing IDs, *Stale* on a mismatch; no tenant ID disables Tenant; `SchemaVersion` upgrade that keeps the token and host settings; a downgraded file read without failing | Unit tests with a fake clock, fake UI and fake settings store |
+| Approval policy (read scopes and dev-confirmation scopes — once, session, environment, always; persistence; revoke; timeout; per-organization isolation). Phase 6: four kinds with their allowed scopes; tenant scope; Write and dev-environment confirmation capped at Environment; matching on organization, environment and tenant IDs, filling missing IDs, *Stale* on a mismatch; no tenant ID disables Tenant; `SchemaVersion` upgrade that keeps the token and host settings; a downgraded file read without failing; the Active Approvals tree order (Global, tenants by first environment name, environments alphabetically, environment grants before session grants, kind order, *No tenant* last, a v1 grant under *No tenant* until its IDs are filled) and reset of a tenant or an environment | Unit tests with a fake clock, fake UI and fake settings store |
 | Paging (cursor binding to connection, tool and arguments; cap-limited pages; XML chunking; snapshot consistency; expiry) | Unit tests with recorded fixtures and a fake clock |
 | Add-components guard (resolution before approval, fixed flags, stop on first failure, unexpected-component detection) | Unit tests with mocked `IOrganizationService` |
 | Serializers (records, metadata projections, ribbon decompression) | Unit tests with recorded fixtures — synthetic, never client data |
@@ -2338,7 +2354,7 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 
 | Enhancement | Behaviour | What v1 does to leave room |
 |---|---|---|
-| **Active Approvals** | A button on the main panel opens one window showing every current grant across all environments and tenants. Grants are grouped in four sections: **Session only**, **Per environment**, **Per tenant** and **Global**. Each entry shows what it applies to, what the grant covers (Read, record reads, Write or dev-environment confirmation, [§7](#phase-6--scopes-and-grants)), and when and from which tab it was given. A grant that no longer matches its environment is marked *Stale*. A person can **Revoke** a single entry, use **Reset all** in one section to clear that scope, or use **Reset all approvals** to clear every section. Each reset asks for confirmation inside the window. A revocation applies from the next call, and a call that is already running finishes under its approval. *Once* scopes are not listed, because they end with their call or binding. A separate **File roots** section lists each File root with its level, environment or tenant ([§6.8](#file-root)). It has **Change**, which opens the folder prompt that explains the File root rules, and **Clear**. A bound environment without a File root is listed as *Not set*, with **Set**. The reset buttons do not clear File roots, because a File root is a setting, not a grant. The layout is in [§8.8](#88-active-approvals-window-phase-6) | Keep every grant in one approval store, held per organization. Each entry records its kind, scope, organization ID and friendly name, grant time and originating tab. The store can list its entries, remove one entry, and clear one scope. v1's **Revoke** in a tab, and the *always* setting, become calls on that store rather than separate paths |
+| **Active Approvals** | A button on the main panel opens one window showing every current grant across all environments and tenants. Grants are shown as one tree, in a fixed order: **Global** first, then each tenant with its *Per tenant* grants followed by its environments, each environment with its *Per environment* grants and then its *Session only* grants, and environments without a tenant ID last. Environments are in alphabetical order, and tenants in the order of their first environment. Each entry shows what the grant covers (Read, record reads, Write or dev-environment confirmation, [§7](#phase-6--scopes-and-grants)), its scope, and when and from which tab it was given. A grant that no longer matches its environment is marked *Stale*. A person can **Revoke** a single entry, use **Reset** on a heading to clear Global, a tenant with its environments, or one environment, or use **Reset all approvals** to clear everything. Each reset asks for confirmation inside the window. A revocation applies from the next call, and a call that is already running finishes under its approval. *Once* scopes are not listed, because they end with their call or binding. Each File root shows under the tenant or environment it is set for, with its level ([§6.8](#file-root)), **Change**, which opens the folder prompt that explains the File root rules, and **Clear**. A tenant without a File root, or a bound environment that no File root covers, shows *Not set*, with **Set**. The reset buttons do not clear File roots, because a File root is a setting, not a grant. The layout and ordering rules are in [§8.8](#88-active-approvals-window-phase-6) | Keep every grant in one approval store. Each entry records its kind, scope, organization, environment and tenant IDs, friendly name, grant time and originating tab. The store can list its entries, remove one entry, and clear Global, one tenant with its environments, or one environment. Order the tree in one testable function, apart from the window. v1's **Revoke** in a tab, and the *always* setting, become calls on that store rather than separate paths |
 | **Token in the Active Approvals window** | The bearer token moves off the main panel into the Active Approvals window, so the credentials and grants that decide what an agent can do sit in one place. The window shows the token masked, with **Copy** and **Regenerate**. **Copy client config** stays on the main panel for setup | Build the token display, **Copy** and **Regenerate** as one self-contained control backed by the token store (D8), so it can move without change. H4 is unchanged: one host-level token, and regenerating it affects every client |
 | **Scopes and grants** | The model in [§7, Phase 6 — scopes and grants](#phase-6--scopes-and-grants). The scopes are Once, Session, Environment, a new Tenant, and *Always*, shown as Global. Record reads and Write calls become grants, and the **Record queries** switch is removed. Write grants and the dev-environment confirmation go no further than Environment, and the *always* dev-environment confirmation is withdrawn. Grants record organization, environment and tenant IDs, and a grant that no longer matches is *Stale*. The settings file gets a `SchemaVersion` and an upgrade mapping. Publisher creation stays once, with typed confirmation, and never for a session (R3). A scoped Write grant still leaves every Write call subject to the dev-environment confirmation, a non-blank reason (R12) and the fixed add flags (R1), and every call is still logged (R13) | The approval store is already one store keyed by kind, scope and organization. Its enums and the settings elements gain values and fields, and nothing is renamed, so v1 grants load as they are. A scope other than *Once* authorizes later Write calls in advance — and that remains a person's decision, made in the dialog for one environment. It stays within R2 the way read scopes do today; when this is built, R2 and the instructions file's fixed safety behaviour are reworded to name scoped Write approvals explicitly |
 | **Direct web resource updates** | `update_web_resources` ([§6.8](#68-direct-update-tools-phase-6)): create or update web resources from local files in a WIP, with the overwrite check inside the tool and a targeted publish; the **File root**, set per environment or per tenant ([§6.8](#file-root)), asked for on first use and editable in Active Approvals. An edit-and-push loop calls it often, so scoped Write approvals make it practical | Specified after v1 was built (2026-11-03); v1 is unchanged |
@@ -2354,7 +2370,7 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 
 S10 ran through a throwaway SDK console with its own sign-in, not through the plugin. It establishes platform behaviour only: the tool itself is verified through the plugin at Phase 6 exit. Later spikes use the plugin and the person's PAC profile only.
 
-**Exit:** with grants of every scope in place for two environments in one tenant and one in another, each grant is listed in its section, revoking one or resetting a section takes effect on the next call, and the main panel no longer shows the token. A Write call approved *Per environment* runs the next Write to that environment without a dialog but with its log line pair; Write and dev-environment confirmation offer nothing broader; a publisher creation still prompts every time. A Read granted *Per tenant* covers a second environment of that tenant bound afterwards, but not the environment in the other tenant. A record query prompts on its own even with a Read grant, and a `RecordRead` grant does not cover other reads. A v1 settings file loads: its Read grants are kept and gain environment and tenant IDs on the next binding, an *always* dev-environment confirmation is dropped, and the token is unchanged. A grant whose environment ID no longer matches is shown *Stale* and not applied. For the direct-update tools: on the sandbox, a web resource edit is written, published and visible in the app without an import, and a stale `expectedVersion` is refused. With no File root set, the first call prompts for one and its level, and Cancel fails it with `denied_by_user`. A tenant File root serves a second environment of that tenant without a prompt, and an environment File root takes precedence over it. A relative path and an absolute path inside the root are both accepted. A `..` escape, an absolute path outside the root and a path through a junction are refused before the dialog. The File root is shown, changed and cleared in Active Approvals, and a change applies from the next call. For plug-in components: an assembly, two of its steps — one with an image — and a custom API with a request parameter and a response property, all registered beforehand, are added to a WIP by name, unique name or ID in one call. The read-back shows what the platform added with each, recorded in [notes](notes.md); nothing unexpected is left unreported. An export of the WIP carries the steps with their image and the custom API with its parameter and property. This also answers part of spike S12.
+**Exit:** with grants of every scope in place for two environments in one tenant and one in another, each grant is listed under its tenant and environment in the order of [§8.8](#88-active-approvals-window-phase-6), revoking one or resetting a tenant or an environment takes effect on the next call, and the main panel no longer shows the token. A Write call approved *Per environment* runs the next Write to that environment without a dialog but with its log line pair; Write and dev-environment confirmation offer nothing broader; a publisher creation still prompts every time. A Read granted *Per tenant* covers a second environment of that tenant bound afterwards, but not the environment in the other tenant. A record query prompts on its own even with a Read grant, and a `RecordRead` grant does not cover other reads. A v1 settings file loads: its Read grants are kept and gain environment and tenant IDs on the next binding, an *always* dev-environment confirmation is dropped, and the token is unchanged. A grant whose environment ID no longer matches is shown *Stale* and not applied. For the direct-update tools: on the sandbox, a web resource edit is written, published and visible in the app without an import, and a stale `expectedVersion` is refused. With no File root set, the first call prompts for one and its level, and Cancel fails it with `denied_by_user`. A tenant File root serves a second environment of that tenant without a prompt, and an environment File root takes precedence over it. A relative path and an absolute path inside the root are both accepted. A `..` escape, an absolute path outside the root and a path through a junction are refused before the dialog. The File root is shown, changed and cleared in Active Approvals, and a change applies from the next call. For plug-in components: an assembly, two of its steps — one with an image — and a custom API with a request parameter and a response property, all registered beforehand, are added to a WIP by name, unique name or ID in one call. The read-back shows what the platform added with each, recorded in [notes](notes.md); nothing unexpected is left unreported. An export of the WIP carries the steps with their image and the custom API with its parameter and property. This also answers part of spike S12.
 
 ### Phase 7 — Plug-in authoring
 
