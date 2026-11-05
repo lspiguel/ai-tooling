@@ -9,13 +9,19 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
 
     /// <summary>
     /// The plugin settings XrmToolBox keeps between sessions (SPEC §7): host limits (H4), the bearer token
-    /// encrypted with DPAPI (D8), and environment and always grants — organization IDs, friendly names and scopes
-    /// only, never arguments or results. Public because XrmToolBox serializes it with <c>XmlSerializer</c>.
+    /// encrypted with DPAPI (D8), environment, tenant and global grants, and File roots — IDs, friendly names, scopes
+    /// and folders only, never arguments or results. Public because XrmToolBox serializes it with <c>XmlSerializer</c>.
     /// </summary>
     public sealed class HostSettings
     {
         /// <summary>The default loopback port.</summary>
         public const int DefaultPort = 47321;
+
+        /// <summary>The schema version Phase 6 writes. A file without a version is version 0 (v1).</summary>
+        public const int CurrentSchemaVersion = 1;
+
+        /// <summary>Gets or sets the schema version of the file; 0 for a file written before Phase 6.</summary>
+        public int SchemaVersion { get; set; }
 
         /// <summary>Gets or sets the loopback port.</summary>
         public int Port { get; set; } = DefaultPort;
@@ -34,6 +40,9 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
 
         /// <summary>Gets or sets the persisted grants.</summary>
         public List<PersistedGrant> Grants { get; set; } = new List<PersistedGrant>();
+
+        /// <summary>Gets or sets the File roots (SPEC §6.8).</summary>
+        public List<PersistedFileRoot> FileRoots { get; set; } = new List<PersistedFileRoot>();
 
         /// <summary>
         /// Gets or sets the plugin version the setup wizard was last completed for (SPEC §8.7), or <c>null</c> before

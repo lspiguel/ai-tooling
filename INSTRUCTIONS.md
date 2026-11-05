@@ -163,7 +163,7 @@ dotnet test    tooling/D365ContextExporter/D365ContextExporter.Tests/D365Context
 
 ## Tooling conventions — Agent Companion MCP
 
-The [Agent Companion MCP](/tooling/D365AgentCompanionMcp/README.md) is an XrmToolBox plugin (`net48`, WinForms, `Nullable` enabled, StyleCop.Analyzers enforced; NUnit + Moq tests in [D365AgentCompanionMcp.Tests](/tooling/D365AgentCompanionMcp/D365AgentCompanionMcp.Tests/)) that gives a coding agent a local MCP endpoint over XrmToolBox connections, with every call authorized by a person. Its companion skills are the `agent-companion-*` folders in [skills/](/skills/). **It is released in the XrmToolBox Tool Library**; Phase 6 — direct updates in development — is being shaped, and progress is in [notes.md](/tooling/D365AgentCompanionMcp/notes.md). The [spec](/tooling/D365AgentCompanionMcp/SPEC.md) is the source of truth: build tasks cite its rule IDs (R1–R16 for rules, H and C for host and connection behaviour, W and X for WIP solutions, T for delivery context, K for skill coexistence, G and M for plug-in registration and step switching, deferred to Phase 7), and a change in behaviour is made in the spec first.
+The [Agent Companion MCP](/tooling/D365AgentCompanionMcp/README.md) is an XrmToolBox plugin (`net48`, WinForms, `Nullable` enabled, StyleCop.Analyzers enforced; NUnit + Moq tests in [D365AgentCompanionMcp.Tests](/tooling/D365AgentCompanionMcp/D365AgentCompanionMcp.Tests/)) that gives a coding agent a local MCP endpoint over XrmToolBox connections, with every call authorized by a person. Its companion skills are the `agent-companion-*` folders in [skills/](/skills/). **It is released in the XrmToolBox Tool Library**; Phase 6 — scoped approvals, direct web resource updates and plug-in components — is built as version 1.2026.11.2, and progress is in [notes.md](/tooling/D365AgentCompanionMcp/notes.md). The [spec](/tooling/D365AgentCompanionMcp/SPEC.md) is the source of truth: build tasks cite its rule IDs (R1–R16 for rules, H and C for host and connection behaviour, W and X for WIP solutions, T for delivery context, K for skill coexistence, G and M for plug-in registration and step switching, deferred to Phase 7), and a change in behaviour is made in the spec first.
 
 ### Using the MCP
 
@@ -175,6 +175,7 @@ This applies on a repo-connected surface whose agent client has the plugin's end
 |---|---|
 | What exists in an environment — tables, columns, choices, relationships, forms, views, ribbons, solutions, where a component already lives, registered plug-in steps and custom APIs | The MCP's Read tools. When the MCP is connected, read the environment while planning, instead of leaving "confirm in the environment" as an open point |
 | Shaping a WIP solution — create it, add and remove components, read it back | The MCP's Write tools, under the companion skills |
+| Updating a web resource's content in development | `update_web_resources`, from plugin 1.2026.11.2: files by path under the File root, with `expectedVersion` from `get_component_state` |
 | Export, unpack, pack, import, publish or delete a solution; push a PCF control | PAC CLI, on the profile matched to the connection |
 | Metadata snapshots for a context pack | The [D365 Context Exporter](/tooling/D365ContextExporter/README.md), not the MCP |
 
@@ -182,7 +183,7 @@ This applies on a repo-connected surface whose agent client has the plugin's end
 
 - **`list_connections` first.** Every other call names its `connection`. With one connection bound, use it and say which; with more than one, ask. Never switch connection within a task without saying so.
 - **Match PAC to the connection.** Before any PAC command, compare `pac org who` with the organization URL from `get_connection_info`, and stop if they differ.
-- **A person approves every call** in the plugin tab. A denial or a timeout is final: do not retry the call without new instructions.
+- **A person approves every call** in the plugin tab — once, or under a grant they gave for a session, an environment, a tenant or globally. A grant never skips the `reason`, the development-environment confirmation or the log. A denial or a timeout is final: do not retry the call without new instructions.
 - **Write calls state a `reason`** that says exactly what the arguments do (R12). The person approves the reason and the arguments together.
 - **Read back after every add** with `list_solution_components`. Any unexpected component stops the work until a person has reviewed it (R1).
 - **Page large results** by passing `nextCursor` back as `cursor`; results are never written to files.
@@ -203,12 +204,12 @@ This applies on a repo-connected surface whose agent client has the plugin's end
 
 **What comes back is client data.** It is never written into this repository — not into documentation, tests, fixtures, notes or commit messages (hard rule 1, R7). A saved call log stays outside every working tree.
 
-**Planned tools are not available.** The Phase 6 direct-update tools ([spec §6.8](/tooling/D365AgentCompanionMcp/SPEC.md#68-direct-update-tools-phase-6)) and the Phase 7 plug-in step tools ([§6.9](/tooling/D365AgentCompanionMcp/SPEC.md#69-plug-in-step-tools-phase-7)) are specified but not built. Do not call them, or recommend them as if they exist.
+**Planned tools are not available.** The Phase 7 plug-in step tools ([spec §6.9](/tooling/D365AgentCompanionMcp/SPEC.md#69-plug-in-step-tools-phase-7)) are specified but not built. Do not call them, or recommend them as if they exist. `update_web_resources` ([§6.8](/tooling/D365AgentCompanionMcp/SPEC.md#68-direct-update-tools-phase-6)) exists from plugin version 1.2026.11.2; on an older plugin it is not listed.
 
 ### Rules specific to this plugin
 
 - **The Context Exporter's platform rules apply unchanged** — no package references that ship a DLL next to the plugin, late binding only, two-file version bump, trusted publishing in CI. See [the section above](#tooling-conventions--d365-context-exporter).
-- **Never weaken the fixed safety behaviour.** Adding components to a solution never includes required components or subcomponents, every call except `list_connections` is approved by a person in the plugin, Write tools refuse on a connection not confirmed as development, Write and Publisher calls require a reason, every call is logged in its tab as a call line and an outcome line, and publisher creation stays off by default.
+- **Never weaken the fixed safety behaviour.** Adding components to a solution never includes required components or subcomponents; every call except `list_connections` is approved by a person in the plugin — in its dialog, or in advance by a grant the person gave there (a Write grant for one environment, a read grant as far as a tenant or globally), never by a setting the agent can change; Write tools refuse on a connection not confirmed as development, and that confirmation and any Write grant never reach beyond one environment; Write and Publisher calls require a reason, even under a grant; every call is logged in its tab as a call line and an outcome line; a query that touches records needs its own record-read approval; file paths from the agent are checked against the File root before any dialog; and publisher creation stays off by default and is typed in every time.
 - **Large results are paged, never written to files.** Payloads stay in memory and travel over MCP; the plugin creates no exchange files.
 - **The plugin does not interpret a project's solution segmentation.** Placing components in the right WIP and transport solutions is the agent's responsibility, guided by skills.
 - **Tests and fixtures are synthetic.** No organization URLs, user names, GUIDs or records from a client environment, including in recorded MCP request/response pairs.

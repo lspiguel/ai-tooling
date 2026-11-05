@@ -60,11 +60,14 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 ("friendlyName", OutputSchema.String()),
                 ("url", OutputSchema.String()),
                 ("version", OutputSchema.String()),
-                ("baseLanguageCode", OutputSchema.Integer()));
+                ("baseLanguageCode", OutputSchema.Integer()),
+                ("environmentId", OutputSchema.NullableString()),
+                ("tenantId", OutputSchema.NullableString()));
             var user = OutputSchema.Object(("id", OutputSchema.Guid()), ("name", OutputSchema.NullableString()));
             var settings = OutputSchema.Object(
-                ("recordQueriesEnabled", OutputSchema.Boolean()),
                 ("publisherCreationEnabled", OutputSchema.Boolean()),
+                ("fileRoot", OutputSchema.NullableString()),
+                ("fileRootScope", OutputSchema.NullableEnum("environment", "tenant")),
                 ("maxPageSize", OutputSchema.Integer()),
                 ("responseCapBytes", OutputSchema.Integer()),
                 ("approvalTimeoutSeconds", OutputSchema.Integer()));
@@ -75,8 +78,10 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 ("organization", organization),
                 ("user", user),
                 ("devEnvironmentConfirmed", OutputSchema.Boolean()),
-                ("devEnvironmentScope", OutputSchema.NullableEnum("once", "session", "environment", "always")),
-                ("readApprovalScope", OutputSchema.NullableEnum("session", "environment", "always")),
+                ("devEnvironmentScope", OutputSchema.NullableEnum("once", "session", "environment")),
+                ("readApprovalScope", OutputSchema.NullableEnum("session", "environment", "tenant", "global")),
+                ("recordReadScope", OutputSchema.NullableEnum("session", "environment", "tenant", "global")),
+                ("writeScope", OutputSchema.NullableEnum("session", "environment")),
                 ("settings", settings));
         }
 
@@ -90,6 +95,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             var host = execution.Host;
             var devScope = host.DevEnvironmentScope(binding);
             var limits = host.Settings.Read(s => new { s.MaxPageSize, s.ResponseCapCharacters, s.ApprovalTimeoutSeconds });
+            var identity = binding.Identity;
+            var fileRoot = host.FileRoots.Find(identity);
 
             return new JObject
             {
@@ -103,6 +110,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                     ["url"] = binding.OrganizationUrl,
                     ["version"] = version,
                     ["baseLanguageCode"] = organization.GetAttributeValue<int>("languagecode"),
+                    ["environmentId"] = ValueFormats.NullableString(identity.EnvironmentId.Length == 0 ? null : identity.EnvironmentId),
+                    ["tenantId"] = ValueFormats.NullableString(identity.TenantId == Guid.Empty ? null : ValueFormats.FormatGuid(identity.TenantId)),
                 },
                 ["user"] = new JObject
                 {
@@ -111,11 +120,14 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 },
                 ["devEnvironmentConfirmed"] = devScope != null,
                 ["devEnvironmentScope"] = ValueFormats.NullableString(devScope.ToLabel()),
-                ["readApprovalScope"] = ValueFormats.NullableString(host.Approvals.Find(ApprovalKind.ReadApproval, binding.OrganizationId)?.Scope.ToLabel()),
+                ["readApprovalScope"] = ValueFormats.NullableString(host.Approvals.Find(ApprovalKind.ReadApproval, identity)?.Scope.ToLabel()),
+                ["recordReadScope"] = ValueFormats.NullableString(host.Approvals.Find(ApprovalKind.RecordRead, identity)?.Scope.ToLabel()),
+                ["writeScope"] = ValueFormats.NullableString(host.Approvals.Find(ApprovalKind.Write, identity)?.Scope.ToLabel()),
                 ["settings"] = new JObject
                 {
-                    ["recordQueriesEnabled"] = binding.RecordQueriesEnabled,
                     ["publisherCreationEnabled"] = binding.PublisherCreationEnabled,
+                    ["fileRoot"] = ValueFormats.NullableString(fileRoot?.Path),
+                    ["fileRootScope"] = ValueFormats.NullableString(fileRoot?.LevelLabel),
                     ["maxPageSize"] = limits.MaxPageSize,
                     ["responseCapBytes"] = limits.ResponseCapCharacters,
                     ["approvalTimeoutSeconds"] = limits.ApprovalTimeoutSeconds,

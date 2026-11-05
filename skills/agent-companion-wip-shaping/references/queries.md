@@ -165,7 +165,7 @@ The same shape works for `pluginassembly` (`pluginassemblyid`, `name`, `version`
 
 ## Research — what already runs on a table
 
-For planning and for checks before an edit: what is registered on a table now, whether it is in a solution or not. From plugin version 1.2026.11.1, `plugintype`, `sdkmessage`, `sdkmessagefilter`, `sdkmessageprocessingstepimage`, `customapirequestparameter` and `customapiresponseproperty` are on the configuration allow-list, so these queries run even with record queries switched off. An earlier version reports them as touching records: they need record queries enabled on the connection, and the approval dialog says so. When a query is refused for that reason, say what could not be checked.
+For planning and for checks before an edit: what is registered on a table now, whether it is in a solution or not. From plugin version 1.2026.11.1, `plugintype`, `sdkmessage`, `sdkmessagefilter`, `sdkmessageprocessingstepimage`, `customapirequestparameter` and `customapiresponseproperty` are on the configuration allow-list, so these queries are configuration queries and run under the read approval. An earlier version reports them as touching records. From plugin 1.2026.11.2 there is no per-connection switch for records: a query that touches records is approved on its own, as a record read, and a read approval does not cover it. The dialog says so; if the person denies it, say what could not be checked.
 
 **Custom plug-in steps on a table.** `primaryobjecttypecode` lives on the message filter, not on the step, and takes the table's type code. `customizationlevel` 1 leaves out the platform's internal steps — dozens on any table.
 

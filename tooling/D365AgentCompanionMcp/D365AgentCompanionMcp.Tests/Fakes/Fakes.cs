@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using Lspiguel.Xrm.D365AgentCompanionMcp.Approvals;
 using Lspiguel.Xrm.D365AgentCompanionMcp.Common;
+using Lspiguel.Xrm.D365AgentCompanionMcp.Files;
 using Lspiguel.Xrm.D365AgentCompanionMcp.Hosting;
 using Lspiguel.Xrm.D365AgentCompanionMcp.Logging;
 using Lspiguel.Xrm.D365AgentCompanionMcp.Mcp;
@@ -124,6 +125,22 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.Fakes
         public Func<ApprovalRequest, CancellationToken, Task<ApprovalDecision>> Answer { get; set; } =
             (request, cancellation) => Task.FromResult(ApprovalDecision.AllowOnce);
 
+        public List<FileRootRequest> FileRootRequests { get; } = new List<FileRootRequest>();
+
+        /// <summary>Answers each File root prompt; by default the person cancels.</summary>
+        public Func<FileRootRequest, CancellationToken, Task<FileRootChoice?>> FileRootAnswer { get; set; } =
+            (request, cancellation) => Task.FromResult<FileRootChoice?>(null);
+
+        public Task<FileRootChoice?> PromptFileRootAsync(FileRootRequest request, CancellationToken cancellation)
+        {
+            lock (FileRootRequests)
+            {
+                FileRootRequests.Add(request);
+            }
+
+            return FileRootAnswer(request, cancellation);
+        }
+
         public Task<ApprovalDecision> PromptAsync(ApprovalRequest request, CancellationToken cancellation)
         {
             lock (Requests)
@@ -157,7 +174,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.Fakes
                 tools);
         }
 
-        public static BoundConnection Bind(CompanionHost host, IHostInstance owner, Guid organizationId, string connectionId, IOrganizationService service, string name = "Dev A")
+        public static BoundConnection Bind(CompanionHost host, IHostInstance owner, Guid organizationId, string connectionId, IOrganizationService service, string name = "Dev A", string? environmentId = null, Guid tenantId = default)
         {
             var binding = new BoundConnection(owner, connectionId, false, name, $"org{name.Replace(" ", string.Empty).ToLowerInvariant()}", $"{name} org", $"https://{name.Replace(" ", string.Empty).ToLowerInvariant()}.example.invalid");
             if (host.Registry.Claim(binding) != null)
@@ -165,7 +182,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.Fakes
                 throw new InvalidOperationException("Claim conflict in test setup.");
             }
 
-            var outcome = host.Registry.Complete(binding, organizationId, Guid.NewGuid(), false, service, DateTime.UtcNow, out _);
+            var outcome = host.CompleteBinding(binding, organizationId, environmentId, tenantId, Guid.NewGuid(), false, service, DateTime.UtcNow, out _);
             if (outcome != BindOutcome.Bound)
             {
                 throw new InvalidOperationException($"Binding failed in test setup: {outcome}.");

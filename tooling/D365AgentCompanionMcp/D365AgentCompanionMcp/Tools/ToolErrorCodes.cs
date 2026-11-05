@@ -26,7 +26,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         /// <summary>The approval timed out.</summary>
         public const string DeniedNoResponse = "denied_no_response";
 
-        /// <summary>The tool, or a query that touches records, is switched off for this connection.</summary>
+        /// <summary>The tool is switched off for this connection: <c>create_publisher</c> (from Phase 6, the only tool).</summary>
         public const string ToolDisabled = "tool_disabled";
 
         /// <summary>A named item does not exist.</summary>
@@ -49,5 +49,14 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
 
         /// <summary>The platform returned a fault.</summary>
         public const string DataverseError = "dataverse_error";
+
+        /// <summary>A component's current version differs from the <c>expectedVersion</c> passed (SPEC 6.8).</summary>
+        public const string VersionConflict = "version_conflict";
+
+        /// <summary>The component is managed — a first-party web resource, step or custom API (SPEC 6.8).</summary>
+        public const string ManagedComponent = "managed_component";
+
+        /// <summary>An existing component is not in the named WIP (SPEC 6.8).</summary>
+        public const string NotInSolution = "not_in_solution";
     }
 }

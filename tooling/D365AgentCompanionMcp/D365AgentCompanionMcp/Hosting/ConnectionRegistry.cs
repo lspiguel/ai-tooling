@@ -49,7 +49,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
             return null;
         }
 
-        /// <summary>Completes a claim once the identity call has returned.</summary>
+        /// <summary>Completes a claim once the identity call has returned, for a connection that reports no environment or tenant ID.</summary>
         /// <param name="claimed">The claimed binding.</param>
         /// <param name="organizationId">The organization ID.</param>
         /// <param name="userId">The user ID.</param>
@@ -58,7 +58,21 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
         /// <param name="nowUtc">The binding time.</param>
         /// <param name="conflict">The binding to the same organization, on <see cref="BindOutcome.OrganizationConflict"/>.</param>
         /// <returns>The outcome.</returns>
-        public BindOutcome Complete(BoundConnection claimed, Guid organizationId, Guid userId, bool impersonating, IOrganizationService service, DateTime nowUtc, out BoundConnection? conflict)
+        public BindOutcome Complete(BoundConnection claimed, Guid organizationId, Guid userId, bool impersonating, IOrganizationService service, DateTime nowUtc, out BoundConnection? conflict) =>
+            this.Complete(claimed, organizationId, null, Guid.Empty, userId, impersonating, service, nowUtc, out conflict);
+
+        /// <summary>Completes a claim once the identity call has returned.</summary>
+        /// <param name="claimed">The claimed binding.</param>
+        /// <param name="organizationId">The organization ID.</param>
+        /// <param name="environmentId">The environment ID the connection reports, or <c>null</c>.</param>
+        /// <param name="tenantId">The tenant ID the connection reports, or <see cref="Guid.Empty"/>.</param>
+        /// <param name="userId">The user ID.</param>
+        /// <param name="impersonating">Whether the connection impersonates another user.</param>
+        /// <param name="service">The service calls run with.</param>
+        /// <param name="nowUtc">The binding time.</param>
+        /// <param name="conflict">The binding to the same organization, on <see cref="BindOutcome.OrganizationConflict"/>.</param>
+        /// <returns>The outcome.</returns>
+        public BindOutcome Complete(BoundConnection claimed, Guid organizationId, string? environmentId, Guid tenantId, Guid userId, bool impersonating, IOrganizationService service, DateTime nowUtc, out BoundConnection? conflict)
         {
             lock (this.gate)
             {
@@ -76,7 +90,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
                 }
                 else
                 {
-                    claimed.MarkBound(organizationId, userId, impersonating, service, nowUtc);
+                    claimed.MarkBound(organizationId, userId, impersonating, service, nowUtc, environmentId, tenantId);
                 }
             }
 

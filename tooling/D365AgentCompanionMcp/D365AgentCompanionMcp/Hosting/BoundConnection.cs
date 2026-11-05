@@ -7,6 +7,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
 {
     using System;
     using System.Threading;
+    using Lspiguel.Xrm.D365AgentCompanionMcp.Approvals;
     using Microsoft.Xrm.Sdk;
 
     /// <summary>
@@ -65,6 +66,15 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
         /// <summary>Gets the organization ID, known once bound.</summary>
         public Guid OrganizationId { get; private set; }
 
+        /// <summary>Gets the environment ID the connection reports, lowercase; empty when it does not (SPEC §7, Identity).</summary>
+        public string EnvironmentId { get; private set; } = string.Empty;
+
+        /// <summary>Gets the tenant ID the connection reports; <see cref="Guid.Empty"/> when it does not.</summary>
+        public Guid TenantId { get; private set; }
+
+        /// <summary>Gets the IDs that say which environment this is, as grants and File roots match them.</summary>
+        public ConnectionIdentity Identity => new ConnectionIdentity(this.OrganizationId, this.EnvironmentId, this.TenantId, this.OrganizationFriendlyName);
+
         /// <summary>Gets the connected user's ID, known once bound.</summary>
         public Guid UserId { get; private set; }
 
@@ -79,9 +89,6 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
 
         /// <summary>Gets the binding state.</summary>
         public BindingState State { get; private set; } = BindingState.Claimed;
-
-        /// <summary>Gets or sets a value indicating whether queries that touch records may run (per connection, C8).</summary>
-        public bool RecordQueriesEnabled { get; set; } = true;
 
         /// <summary>Gets or sets a value indicating whether <c>create_publisher</c> may run (per connection, off by default, R3).</summary>
         public bool PublisherCreationEnabled { get; set; }
@@ -107,9 +114,13 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
         /// <param name="impersonating">Whether the connection impersonates another user.</param>
         /// <param name="service">The service calls run with.</param>
         /// <param name="boundOnUtc">When it was bound.</param>
-        public void MarkBound(Guid organizationId, Guid userId, bool impersonating, IOrganizationService service, DateTime boundOnUtc)
+        /// <param name="environmentId">The environment ID the connection reports, or <c>null</c>.</param>
+        /// <param name="tenantId">The tenant ID the connection reports, or <see cref="Guid.Empty"/>.</param>
+        public void MarkBound(Guid organizationId, Guid userId, bool impersonating, IOrganizationService service, DateTime boundOnUtc, string? environmentId = null, Guid tenantId = default)
         {
             this.OrganizationId = organizationId;
+            this.EnvironmentId = ConnectionIdentity.NormalizeEnvironmentId(environmentId);
+            this.TenantId = tenantId;
             this.UserId = userId;
             this.Impersonating = impersonating;
             this.Service = service;

@@ -13,6 +13,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
     using System.Threading.Tasks;
     using System.Windows.Forms;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Approvals;
+    using Lspiguel.Xrm.D365AgentCompanionMcp.Files;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Hosting;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Logging;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Setup;
@@ -47,9 +48,11 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
         private readonly Label devText = UiBuilder.Text();
         private readonly Button confirmDevButton;
         private readonly Button clearDevButton;
-        private readonly CheckBox recordQueries = new CheckBox { Text = "Record queries", AutoSize = true };
         private readonly CheckBox publisherCreation = new CheckBox { Text = "Publisher creation", AutoSize = true };
+        private readonly Label fileRootText = UiBuilder.Text();
         private readonly Label readsText = UiBuilder.Text();
+        private readonly Label recordsText = UiBuilder.Text();
+        private readonly Label writesText = UiBuilder.Text();
         private readonly Button revokeButton;
 
         private readonly Label serverText = UiBuilder.Text();
@@ -61,7 +64,6 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
         private readonly NumericUpDown approvalTimeout = UiBuilder.Number(HostLimits.MinPanelApprovalTimeout, HostLimits.MaxApprovalTimeout, 60);
         private readonly Label alwaysText = UiBuilder.Text();
         private readonly Label noticeText = UiBuilder.Text();
-        private readonly TokenControl tokenControl;
 
         private readonly LogView callLogView = new LogView();
         private readonly LogView hostLogView = new LogView();
@@ -82,11 +84,9 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
             this.clearDevButton = UiBuilder.Button("Clear", (s, e) => this.ClearDevConfirmation());
             this.revokeButton = UiBuilder.Button("Revoke", (s, e) => this.RevokeReads());
             this.startStopButton = UiBuilder.Button("Stop server — all connections", (s, e) => this.StartOrStop());
-            this.tokenControl = new TokenControl(this.host);
             this.noticeText.ForeColor = UiBuilder.WarningColor;
             this.alwaysText.ForeColor = UiBuilder.WarningColor;
 
-            this.recordQueries.CheckedChanged += (s, e) => this.ApplyConnectionSettings();
             this.publisherCreation.CheckedChanged += (s, e) => this.ApplyConnectionSettings();
             this.callLog.EntryAdded += (s, entry) => this.RunOnUi(() => this.callLogView.Append(entry));
             this.callLog.Cleared += (s, e) => this.RunOnUi(this.callLogView.ClearLines);
@@ -205,14 +205,54 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
             return completion.Task;
         }
 
+        /// <inheritdoc/>
+        Task<FileRootChoice?> IFileRootPrompt.PromptFileRootAsync(FileRootRequest request, CancellationToken cancellation)
+        {
+            var completion = new TaskCompletionSource<FileRootChoice?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            FileRootForm? form = null;
+            var registration = cancellation.Register(() =>
+            {
+                completion.TrySetCanceled();
+                this.RunOnUi(() => form?.Withdraw());
+            });
+            completion.Task.ContinueWith(t => registration.Dispose(), TaskScheduler.Default);
+
+            this.RunOnUi(() =>
+            {
+                if (completion.Task.IsCompleted)
+                {
+                    return;
+                }
+
+                form = new FileRootForm(request);
+                form.Decided += (s, choice) => completion.TrySetResult(choice);
+                form.FormClosed += (s, e) =>
+                {
+                    completion.TrySetResult(null);
+                    form.Dispose();
+                };
+
+                // Owned by the main window, like the approval dialog, so it appears whichever tab is in front (C9).
+                form.Show(this.MainWindow);
+            });
+
+            return completion.Task;
+        }
+
         private static Identity Identify(IOrganizationService service)
         {
             // Calls run on a clone of the tab's service where XrmToolBox allows it (SPEC §5 Threading).
             var callService = service;
             var impersonating = false;
+            string? environmentId = null;
+            var tenantId = Guid.Empty;
             if (service is CrmServiceClient client)
             {
                 impersonating = client.CallerId != Guid.Empty;
+
+                // The environment and tenant IDs say which environment this is, beyond the organization ID (SPEC 7, Identity).
+                environmentId = client.EnvironmentId;
+                tenantId = client.TenantId;
                 try
                 {
                     var clone = client.Clone();
@@ -229,7 +269,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
             }
 
             var who = (WhoAmIResponse)callService.Execute(new WhoAmIRequest());
-            return new Identity(callService, who.OrganizationId, who.UserId, impersonating);
+            return new Identity(callService, who.OrganizationId, who.UserId, impersonating, environmentId, tenantId);
         }
 
         private static string DescribeDev(ApprovalScope? scope)
@@ -242,14 +282,12 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
                     return "Confirmed — this session";
                 case ApprovalScope.Environment:
                     return "Confirmed — this environment, remembered";
-                case ApprovalScope.Always:
-                    return "Confirmed — every organization (always, set in settings)";
                 default:
                     return "Not confirmed — Write tools refuse on this connection";
             }
         }
 
-        private static string DescribeReads(ApprovalScope? scope)
+        private static string Describe(ApprovalScope? scope, string none)
         {
             switch (scope)
             {
@@ -257,10 +295,12 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
                     return "Approved — this session";
                 case ApprovalScope.Environment:
                     return "Approved — this environment, remembered";
+                case ApprovalScope.Tenant:
+                    return "Approved — every environment in this tenant";
                 case ApprovalScope.Always:
-                    return "Approved — every organization (always, set in settings)";
+                    return "Approved — Global, every environment";
                 default:
-                    return "Every Read call prompts";
+                    return none;
             }
         }
 
@@ -271,14 +311,17 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
                 UiBuilder.Row(UiBuilder.Caption("This tab"), this.connectionText, this.connectButton),
                 UiBuilder.Row(UiBuilder.Caption(string.Empty), this.urlText),
                 UiBuilder.Row(UiBuilder.Caption("Dev env"), this.devText, this.confirmDevButton, this.clearDevButton),
-                UiBuilder.Row(UiBuilder.Caption("Settings"), this.recordQueries, this.publisherCreation),
-                UiBuilder.Row(UiBuilder.Caption("Reads"), this.readsText, this.revokeButton));
+                UiBuilder.Row(UiBuilder.Caption("Settings"), this.publisherCreation),
+                UiBuilder.Row(UiBuilder.Caption("File root"), this.fileRootText),
+                UiBuilder.Row(UiBuilder.Caption("Reads"), this.readsText, this.revokeButton),
+                UiBuilder.Row(UiBuilder.Caption("Records"), this.recordsText),
+                UiBuilder.Row(UiBuilder.Caption("Writes"), this.writesText));
 
             var hostGroup = UiBuilder.Group(
                 "Host — shared by all tabs",
                 UiBuilder.Row(UiBuilder.Caption("Server"), this.serverText, this.startStopButton),
                 UiBuilder.Row(UiBuilder.Caption("Port"), this.port, UiBuilder.Button("Apply port — all clients", (s, e) => this.ApplyPort())),
-                UiBuilder.Row(UiBuilder.Caption("Token"), this.tokenControl, UiBuilder.Button("Copy client config", (s, e) => this.CopyClientConfig())),
+                UiBuilder.Row(UiBuilder.Caption("Clients"), UiBuilder.Button("Copy client config", (s, e) => this.CopyClientConfig()), UiBuilder.Button("Active Approvals…", (s, e) => this.ShowActiveApprovals())),
                 UiBuilder.Row(UiBuilder.Caption("Bound"), this.boundText),
                 UiBuilder.Row(
                     UiBuilder.Caption("Limits"),
@@ -288,8 +331,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
                     this.responseCap,
                     UiBuilder.Text("Timeout (s)"),
                     this.approvalTimeout,
-                    UiBuilder.Button("Apply", (s, e) => this.ApplyLimits()),
-                    UiBuilder.Button("Always settings…", (s, e) => this.ShowAlwaysSettings())),
+                    UiBuilder.Button("Apply", (s, e) => this.ApplyLimits())),
                 UiBuilder.Row(this.alwaysText),
                 UiBuilder.Row(this.noticeText));
 
@@ -432,7 +474,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
             }
 
             var result = identity.Result;
-            var outcome = this.host.Registry.Complete(candidate, result.OrganizationId, result.UserId, result.Impersonating, result.Service, DateTime.UtcNow, out var conflict);
+            var outcome = this.host.CompleteBinding(candidate, result.OrganizationId, result.EnvironmentId, result.TenantId, result.UserId, result.Impersonating, result.Service, DateTime.UtcNow, out var conflict);
             if (outcome != BindOutcome.Bound)
             {
                 this.binding = null;
@@ -501,7 +543,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
             }
             else if (choice.HasValue)
             {
-                this.host.Approvals.GrantForOrganization(ApprovalKind.DevEnvironment, choice.Value, current.OrganizationId, current.OrganizationFriendlyName, this.tabLabel);
+                this.host.Approvals.Allow(ApprovalKind.DevEnvironment, choice.Value, current.Identity, this.tabLabel);
             }
 
             this.RefreshPanel();
@@ -512,7 +554,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
             if (this.binding?.State == BindingState.Bound)
             {
                 this.binding.DevConfirmedOnce = false;
-                this.host.Approvals.RevokeOrganization(ApprovalKind.DevEnvironment, this.binding.OrganizationId);
+                this.host.Approvals.RevokeEnvironment(ApprovalKind.DevEnvironment, this.binding.Identity);
                 this.RefreshPanel();
             }
         }
@@ -521,7 +563,12 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
         {
             if (this.binding?.State == BindingState.Bound)
             {
-                this.host.Approvals.RevokeOrganization(ApprovalKind.ReadApproval, this.binding.OrganizationId);
+                // This tab's grants for its own environment; tenant and Global grants are revoked in Active Approvals.
+                foreach (var kind in new[] { ApprovalKind.ReadApproval, ApprovalKind.RecordRead, ApprovalKind.Write })
+                {
+                    this.host.Approvals.RevokeEnvironment(kind, this.binding.Identity);
+                }
+
                 this.RefreshPanel();
             }
         }
@@ -530,7 +577,6 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
         {
             if (this.binding?.State == BindingState.Bound)
             {
-                this.binding.RecordQueriesEnabled = this.recordQueries.Checked;
                 this.binding.PublisherCreationEnabled = this.publisherCreation.Checked;
             }
         }
@@ -558,13 +604,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
         private void ApplyLimits() =>
             this.host.ChangeLimits((int)this.maxPageSize.Value, (int)this.responseCap.Value, (int)this.approvalTimeout.Value);
 
-        private void ShowAlwaysSettings()
-        {
-            using (var dialog = new AlwaysSettingsForm(this.host.Approvals, $"settings ({this.tabLabel})"))
-            {
-                dialog.ShowDialog(this.MainWindow);
-            }
-        }
+        private void ShowActiveApprovals() => ActiveApprovalsForm.ShowFor(this.host, this.MainWindow, this.tabLabel);
 
         private void CopyClientConfig() => Clipboard.SetText(ClientConfig.Compose(this.host.Endpoint, this.host.Tokens.Token));
 
@@ -615,13 +655,21 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
             var devScope = bound == null ? null : this.host.DevEnvironmentScope(bound);
             this.devText.Text = bound == null ? "—" : DescribeDev(devScope);
             this.confirmDevButton.Enabled = bound != null && devScope == null;
-            this.clearDevButton.Enabled = bound != null && devScope != null && devScope != ApprovalScope.Always;
-            this.recordQueries.Enabled = this.publisherCreation.Enabled = bound != null;
-            this.recordQueries.Checked = bound?.RecordQueriesEnabled ?? false;
+            this.clearDevButton.Enabled = bound != null && devScope != null;
+            this.publisherCreation.Enabled = bound != null;
             this.publisherCreation.Checked = bound?.PublisherCreationEnabled ?? false;
-            var readScope = bound == null ? null : this.host.Approvals.Find(ApprovalKind.ReadApproval, bound.OrganizationId)?.Scope;
-            this.readsText.Text = bound == null ? "—" : DescribeReads(readScope);
-            this.revokeButton.Enabled = readScope == ApprovalScope.Session || readScope == ApprovalScope.Environment;
+            var identity = bound?.Identity;
+            var fileRoot = identity == null ? null : this.host.FileRoots.Find(identity);
+            this.fileRootText.Text = bound == null
+                ? "—"
+                : fileRoot == null ? "Not set — asked for on first use" : $"{fileRoot.Path}   {fileRoot.LevelLabel} · read-only here, change it in Active Approvals";
+            var readScope = identity == null ? null : this.host.Approvals.Find(ApprovalKind.ReadApproval, identity)?.Scope;
+            var recordScope = identity == null ? null : this.host.Approvals.Find(ApprovalKind.RecordRead, identity)?.Scope;
+            var writeScope = identity == null ? null : this.host.Approvals.Find(ApprovalKind.Write, identity)?.Scope;
+            this.readsText.Text = bound == null ? "—" : Describe(readScope, "Every Read call prompts");
+            this.recordsText.Text = bound == null ? "—" : Describe(recordScope, "Every query that reads records prompts");
+            this.writesText.Text = bound == null ? "—" : Describe(writeScope, "Every Write call prompts");
+            this.revokeButton.Enabled = bound != null && new[] { readScope, recordScope, writeScope }.Any(s => s == ApprovalScope.Session || s == ApprovalScope.Environment);
 
             switch (this.host.State)
             {
@@ -653,18 +701,18 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
                 ? "0"
                 : $"{all.Count} — {string.Join(", ", all.Select(b => ReferenceEquals(b, bound) ? $"{b.OrganizationFriendlyName} (this tab)" : b.OrganizationFriendlyName))}";
 
-            var always = new List<string>();
-            if (this.host.Approvals.IsAlways(ApprovalKind.ReadApproval))
+            var global = new List<string>();
+            if (this.host.Approvals.IsGlobal(ApprovalKind.ReadApproval))
             {
-                always.Add("⚠ Reads are approved on every organization (always).");
+                global.Add("⚠ Reads are approved on every environment (Global).");
             }
 
-            if (this.host.Approvals.IsAlways(ApprovalKind.DevEnvironment))
+            if (this.host.Approvals.IsGlobal(ApprovalKind.RecordRead))
             {
-                always.Add("⚠ The dev-environment guard is off for every organization (always).");
+                global.Add("⚠ Record reads are approved on every environment (Global).");
             }
 
-            this.alwaysText.Text = string.Join("  ", always);
+            this.alwaysText.Text = string.Join("  ", global);
             if (this.host.Notice != null)
             {
                 this.noticeText.Text = this.host.Notice;
@@ -716,13 +764,19 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
 
         private sealed class Identity
         {
-            public Identity(IOrganizationService service, Guid organizationId, Guid userId, bool impersonating)
+            public Identity(IOrganizationService service, Guid organizationId, Guid userId, bool impersonating, string? environmentId, Guid tenantId)
             {
                 this.Service = service;
                 this.OrganizationId = organizationId;
                 this.UserId = userId;
                 this.Impersonating = impersonating;
+                this.EnvironmentId = environmentId;
+                this.TenantId = tenantId;
             }
+
+            public string? EnvironmentId { get; }
+
+            public Guid TenantId { get; }
 
             public IOrganizationService Service { get; }
 

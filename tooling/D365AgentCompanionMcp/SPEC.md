@@ -68,7 +68,7 @@ The same loop serves every moment above: a small set of WIP solutions per user s
 | # | Rule | Why |
 |---|---|---|
 | R1 | **No required components, no subcomponents** — see above | Bloat and unrecoverable layering |
-| R2 | **Every call is visible and authorized by a person** before it runs. The one exception is `list_connections`, which returns only the connections the person bound to plugin tabs and is logged but not individually approved | Prompt injection; agent error |
+| R2 | **Every call is visible and authorized by a person** before it runs: in its own dialog, or in advance by a grant the person gave in a dialog — a scoped Write approval reaches no further than one environment, and a read approval no further than the scope the person chose ([§7](#phase-6--scopes-and-grants)). A grant never skips the reason (R12), the dev-environment confirmation, the fixed add flags (R1) or the log (R13). The one exception is `list_connections`, which returns only the connections the person bound to plugin tabs and is logged but not individually approved | Prompt injection; agent error |
 | R3 | **Publisher creation is always confirmed individually** — never allowed for a session, and disabled by default | A second publisher, even with the same prefix, creates layering problems that cannot be solved |
 | R4 | **Modern commanding (Power Fx command bar) is out of scope** — classic ribbon only | Creates chicken-and-egg dependencies between base solutions and app solutions |
 | R5 | **Unpacked format is the XML layout produced by `pac solution unpack`** — not the YAML source-control layout | One format for all skills and scripts |
@@ -355,11 +355,11 @@ State that spans calls — the `connection` and paging `cursor` handles — trav
 | `dev_environment_not_confirmed` | Write or Publisher tool on a connection not confirmed as development | Ask the person |
 | `denied_by_user` | The person denied the call | Do not retry without new instructions |
 | `denied_no_response` | Approval timed out | Do not retry without new instructions |
-| `tool_disabled` | `create_publisher`, or a `query` that touches records, switched off for this connection. From Phase 6, only `create_publisher` | Ask the person |
+| `tool_disabled` | `create_publisher` switched off for this connection. In v1 a `query` that touched records could also be switched off; from Phase 6 it asks as a record read instead | Ask the person |
 | `not_found` | A named solution, publisher, table, column, option set, relationship or component does not exist. `details` names it | Check the name |
 | `already_exists` | Unique name already taken | Choose another name, or reuse the existing one |
 | `managed_solution` | Add or remove against a managed solution | Use an unmanaged solution |
-| `version_conflict`, `managed_component`, `not_in_solution` | *Phase 6* direct-update tools and *Phase 7* step tools — see [§6.8](#68-direct-update-tools-phase-6) | See §6.8 |
+| `version_conflict`, `managed_component`, `not_in_solution` | `update_web_resources` (Phase 6, built) and the *Phase 7* step tools — see [§6.8](#68-direct-update-tools-phase-6) | See §6.8 |
 | `invalid_cursor` | The cursor is unknown, expired, or belongs to another connection or tool | Start again from the first page |
 | `server_stopping` | The host is stopping; the call did not run | Wait for the person |
 | `cancelled_by_client` | The client closed the request, or cancelled it, before the call ran ([§6.1](#61-protocol-surface)). Written to the call log only — the agent never receives it | — |
@@ -1028,7 +1028,7 @@ type PluginComponentTable = "customapi" | "customapirequestparameter" | "customa
 
 Component type codes accepted in v1 (confirmed against the `solutioncomponent` type option set in spike S2): table `1`, column `2`, global option set `9`, relationship `10`, view `26`, form `60`, web resource `61`, sitemap `62`, app module `80`. Any other type fails with `invalid_argument` naming the entry. The application ribbon customization is not accepted until its type code is confirmed live; S2 did not settle it.
 
-**Plug-in components (Phase 6).** Accepting them is not plug-in authoring, which stays in [Phase 7](#phase-7--plug-in-authoring): each component must already be registered in development, by a person in the Plugin Registration Tool, and the tool only puts it in a WIP. Until Phase 6 is built, these types are refused as above and are added with PAC (Path B).
+**Plug-in components (Phase 6).** Accepting them is not plug-in authoring, which stays in [Phase 7](#phase-7--plug-in-authoring): each component must already be registered in development, by a person in the Plugin Registration Tool, and the tool only puts it in a WIP. From plugin version 1.2026.11.2 they are accepted; on an earlier plugin they are refused as above and are added with PAC (Path B).
 
 | Component | Type code | Selected by |
 |---|---|---|
@@ -1039,7 +1039,8 @@ Component type codes accepted in v1 (confirmed against the `solutioncomponent` t
 
 - **Codes that vary by environment.** Custom API types have codes of 10000 and above, assigned per organization (10038 in S9). The tool reads the code for the connection's organization from `solutioncomponentdefinition` by table name and reports it in `results`. A numeric `type` of 10000 or above is refused with `invalid_argument`, because the same number means something else elsewhere.
 - **Fixed behaviour is unchanged (R1).** Adding a step adds neither its plug-in type nor its assembly; `get_required_components` checks that they are in place (W6).
-- **What travels with what.** Adding an assembly does not add its steps[^5]: every step the WIP should carry is added on its own. A step's images are not separate solution components and travel with the step (S9); its secure configuration is never exported. Whether adding a custom API also adds its request parameters and response properties is checked at Phase 6 exit. Until it is, the read-back shows it, and anything added that was not requested is reported as `unexpected`.
+- **What travels with what.** Adding an assembly does not add its steps[^5]: every step the WIP should carry is added on its own. A step's images are not separate solution components and travel with the step (S9); its secure configuration is never exported. Whether adding a custom API also adds its request parameters and response properties is checked at Phase 6 exit. Until it is, the read-back shows it, and anything added that was not requested is reported as `unexpected`, with a code of 10000 or above named by its table (`customapirequestparameter`, say) rather than as `ComponentType10038`.
+- **How the tool resolves them (as built).** An assembly selected by name is matched in `pluginassembly`; a name that matches several versions fails with `invalid_argument` and `details.versions` lists them, and a `version` that matches none is `not_found`. A custom API component selected by `uniqueName` is read from its table, a request parameter or response property by the `customapiid` of the named API plus its own `uniqueName`. The code is read with `solutioncomponentdefinition.primaryentityname`; an environment with no definition for the table fails the call with `not_found`. Steps, assemblies and the three custom API tables are named in the dialog; a selector by `componentTable` has no numeric `type`, and one that carries both is `invalid_argument`.
 - **The same selectors** apply to `get_required_components` and `remove_solution_component`.
 
 ```ts
@@ -1132,7 +1133,7 @@ Disabled unless the user enables it for the connection. When disabled, the tool 
 ### 6.8 Direct-update tools (Phase 6)
 
 > [!NOTE]
-> **Planned, not built.** Specified from the analysis of 2026-11-03 ([notes](notes.md#phase-6--preparation)); built in [Phase 6](#phase-6--planned-enhancements) after the spikes it lists. The workflows that use these tools are in [§9.11](#911-direct-updates-in-development).
+> **Built (2026-11-05, version 1.2026.11.2).** Specified from the analysis of 2026-11-03 ([notes](notes.md#phase-6--preparation)); the workflows that use the tool are in [§9.11](#911-direct-updates-in-development). Live exit checks are pending ([Phase 6](#phase-6--planned-enhancements)).
 
 These tools change components in development without a solution export and import. They are Write tier: each needs a `reason` (R12), dev-environment confirmation and a per-call approval, and each is logged (R13). They take over two jobs the import loop does today:
 
@@ -1222,6 +1223,9 @@ interface UpdateWebResourcesResult {
     error?: ToolError["error"];
   }>;
   published: boolean;
+  publishError: string | null;       // the publish failed after the writes: they are kept, and the reason is here
+  unexpected: Array<{ componentType: ComponentType; objectId: Guid; name: string | null; rootComponentBehavior: RootComponentBehavior | null }>;
+  unexpectedCount: number;           // the read-back of step 5, as add_solution_components reports it
 }
 ```
 
@@ -1337,7 +1341,7 @@ The current plug-in type's `typename` is matched in the target assembly; a missi
 The plugin's approval is the authoritative gate. The agent client's own tool-approval prompt is a convenience and is not relied on.
 
 > [!NOTE]
-> **Phase 6 changes this model.** The tiers, scopes and saved settings below are v1, as built. [Phase 6 — scopes and grants](#phase-6--scopes-and-grants) at the end of this section replaces them:
+> **Phase 6 changes this model (built in 1.2026.11.2).** The tiers, scopes and saved settings immediately below describe v1. [Phase 6 — scopes and grants](#phase-6--scopes-and-grants) at the end of this section replaces them:
 > - a Tenant scope is added, and *Always* is shown as Global;
 > - record reads and Write calls become grants;
 > - Write and the dev-environment confirmation are capped at one environment;
@@ -1389,7 +1393,7 @@ Environment and always scopes persist between sessions in XrmToolBox's plugin se
 ### Phase 6 — scopes and grants
 
 > [!NOTE]
-> **Planned, not built.** Decided 2026-11-04 ([notes](notes.md#decisions), D16). When Phase 6 is built, this replaces the scopes and saved settings above. Until then v1 behaves as described above.
+> **Built (2026-11-05, version 1.2026.11.2).** Decided 2026-11-04 ([notes](notes.md#decisions), D16). This replaces the scopes and saved settings above; the text above describes v1, which an older plugin still follows.
 
 A client project usually has one repository and many environments, often all in one tenant. Phase 6 lets a grant cover one environment, one tenant or every tenant, and lets the reach depend on what the grant allows.
 
@@ -1683,7 +1687,7 @@ The first time the plugin opens in an XrmToolBox installation, the tab shows a s
 ### 8.8 Active Approvals window (Phase 6)
 
 > [!NOTE]
-> **Planned, not built.** The behaviour is set out in [§7, Phase 6 — scopes and grants](#phase-6--scopes-and-grants), in [§6.8, File root](#file-root) and in the [Phase 6](#phase-6--planned-enhancements) table. This section is the window's layout.
+> **Built (2026-11-05, version 1.2026.11.2).** The behaviour is set out in [§7, Phase 6 — scopes and grants](#phase-6--scopes-and-grants), in [§6.8, File root](#file-root) and in the [Phase 6](#phase-6--planned-enhancements) table. This section is the window's layout; the tree is built by one function apart from the window and is unit-tested.
 
 The window opens from an **Active Approvals** button on the main panel of any tab. There is one window for all tabs. It lists every environment and tenant the plugin holds a grant or a File root for, whether or not a tab is bound there now.
 
@@ -2101,7 +2105,7 @@ An import sets the state of every step the solution carries. With plug-in activa
 ### 9.11 Direct updates in development
 
 > [!NOTE]
-> **Phase 6.** Decided 2026-11-03 from field use; the analysis and decisions are in [notes](notes.md#phase-6--preparation). Nothing here is built yet. Plug-ins were part of this analysis and moved to Phase 7 the same day ([§9.10](#910-plug-in-assemblies-steps-and-custom-apis-phase-7)).
+> **Phase 6.** Decided 2026-11-03 from field use; the analysis and decisions are in [notes](notes.md#phase-6--preparation). `update_web_resources` is built (1.2026.11.2); the PCF guidance is in the `agent-companion-wip-edit-loop` skill. Plug-ins were part of this analysis and moved to Phase 7 the same day ([§9.10](#910-plug-in-assemblies-steps-and-custom-apis-phase-7)).
 
 Export, unpack, pack and import are the slowest part of the edit loop. For four kinds of component, updating development in place was weighed against that loop. Where it is adopted, the WIP still holds the components, for overlap checks, W10 and close-out. It is no longer how the edit gets into development.
 
@@ -2350,7 +2354,9 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 ### Phase 6 — Planned enhancements
 
 > [!NOTE]
-> **Phase 5 has shipped (2026-11-03).** Phase 6 is being explored and shaped from real use before main development starts, and that may still reshape or drop these items. Spikes S10 and S11 ran on 2026-11-03; their results are written into [§6.8](#68-direct-update-tools-phase-6) and [§9.11](#911-direct-updates-in-development). Plug-in authoring, step mirroring and switching included, moved to [Phase 7](#phase-7--plug-in-authoring) the same day. Phase 6 builds as version **1.2026.11.2** (two-file rule); the `.nuspec` release notes are rewritten when it ships.
+> **Phase 6 is built (2026-11-05), as version 1.2026.11.2; the live exit checks are pending.** Phase 5 shipped on 2026-11-03, and Phase 6 was shaped from real use before it was built. Spikes S10 and S11 ran on 2026-11-03; their results are written into [§6.8](#68-direct-update-tools-phase-6) and [§9.11](#911-direct-updates-in-development). Plug-in authoring, step mirroring and switching included, moved to [Phase 7](#phase-7--plug-in-authoring) the same day. Phase 6 builds as version **1.2026.11.2** (two-file rule); the `.nuspec` release notes are rewritten for it.
+
+**Status (2026-11-05): built; live exit checks pending.** Every enhancement below is built and unit-tested, and the skills carry the direct-update and plug-in component guidance. Implementation choices, what the build found, and the exit-check steps are in [notes.md](notes.md#phase-6--execution).
 
 | Enhancement | Behaviour | What v1 does to leave room |
 |---|---|---|

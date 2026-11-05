@@ -14,10 +14,16 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Approvals
         /// <summary>This call only.</summary>
         AllowOnce,
 
-        /// <summary>Every Read call to this organization until the host stops.</summary>
+        /// <summary>Every call of the kind to this environment until the host stops.</summary>
         AllowSession,
 
-        /// <summary>Every Read call to this organization, remembered.</summary>
+        /// <summary>Every call of the kind to this environment, remembered.</summary>
         AllowEnvironment,
+
+        /// <summary>Every call of the kind to every environment of this tenant, remembered.</summary>
+        AllowTenant,
+
+        /// <summary>Every call of the kind to every environment of every tenant, remembered.</summary>
+        AllowGlobal,
     }
 }

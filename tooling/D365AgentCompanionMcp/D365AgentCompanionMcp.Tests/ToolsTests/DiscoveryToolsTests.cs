@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
+using Lspiguel.Xrm.D365AgentCompanionMcp.Approvals;
 using Lspiguel.Xrm.D365AgentCompanionMcp.Hosting;
 using Lspiguel.Xrm.D365AgentCompanionMcp.Mcp;
 using Lspiguel.Xrm.D365AgentCompanionMcp.Tests.Fakes;
@@ -278,24 +279,43 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
         }
 
         [Test]
-        public async Task Query_OnRecords_WhenSwitchedOff_IsToolDisabledWithoutDialog()
+        public async Task Query_OnRecords_IsNeverRefusedAsToolDisabled_ItAsksAsRecordRead()
         {
-            _binding.RecordQueriesEnabled = false;
-
             var records = await Call(QueryTool.Query, Args(new JObject { ["fetchXml"] = AccountsFetch }));
-            var configuration = await Call(QueryTool.Query, Args(new JObject { ["fetchXml"] = FormsFetch }));
 
-            Assert.That(Code(records), Is.EqualTo(ToolErrorCodes.ToolDisabled));
-            Assert.That(configuration.IsError, Is.False, "configuration queries still run");
-            Assert.That(_tab.Requests, Has.Count.EqualTo(1));
-            Assert.That(_tab.CallLog.Snapshot().First().OutcomeLine, Does.StartWith("  → error tool_disabled"));
+            Assert.That(records.IsError, Is.False, records.Payload.ToString());
+            var request = _tab.Requests.Single();
+            Assert.That(request.TouchesRecords, Is.True);
+            Assert.That(request.Kind, Is.EqualTo(ApprovalKind.RecordRead));
         }
 
         [Test]
-        public async Task Query_OnPluginRegistration_WhenRecordsSwitchedOff_StillRuns()
+        public async Task Query_OnRecords_NeedsItsOwnGrant_AReadApprovalDoesNotCoverIt()
         {
-            _binding.RecordQueriesEnabled = false;
+            _host.Approvals.Allow(ApprovalKind.ReadApproval, ApprovalScope.Environment, _binding.Identity, "tab");
 
+            await Call(QueryTool.Query, Args(new JObject { ["fetchXml"] = FormsFetch }));
+            Assert.That(_tab.Requests, Is.Empty, "a configuration query runs under the read approval");
+
+            await Call(QueryTool.Query, Args(new JObject { ["fetchXml"] = AccountsFetch }));
+            Assert.That(_tab.Requests, Has.Count.EqualTo(1), "a record query prompts on its own");
+        }
+
+        [Test]
+        public async Task Query_OnRecords_UnderARecordReadGrant_RunsWithoutADialog_AndTheGrantCoversNothingElse()
+        {
+            _host.Approvals.Allow(ApprovalKind.RecordRead, ApprovalScope.Environment, _binding.Identity, "tab");
+
+            await Call(QueryTool.Query, Args(new JObject { ["fetchXml"] = AccountsFetch }));
+            Assert.That(_tab.Requests, Is.Empty);
+
+            await Call(QueryTool.Query, Args(new JObject { ["fetchXml"] = FormsFetch }));
+            Assert.That(_tab.Requests, Has.Count.EqualTo(1), "a record-read grant does not cover other reads");
+        }
+
+        [Test]
+        public async Task Query_OnPluginRegistration_StillRunsAsAConfigurationQuery()
+        {
             var result = await Call(QueryTool.Query, Args(new JObject { ["fetchXml"] = SerializationTests.StepsOnATableFetch }));
 
             Assert.That(result.IsError, Is.False, result.Payload.ToString());

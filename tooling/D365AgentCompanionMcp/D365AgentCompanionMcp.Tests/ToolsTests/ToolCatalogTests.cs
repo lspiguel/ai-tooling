@@ -34,6 +34,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
                 "get_table_metadata", "get_relationships", "get_option_sets", "get_entity_ribbon", "get_application_ribbon",
                 "query", "list_solution_components", "get_component_state", "get_required_components",
                 "create_solution", "add_solution_components", "remove_solution_component", "create_publisher",
+                "update_web_resources",
             }));
         }
 
@@ -93,7 +94,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
         {
             var tools = TestHost.Create().Dispatcher.Tools.Where(t => t.Tier == ToolTier.Write || t.Tier == ToolTier.Publisher).ToList();
 
-            Assert.That(tools.Select(t => t.Name), Is.EquivalentTo(new[] { "create_solution", "add_solution_components", "remove_solution_component", "create_publisher" }));
+            Assert.That(tools.Select(t => t.Name), Is.EquivalentTo(new[] { "create_solution", "add_solution_components", "remove_solution_component", "create_publisher", "update_web_resources" }));
             foreach (var tool in tools)
             {
                 Assert.That(tool.InputSchema["required"]!.Values<string>(), Does.Contain("reason"), tool.Name);

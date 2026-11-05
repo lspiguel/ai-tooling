@@ -57,7 +57,7 @@ The full playbook is the **[Activity × Tooling Matrix](workflows/ai-augmented-d
 
 **How it is used.** PAC CLI exports, unpacks, packs and imports; the plugin covers what PAC cannot. Five `agent-companion-*` [skills](skills/) carry the delivery method: delivery context and a WIP ledger, segmented WIPs per story and transport group, a local edit loop with an overwrite check before every import, and close-out into transport solutions. The plugin's setup wizard exports the skills and copies the client configuration; Claude Code and GitHub Copilot in VS Code are tested.
 
-**Where it is going.** Phase 6 is being shaped from field use: direct updates in development for web resources, so that common edits skip the slow solution round trip. Plug-in authoring — registration through WIP solutions, and mirroring and switching steps for side-loaded assemblies — is deferred to Phase 7, which starts with a spike. See the [spec](tooling/D365AgentCompanionMcp/SPEC.md#phase-6--planned-enhancements).
+**Where it is going.** Phase 6 (version 1.2026.11.2) adds approvals scoped to an environment, a tenant or globally, an Active Approvals window, `update_web_resources` — direct updates in development, so that common web resource edits skip the slow solution round trip — and already-registered plug-in assemblies, steps and custom APIs in WIP solutions. Plug-in authoring — registration through WIP solutions, and mirroring and switching steps for side-loaded assemblies — is deferred to Phase 7, which starts with a spike. See the [spec](tooling/D365AgentCompanionMcp/SPEC.md#phase-6--planned-enhancements).
 
 Install: XrmToolBox → *Tool Library* → search for *D365 Agent Companion MCP*. Conventions for agents using it are in [INSTRUCTIONS.md](INSTRUCTIONS.md#using-the-mcp).
 

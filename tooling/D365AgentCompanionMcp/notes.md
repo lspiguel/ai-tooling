@@ -14,7 +14,7 @@
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | **Done** (2026-10-31) — built, unit-tested (207 tests), and the cold-start workflow (§9.1) ran end to end on the sandbox; two findings (P1, P2) for the Phase 4 skills. See [Phase 3 — execution](#phase-3--execution) | See spec |
 | [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | **In progress** (2026-10-31) — five companion skills and their scripts built; script self-tests pass (35 + 11). Live exit checks: I31 verified; scenarios 1–4 pass; scenario 5 desk-checked; scenario 6 partial — the imported flow did not fire (E13). Findings E1–E13. See [Phase 4 — execution](#phase-4--execution) | See spec |
 | [5 — Release](SPEC.md#phase-5--release) | **Done** (2026-11-03) — published in the XrmToolBox Tool Library. Still to follow the release: the column-3 guide changes. See [Phase 5 — execution](#phase-5--execution) | See spec |
-| [6 — Planned enhancements](SPEC.md#phase-6--planned-enhancements) | **Ready to build** (2026-11-03) — direct updates in development specified: web resources, PCF guidance; Power Pages not pursued. Spikes S10–S11 done. Shaping continues before main development. See [Phase 6 — preparation](#phase-6--preparation) | See spec |
+| [6 — Planned enhancements](SPEC.md#phase-6--planned-enhancements) | **Built; live exit checks pending** (2026-11-05) — scoped approvals and the Active Approvals window, `update_web_resources`, plug-in components in the selectors, the skill changes and the docs, as version 1.2026.11.2. Built and unit-tested (383 tests); nothing of it has run in XrmToolBox or against a sandbox yet. See [Phase 6 — execution](#phase-6--execution) | See spec |
 | [7 — Plug-in authoring](SPEC.md#phase-7--plug-in-authoring) | **Not started** (2026-11-03) — split from Phase 6 after field use (U10): registration through a WIP, `pac plugin push`, step mirroring and switching, custom API rebinding. Spike S9 done; S12 first when it starts. Deferred at the person's choice | See spec |
 
 Status values: *Not started* · *In progress* · *Blocked* (say on what) · *Done*.
@@ -100,15 +100,77 @@ On a data-free trial environment the person provided for spikes. Its URL stays o
 
 ### Open for Phase 6
 
-- **Shaping** continues before main development (person's decision, 2026-11-03).
-- **Plug-in components in `add_solution_components`** (person's request, 2026-11-03): assemblies, steps, custom APIs, request parameters and response properties, already registered — not authoring, which stays in Phase 7. Custom API codes are per environment, resolved through `solutioncomponentdefinition`; to confirm live, with what the platform adds with a custom API. SPEC §6.6.
+- **Shaping** closed with the build (2026-11-05); see [Phase 6 — execution](#phase-6--execution).
+- **Plug-in components in `add_solution_components`** (person's request, 2026-11-03): assemblies, steps, custom APIs, request parameters and response properties, already registered — not authoring, which stays in Phase 7. Custom API codes are per environment, resolved through `solutioncomponentdefinition`; built, and still to confirm live, with what the platform adds with a custom API. SPEC §6.6.
 - **Q14** — decided: no delete tool; removal stays with the person.
-- **Skill changes** listed in the Phase 6 table. Not started; the skills ship in the package, so they wait for the tools.
+- **Skill changes** listed in the Phase 6 table. Done with the build (2026-11-05): `agent-companion-wip-edit-loop` (direct web resource updates, PCF push) and `agent-companion-wip-shaping` (plug-in components, the record-read note in `queries.md`).
 
 ### Open for Phase 7
 
 - **Spike S12** first ([SPEC Phase 7](SPEC.md#phase-7--plug-in-authoring)), starting from U10: what registers new plug-in types, what a WIP must hold for its export to carry steps, and what makes an import create them. Through the plugin and the person's PAC profile only.
 - **Skill changes** listed in the Phase 7 table, including `Get-WipName.ps1`'s `_Sideload` suffix.
+
+---
+
+## Phase 6 — execution
+
+Built on 2026-11-05 from [SPEC Phase 6](SPEC.md#phase-6--planned-enhancements), in this order, with the build and the unit tests run after each step: grants and settings, dispatcher authorization, File root and `update_web_resources`, plug-in components, the windows, then skills and documents. Version **1.2026.11.2** in the `.csproj` and the `.nuspec`. Unit tests went from 251 to 383, with 0 build warnings.
+
+### What is built
+
+| Area | Where | Spec |
+|---|---|---|
+| Scopes, kinds, identity | `Approvals/ApprovalScope` (adds `Tenant`; `Always` stays the name and is labelled *global*), `ApprovalKind` (adds `RecordRead`, `Write`), `ConnectionIdentity` (organization, environment and tenant IDs), `Grant` (immutable, with `Matches`, `IsStale`, `Covers`, `WithIdentity`) | §7 Phase 6 |
+| The grant store | `Approvals/ApprovalStore` — `Allow`, `Find` (broadest wins), `FillIdentity`, `Stale`, `RevokeEnvironment`, `Remove`, `ClearGlobal`, `ClearTenant`, `ClearEnvironment`, `ClearAll`, `EndSession` | §7, §8.8 |
+| Settings | `Hosting/HostSettings` (`SchemaVersion`, `FileRoots`), `PersistedGrant` (+ `EnvironmentId`, `TenantId`), `PersistedFileRoot`, `HostSettingsStore.Upgrade` (version 0 → 1: drops what the new rules do not allow, never the token, port, limits or setup version) | §7 Saved settings |
+| Identity at bind | `BoundConnection.EnvironmentId`/`TenantId`/`Identity`, `ConnectionRegistry.Complete` (new overload), `CompanionHost.CompleteBinding` (fills the IDs into matching grants); the control reads `CrmServiceClient.EnvironmentId` and `TenantId` | §7 Identity |
+| Authorization | `Tools/ToolDispatcher` — the grant kind follows the tool and the inspection (record query → `RecordRead`); the offered decisions follow the tier; a decision the dialog did not offer is a denial; a publisher is never a grant | §7, R2 |
+| Active Approvals | `Approvals/ApprovalTree` (the tree in one pure function), `UI/ActiveApprovalsForm` (one window, in-window confirmations, live), `UI/TokenControl` moved into it | §8.8 |
+| File root | `Files/FileRoot`, `FileRootStore`, `FilePathResolver`, `IFileRootPrompt` with `FileRootRequest`/`FileRootChoice`, `UI/FileRootForm`; `ToolExecution.RequireFileRoot` | §6.8 |
+| `update_web_resources` | `Tools/WebResourceTools`; new error codes `version_conflict`, `managed_component`, `not_in_solution` | §6.8 |
+| Plug-in components | `Tools/ComponentSelector` (selectors by name and by `componentTable`; codes from `solutioncomponentdefinition`), `ComponentNames.PluginRows`, `SolutionShapingTools` (accepted types, labels, per-environment type names in the read-back) | §6.6 |
+| Panel and dialogs | `AgentCompanionControl` (File root, Reads, Records and Writes rows; **Active Approvals…**; no Record queries box, no Always settings), `UI/ApprovalForm` (every scope, disabled Per tenant with its reason, warnings) | §8.1, §8.2 |
+| Skills and documents | `agent-companion-wip-edit-loop`, `agent-companion-wip-shaping`, the tooling README, `.nuspec` release notes, INSTRUCTIONS.md (R2 and the fixed safety behaviour reworded), CLAUDE.md, the root README | Phase 6 table |
+
+### Implementation choices
+
+| # | Choice | Why |
+|---|---|---|
+| I46 | `Grant` is immutable and compares by value; learning an ID replaces the grant in the store | The store's change detection stays a sequence comparison, and a filled-in grant is saved once |
+| I47 | The labels in the log and in `get_connection_info` say `global` for the enum's `Always`; `devEnvironmentScope` no longer has `always` | The enum name stays so saved grants load; what people read says Global |
+| I48 | Two grants of one kind and reach replace each other; a narrower grant is kept beside a broader one | A tab's **Revoke** is then exactly "this tab's grants for its environment", and the window shows what exists |
+| I49 | `ApprovalKind.Allows(scope)` is the one rule for what a kind may reach; `Allow` throws on a violation and a saved grant that breaks it is dropped on load | A hand-edited or downgraded file cannot widen a Write grant or the dev-environment confirmation |
+| I50 | An environment's key in the tree is its environment ID, else `org:<organization ID>`; a grant from a v1 file lists under **No tenant** until a connection fills its IDs in, then moves under its tenant | §8.8 asks for exactly this, and it needs no migration step |
+| I51 | The tree puts a tenant's environments in alphabetical order and orders tenants by their first environment's name; a bound environment is listed when no File root covers it | §8.8 |
+| I52 | The File root is resolved in preparation through a delegate the dispatcher gives `ToolExecution`; the person is asked on the background thread that runs preparation, with the approval timeout and the call's cancellation | The prompt precedes the approval dialog and still appears when a Write grant would skip that dialog |
+| I53 | `FilePathResolver` checks, in order: valid path, inside the root (a separator-terminated prefix, so a sibling folder `repo2` is outside `repo`), no reparse point on any segment, the file exists | A link can lead outside while the path text stays inside |
+| I54 | `update_web_resources` also returns `publishError` (null when none) and the read-back's `unexpected`; a failed publish does not fail the call, because the writes already happened | Throwing would hide that the content was written |
+| I55 | The web resource type comes from the file extension; an existing resource of another type, an unknown extension, a file over `maxuploadfilesize` and a duplicate name in one call are `invalid_argument` before the dialog | §6.8 step 1 |
+| I56 | `ComponentNames.PluginRows` names assemblies and steps beside `RowBacked`, which stays the list `get_component_state` accepts | Adding 91 and 92 to `RowBacked` would have made `get_component_state` accept types it has no version for |
+| I57 | The Active Approvals window re-renders on any store change and rebuilds its rows; a confirmation is one string in the form (`global`, `tenant:<id>`, `env:<key>`, `all`, `clear:…`) | Nothing else in the window holds state, so a change from another tab cannot leave it half-updated |
+| I58 | `AlwaysSettingsForm` and the panel's **Always settings…** are deleted; a Global read or record-read grant shows a warning on every tab | Global is chosen in the dialog and managed in Active Approvals |
+| I59 | Test seams: `ActiveApprovalsForm`'s constructor is internal; `FakeInstance` answers File root prompts; `WebResourceData` is a synthetic environment where `versionnumber` rises on every update and publish (S10); `ShapingData` gained plug-in rows | UI tests build forms without showing them; `Button.PerformClick` does nothing on a hidden control, so the tests call `OnClick` by reflection |
+
+### What the build found
+
+| # | Finding | Change |
+|---|---|---|
+| B1 | **The publish request was malformed.** The first version of `PublishXmlRequest`'s XML used `$"{{{id:D}}}"`, which .NET reads as a format string `D}`: the unit test of a failed publish showed `Format String can be only "D"…` where the publish should have been. Fixed by building the braces by concatenation | `WebResourceTools.PublishXml`; covered by `CreatesANewResourceInTheWip_AndPublishesJustIt`, which reads the XML back |
+| B2 | **A test fixture hid a stowaway.** The first read-back test put the extra component in the WIP from the start, so it was in the snapshot and never reported. The fixture now adds it only after something is written | `WebResourceData`; the read-back test passes for the right reason |
+
+### Exit checks
+
+**Done as unit tests** (all synthetic, R7): every scope and kind and who each reaches, tenant grants across two environments of one tenant and not another, the Per tenant option unavailable without a tenant ID, Write grants that skip the dialog but not the reason, the dev-environment confirmation or the log pair, a decision the dialog did not offer denied, revoke and reset, Stale grants, ID fill-in at bind, the settings upgrade (grants kept, the *always* dev-environment confirmation dropped, token, port and limits untouched), the tree order, the File root levels and precedence, the path checks including a junction, the File root prompt before the dialog and with a Write grant, cancel and timeout, `update_web_resources` end to end (create, update, unchanged, publish true and false, a failed publish, version conflicts at preparation and while the dialog is open, managed, not in solution, prefix, extension, size, duplicate names, read-back), and plug-in components by name, version, ID and `componentTable`, with the numeric 10000 refusal.
+
+**Still to run** — the spec's Phase 6 exit, live, through the plugin and the person's PAC profile only (the endpoint was not reachable in this session, and the windows have not been shown inside XrmToolBox):
+
+1. In XrmToolBox, with grants of every scope for two environments in one tenant and one in another, the Active Approvals window lists them in §8.8's order; **Revoke** and **Reset** take effect on the next call; the main panel no longer shows the token. The windows rendered correctly to images in a test harness, but not in XrmToolBox.
+2. A Write call approved *Per environment* runs the next Write to that environment without a dialog and with its log line pair; Write and the dev-environment confirmation offer nothing broader; a publisher creation still prompts every time.
+3. A Read granted *Per tenant* covers a second environment of that tenant bound afterwards, and not the environment in the other tenant. **Check that `CrmServiceClient.EnvironmentId` and `TenantId` are filled for the connection types in use** (OAuth, certificate, client secret): where they are not, the connection reports no tenant and Per tenant is unavailable, which is the designed fallback but should be known.
+4. A record query prompts on its own even with a Read grant; a `RecordRead` grant covers no other read.
+5. A v1 settings file loads: Read grants kept, IDs filled at the next binding, an *always* dev-environment confirmation dropped, token unchanged. A grant whose environment ID no longer matches shows *Stale* and is not applied.
+6. On the sandbox: a web resource edit is written, published and visible in the app without an import; a stale `expectedVersion` is refused; with no File root the first call prompts, and Cancel fails it with `denied_by_user`; a tenant File root serves a second environment without a prompt, and an environment File root takes precedence; `..`, an absolute path outside the root and a path through a junction are refused before the dialog; the File root is shown, changed and cleared in Active Approvals, and a change applies from the next call.
+7. On the sandbox, with an assembly, two of its steps (one with an image) and a custom API with a request parameter and a response property registered beforehand: all added by name, unique name or ID in one call; the read-back shows what the platform added with each — **record it here**; an export of the WIP carries the steps with their image and the custom API with its parameter and property. This also answers part of spike S12.
 
 ---
 
@@ -1029,3 +1091,4 @@ Spike solutions left in the sandbox: `AgentSpikeS2A`, `AgentSpikeS2B`, `AgentSpi
 | 2026-11-04 | Phase 6 **scopes and grants** specified (D16, person's choice): Tenant scope added and *Always* shown as Global; `RecordRead` and `Write` grants replace the **Record queries** switch; Write and dev-environment confirmation go no further than Environment and the *always* confirmation is withdrawn; grants record organization, environment and tenant IDs and go *Stale* on a mismatch; settings file gains `SchemaVersion` and an upgrade mapping; File root now set at Environment or Tenant level (revises D15). Spec §7 (new *Phase 6 — scopes and grants*), §5 (C8), §6.2, §6.5, §6.8, §8.1, §8.2, §8.6, §10, §11, §12 |
 | 2026-11-04 | **Active Approvals** restructured as one tenant tree: Global first, then each tenant with its grants and environments, each environment with its environment grants then session grants, environments without a tenant last, alphabetical order; File roots shown under the tenant or environment they belong to; **Reset** for Global, a tenant with its environments, or one environment, plus **Reset all approvals**, each confirmed in the window. Spec §8.8 (layout), Phase 6 table and exit |
 | 2026-11-05 | Phase 6 build version set to **1.2026.11.2**: assembly and NuGet package versions aligned (`.csproj`, `.nuspec`), noted in the Phase 6 section of the spec. Nothing built yet |
+| 2026-11-05 | Phase 6 built (version 1.2026.11.2). Grants and settings first: `ApprovalScope.Tenant`, `ApprovalKind.RecordRead` and `Write`, `ConnectionIdentity`, an immutable `Grant`, the store with `Allow`, `FillIdentity`, `Stale` and the revoke and reset calls, `HostSettings.SchemaVersion` with an upgrade mapping and `FileRoots`. Then the dispatcher (grant kind by tool and inspection, offered decisions by tier, an unoffered decision is a denial), `get_connection_info` (environment and tenant IDs, `recordReadScope`, `writeScope`, `fileRoot`, `fileRootScope`; `recordQueriesEnabled` gone) and `query` (no `tool_disabled`). Then the File root (store, `FilePathResolver`, the prompt before the dialog) and `update_web_resources`; plug-in components in `ComponentSelector` and `SolutionShapingTools`. Then the windows: `ActiveApprovalsForm` with the tree, `FileRootForm`, `ApprovalForm` scopes, the panel; `AlwaysSettingsForm` deleted. The unit tests found and fixed a malformed publish request (B1). 251 → 383 tests, 0 warnings. Skills (edit loop, shaping), README, `.nuspec`, INSTRUCTIONS.md (R2 and the fixed safety behaviour reworded), CLAUDE.md, root README and SPEC updated. No live check run: see [Phase 6 — execution](#phase-6--execution) |
