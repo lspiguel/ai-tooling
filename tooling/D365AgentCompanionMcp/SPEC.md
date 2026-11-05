@@ -2350,7 +2350,7 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 ### Phase 6 — Planned enhancements
 
 > [!NOTE]
-> **Phase 5 has shipped (2026-11-03).** Phase 6 is being explored and shaped from real use before main development starts, and that may still reshape or drop these items. Spikes S10 and S11 ran on 2026-11-03; their results are written into [§6.8](#68-direct-update-tools-phase-6) and [§9.11](#911-direct-updates-in-development). Plug-in authoring, step mirroring and switching included, moved to [Phase 7](#phase-7--plug-in-authoring) the same day.
+> **Phase 5 has shipped (2026-11-03).** Phase 6 is being explored and shaped from real use before main development starts, and that may still reshape or drop these items. Spikes S10 and S11 ran on 2026-11-03; their results are written into [§6.8](#68-direct-update-tools-phase-6) and [§9.11](#911-direct-updates-in-development). Plug-in authoring, step mirroring and switching included, moved to [Phase 7](#phase-7--plug-in-authoring) the same day. Phase 6 builds as version **1.2026.11.2** (two-file rule); the `.nuspec` release notes are rewritten when it ships.
 
 | Enhancement | Behaviour | What v1 does to leave room |
 |---|---|---|

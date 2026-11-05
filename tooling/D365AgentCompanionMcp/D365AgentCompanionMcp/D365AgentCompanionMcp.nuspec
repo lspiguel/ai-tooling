@@ -8,7 +8,7 @@ nuget.exe pack tooling\D365AgentCompanionMcp\D365AgentCompanionMcp\D365AgentComp
 <package>
   <metadata>
     <id>Lspiguel.Xrm.D365AgentCompanionMcp</id>
-    <version>1.2026.11.1</version>
+    <version>1.2026.11.2</version>
     <title>D365 Agent Companion MCP for XrmToolBox</title>
     <authors>Luciano Spiguel</authors>
     <owners>Luciano Spiguel</owners>
