@@ -208,7 +208,7 @@ The PAC auth profile and the plugin's connections are independent, and with seve
 | C5 | When a bound instance's connection changes, the old binding ends before the new one is checked: queued and pending calls for it fail with `connection_closed`, any once-scoped dev-environment confirmation ends, open paging cursors are released, and it disappears from `list_connections`. Session, environment and always scopes stay with their organization ([§7](#7-authorization-model)). The new connection then goes through C3 |
 | C6 | Closing a bound instance ends its binding the same way. If it was the last instance, H3 applies |
 | C7 | Every tool except `list_connections` takes `connection` as its mandatory first parameter. The host routes the call to the instance bound to it; an unknown ID fails at once with `connection_not_found`, without a dialog |
-| C8 | Read approvals and dev-environment confirmations are scoped by organization ([§7](#7-authorization-model)). The record-query and publisher-creation settings, the approval queue and the call log are **per connection**, held by its instance. An approval given for one organization never covers a call to another, except an approval the person explicitly scopes as *always* |
+| C8 | Read approvals and dev-environment confirmations are scoped by organization ([§7](#7-authorization-model)). The record-query and publisher-creation settings, the approval queue and the call log are **per connection**, held by its instance. An approval given for one organization never covers a call to another, except an approval the person explicitly scopes as *always*. In Phase 6, grants are scoped by environment, tenant or globally, and the record-query setting is removed ([§7](#phase-6--scopes-and-grants)) |
 | C9 | Approval dialogs are owned by the XrmToolBox main window, so they appear whichever tab is active, and name the connection in the title and on the Environment line. Each connection has its own queue; calls for different connections can await approval at the same time |
 | C10 | `list_connections` calls and calls naming an unknown connection are written to a host section of the call log, shown on every instance |
 
@@ -355,7 +355,7 @@ State that spans calls — the `connection` and paging `cursor` handles — trav
 | `dev_environment_not_confirmed` | Write or Publisher tool on a connection not confirmed as development | Ask the person |
 | `denied_by_user` | The person denied the call | Do not retry without new instructions |
 | `denied_no_response` | Approval timed out | Do not retry without new instructions |
-| `tool_disabled` | `create_publisher`, or a `query` that touches records, switched off for this connection | Ask the person |
+| `tool_disabled` | `create_publisher`, or a `query` that touches records, switched off for this connection. From Phase 6, only `create_publisher` | Ask the person |
 | `not_found` | A named solution, publisher, table, column, option set, relationship or component does not exist. `details` names it | Check the name |
 | `already_exists` | Unique name already taken | Choose another name, or reuse the existing one |
 | `managed_solution` | Add or remove against a managed solution | Use an unmanaged solution |
@@ -512,16 +512,23 @@ interface ConnectionInfo {
     url: string;
     version: string;                 // platform version, for example "9.2.x"
     baseLanguageCode: number;        // LCID
+    environmentId: string | null;    // Phase 6; null when the connection does not report it
+    tenantId: Guid | null;           // Phase 6; null when the connection does not report it
   };
   user: UserRef;                     // the user the XrmToolBox connection runs as; full name only —
                                      // first and last names come from who_am_i
   devEnvironmentConfirmed: boolean;
   devEnvironmentScope: "once" | "session" | "environment" | "always" | null;
+                                     // Phase 6: "always" is withdrawn
   readApprovalScope: "session" | "environment" | "always" | null;  // null: every Read call prompts
+                                     // Phase 6: adds "tenant"; "always" becomes "global"
+  recordReadScope: "session" | "environment" | "tenant" | "global" | null;  // Phase 6
+  writeScope: "session" | "environment" | null;                             // Phase 6
   settings: {
-    recordQueriesEnabled: boolean;   // per connection
+    recordQueriesEnabled: boolean;   // per connection; removed in Phase 6 (record reads are grants)
     publisherCreationEnabled: boolean; // per connection
-    fileRoot: string | null;         // per organization (Phase 6, §6.8); null: not set yet
+    fileRoot: string | null;         // Phase 6, §6.8; null: not set yet
+    fileRootScope: "environment" | "tenant" | null;  // Phase 6: the level the File root was set at
     maxPageSize: number;             // host
     responseCapBytes: number;        // host
     approvalTimeoutSeconds: number;  // host
@@ -867,7 +874,7 @@ Rules:
 
 - **Paging from the first release.** Development tables are expected to be small, but every query is paged and the agent continues with `nextCursor` only when it needs more.
 - **Explicit columns.** `<all-attributes />` is rejected with `invalid_argument`; the agent must name columns.
-- **Record detection.** The root entity and every `link-entity` are checked against the configuration allow-list. Anything outside it marks the query as touching records: the approval dialog and the log say so, and the call fails with `tool_disabled` when record queries are switched off for the connection. Approval is the same single Read approval as every other read ([§7](#7-authorization-model)).
+- **Record detection.** The root entity and every `link-entity` are checked against the configuration allow-list. Anything outside it marks the query as touching records: the approval dialog and the log say so, and the call fails with `tool_disabled` when record queries are switched off for the connection. Approval is the same single Read approval as every other read ([§7](#7-authorization-model)). In Phase 6 the switch is removed, and such a query needs a `RecordRead` grant or its own per-call approval ([§7](#phase-6--scopes-and-grants)).
 - **Values.** Columns without a value are omitted. Aliased values (link-entity columns) are keyed by the name the platform returns (`alias.column`) and serialized by the same rules, without the `AliasedValue` wrapper. `label`, `labels`, `name` and `formatted` are present only when `includeFormattedValues` is true.
 
 Configuration allow-list (v1): `publisher`, `solution`, `solutioncomponent`, `systemform`, `savedquery`, `sitemap`, `appmodule`, `appmodulecomponent`, `webresource`, `ribboncustomization`, `organization`, `workflow`, `customcontrol`, `environmentvariabledefinition`, `connectionreference`, `pluginassembly`, `plugintype`, `sdkmessage`, `sdkmessagefilter`, `sdkmessageprocessingstep`, `sdkmessageprocessingstepimage`, `customapi`, `customapirequestparameter`, `customapiresponseproperty`, `role`, `fieldsecurityprofile`. The entries from `workflow` onwards let the agent read the subtype and name columns that the segmentation map uses ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)). The plug-in and custom API tables let it read what is registered on a table — steps by message and table, their images, the plug-in types of an assembly, a custom API's parameters — for planning and research; they hold registration metadata, not business records.
@@ -1136,7 +1143,14 @@ These tools change components in development without a solution export and impor
 
 #### File root
 
-Each organization has one **File root**: the root folder of the git repository that holds the source files the agent is working on. It belongs to the organization, not to a tab, so every tab bound to that organization, now or later, uses the same folder (C8). It is kept in the plugin settings ([§7](#7-authorization-model)), returned by `get_connection_info` as `settings.fileRoot`, and shown and changed in the Active Approvals window ([Phase 6](#phase-6--planned-enhancements)).
+The **File root** is the root folder of the git repository that holds the source files the agent is working on. A client project usually has one repository and many environments, so a File root is set at one of two levels:
+
+| Level | Applies to | Use when |
+|---|---|---|
+| **Environment** | This environment only | The environment works from a repository of its own, or the connection reports no tenant ID |
+| **Tenant** | Every environment in this tenant, including ones bound later | The tenant's environments all work from the same repository — the usual case |
+
+A File root set for an environment takes precedence over its tenant's. It belongs to the environment or tenant, not to a tab, so every tab bound there, now or later, uses the same folder. Environments and tenants are matched by the same IDs as grants ([§7](#phase-6--scopes-and-grants)). The File root is kept in the plugin settings, returned by `get_connection_info` as `settings.fileRoot` and `settings.fileRootScope`, and shown and changed in the Active Approvals window ([§8.8](#88-active-approvals-window-phase-6)).
 
 A file item's `path` takes one of two forms:
 
@@ -1154,14 +1168,19 @@ The check runs while the call is preparing, before any dialog:
 
 A path that fails any of these fails the whole call with `invalid_argument`. `details.argument` names the item, and `details` gives the File root and the full path it resolved to.
 
-**When no File root is set.** If the organization has no File root when a call that takes files is preparing, the plugin asks the person to choose one before the approval dialog. Like the approval dialog, the prompt is owned by the XrmToolBox main window (C9). It explains the rules above:
+**When no File root is set.** If neither the environment nor its tenant has a File root when a call that takes files is preparing, the plugin asks the person to choose one before the approval dialog. Like the approval dialog, the prompt is owned by the XrmToolBox main window (C9). It explains the rules above:
 
 - the folder should be the root of the git repository that holds the source files the agent edits;
 - a relative path from the agent is read from that folder;
 - an absolute path must lie inside it;
-- the choice is kept for this organization and can be changed in Active Approvals.
+- the choice is kept and can be changed in Active Approvals.
 
-The prompt lists the paths in the call. When they are absolute, the folder picker starts at the root of the git working tree that holds the first one, if there is one. A folder that is not the root of a git working tree (no `.git` entry) gets a warning but is not refused. Once a folder is chosen, the plugin saves it and preparation continues. **Cancel** fails the call with `denied_by_user`. No choice within the approval timeout fails it with `denied_no_response`. In both cases nothing is written and the File root stays unset.
+The prompt asks for the folder and the level:
+
+- **Every environment in this tenant** is pre-selected. It is disabled, with the reason shown, when the connection reports no tenant ID.
+- **This environment only** is the other choice.
+
+The prompt lists the paths in the call. When they are absolute, the folder picker starts at the root of the git working tree that holds the first one, if there is one. A folder that is not the root of a git working tree (no `.git` entry) gets a warning but is not refused. Once a folder and a level are chosen, the plugin saves them and preparation continues. **Cancel** fails the call with `denied_by_user`. No choice within the approval timeout fails it with `denied_no_response`. In both cases nothing is written and the File root stays unset.
 
 The prompt appears even when a scoped Write grant would skip the approval dialog, because the File root is a setting, not an approval. A change to the File root applies from the next call. A call already running finishes under the root it resolved its paths with.
 
@@ -1317,6 +1336,13 @@ The current plug-in type's `typename` is matched in the target assembly; a missi
 
 The plugin's approval is the authoritative gate. The agent client's own tool-approval prompt is a convenience and is not relied on.
 
+> [!NOTE]
+> **Phase 6 changes this model.** The tiers, scopes and saved settings below are v1, as built. [Phase 6 — scopes and grants](#phase-6--scopes-and-grants) at the end of this section replaces them:
+> - a Tenant scope is added, and *Always* is shown as Global;
+> - record reads and Write calls become grants;
+> - Write and the dev-environment confirmation are capped at one environment;
+> - grants also record environment and tenant IDs.
+
 | Tier | Tools | Approval | Notes |
 |---|---|---|---|
 | **Host** | `list_connections` | None | No dialog; logged on every tab (R2) |
@@ -1351,7 +1377,7 @@ The confirmation that lets Write tools run on a connection ([§5](#host)) has th
 
 *Always* is set only in settings, never from the binding prompt. It carries a warning and is shown on every tab while it is on. Write and Publisher calls still need their own per-call approval.
 
-Environment and always scopes persist between sessions in XrmToolBox's plugin settings, which record only organization IDs, friendly names and scopes, each organization's File root (Phase 6, [§6.8](#file-root)), plus the host's bearer token encrypted with DPAPI for the current Windows user — no arguments or results.
+Environment and always scopes persist between sessions in XrmToolBox's plugin settings, which record only organization IDs, friendly names and scopes, plus the host's bearer token encrypted with DPAPI for the current Windows user — no arguments or results. Phase 6 adds environment and tenant IDs, the Tenant scope, File roots and a schema version ([below](#phase-6--scopes-and-grants)).
 
 ### Rules
 
@@ -1359,6 +1385,73 @@ Environment and always scopes persist between sessions in XrmToolBox's plugin se
 - **Deny is a normal result.** The agent receives a tool error, `denied_by_user` or `denied_no_response`, and must not retry the same call without new instructions from the person.
 - **Arguments shown verbatim.** The dialog shows the full arguments (FetchXML pretty-printed, component lists resolved to names) and flags a query that touches records. The agent-supplied `reason` is shown in a separate box labelled *Agent-supplied — not verified* (R8). The box is always filled for Write and Publisher calls (R12), and for Read calls it appears only when a reason was given.
 - **One dialog per call.** Concurrent calls to one connection queue; the queue length is visible in its tab.
+
+### Phase 6 — scopes and grants
+
+> [!NOTE]
+> **Planned, not built.** Decided 2026-11-04 ([notes](notes.md#decisions), D16). When Phase 6 is built, this replaces the scopes and saved settings above. Until then v1 behaves as described above.
+
+A client project usually has one repository and many environments, often all in one tenant. Phase 6 lets a grant cover one environment, one tenant or every tenant, and lets the reach depend on what the grant allows.
+
+**Grant kinds.** Each kind is a separate grant. A grant of one kind never covers a call of another.
+
+| Kind (`ApprovalKind`) | Covers | Scopes offered |
+|---|---|---|
+| `ReadApproval` | Every Read call except a `query` that touches records | Once, Session, Environment, Tenant, Global |
+| `RecordRead` (new) | A `query` that touches records ([§6.5](#query)) | Once, Session, Environment, Tenant, Global |
+| `Write` (new) | Every Write call | Once, Session, Environment |
+| `DevEnvironment` | The dev-environment confirmation that Write calls require | Once, Session, Environment |
+| — | `create_publisher` | Once, with typed confirmation. Never a grant (R3) |
+
+**Scopes.**
+
+| Scope (`ApprovalScope`) | Shown as | Covers | Kept | Ends |
+|---|---|---|---|---|
+| `Once` | Once | This call and its continuation pages; for the dev-environment confirmation, this binding | Not stored | When the call completes or the binding ends |
+| `Session` | Session only | This environment | In memory | When the host stops, or **Revoke** |
+| `Environment` | Per environment | This environment | Plugin settings | **Revoke** |
+| `Tenant` (new) | Per tenant | Every environment in this tenant, including ones bound later | Plugin settings | **Revoke** |
+| `Always` | Global | Every environment in every tenant, including ones bound later | Plugin settings | **Revoke** |
+
+The enum keeps the name `Always`, so saved v1 grants still load; the dialogs, the Approvals Window and the log say *Global*. A call runs under the broadest grant that covers it. Every scope is offered in the approval dialog ([§8.2](#82-approval-dialog)), and the Active Approvals window ([§8.8](#88-active-approvals-window-phase-6)) lists and revokes them.
+
+**Rules.**
+
+- **Writes stop at one environment.** A Write grant or a dev-environment confirmation never reaches beyond one environment: only development is written, and a broader grant would also cover environments bound later. The v1 *always* dev-environment confirmation, the "guard is off" setting, is withdrawn. A saved one is dropped on upgrade, and the person confirms each development environment again.
+- **A Write grant does not replace the other checks.** Every Write call still needs the dev-environment confirmation, a non-blank reason (R12) and the fixed add flags (R1), and is logged (R13). Publisher creation stays once per call with typed confirmation (R3). Its switch stays per connection and off by default.
+- **Records are their own grant.** A query that touches records runs only under a `RecordRead` grant, or under a per-call approval whose dialog says it reads records. `ReadApproval` does not cover it, and `RecordRead` covers nothing else. The per-connection **Record queries** switch is removed. The plugin exists to read, the first record query always asks, and a person who does not want a tab reading an environment closes the tab. `tool_disabled` no longer applies to record queries.
+- **Broad scopes carry a warning.** The dialog warns when Per tenant or Global is chosen, because those scopes also cover environments bound later.
+
+> [!NOTE]
+> **Recommended:** Read **per tenant** when the tenant holds only the project's development and test environments; otherwise **per environment** for development and **per session** for production. The same for record reads. Global only with a reason.
+
+**Identity.** Each grant records three IDs:
+
+- the **organization ID**, from the identity call;
+- the **environment ID** and **tenant ID**, from the connection's `CrmServiceClient`;
+- plus the environment's friendly name, for display only.
+
+The IDs are applied as follows:
+
+- **The organization ID is enough to load a grant.** A saved grant that has only an organization ID is accepted; every v1 grant is like this. When a connection with that organization ID binds and reports its environment and tenant IDs, the plugin fills them into the grant and saves it.
+- **Every ID known on both sides must match.** A session or environment grant applies when the organization IDs match, and also the environment and tenant IDs wherever both the grant and the connection know them. A grant that matches on the organization ID but differs on another ID does not apply. The Approvals Window marks it *Stale*. This is the case of an environment that was copied, restored or reset.
+- **Tenant scope needs a tenant ID.** A tenant grant applies to a connection that reports the same tenant ID. A connection that reports none (`Guid.Empty`) gets no tenant grants. For that connection, the dialog and the File root prompt show the Per tenant option disabled, with the reason.
+- **Global grants hold no IDs.**
+
+**Saved settings.** `HostSettings` gains fields; no existing element or enum name changes.
+
+| Element | Holds |
+|---|---|
+| `SchemaVersion` | Integer. A file without it is version 0 (v1). Phase 6 writes 1 |
+| `Grants/PersistedGrant` | The v1 elements, plus `EnvironmentId` (string) and `TenantId` (Guid), each empty until known |
+| `FileRoots/PersistedFileRoot` | `Scope` (`Environment` or `Tenant`), `OrganizationId`, `EnvironmentId`, `TenantId`, `Name` (the environment's friendly name), `Path` ([§6.8](#file-root)) |
+
+How the file is carried between versions:
+
+- **Upgrade.** When the file's `SchemaVersion` is older than the plugin's, an upgrade mapping runs on load. A grant the mapping cannot carry is dropped, and the person approves again. The port, limits, bearer token, setup version and File roots are never dropped by an upgrade, because losing the token would break every client configuration. The mapping from version 0 keeps Read grants as they are and drops *always* dev-environment confirmations.
+- **Downgrade.** An older plugin ignores elements it does not know and drops grants whose kind or scope it does not know. Its next save removes them for good. This is accepted: the person approves again. The token and host settings survive, because every version knows them.
+
+The settings still record no arguments or results.
 
 ---
 
@@ -1373,8 +1466,8 @@ Each tab shows its own connection on top and the shared host below it.
 │ This tab   : [ConnectionName] → [ClientName] DEV                  │
 │              https://<org>.crm.dynamics.com                       │
 │ Dev env    : Confirmed — this environment, remembered  [Clear]    │
-│ Settings   : [x] Record queries   [ ] Publisher creation          │
-│ File root  : C:\Repos\[ClientName]-d365   (read-only)             │
+│ Settings   : [ ] Publisher creation                               │
+│ File root  : C:\Repos\[ClientName]-d365   tenant · read-only      │
 │ Reads      : Approved — this environment, remembered              │
 │                                                      [Revoke]     │
 ├─ Host — shared by all tabs ───────────────────────────────────────┤
@@ -1404,7 +1497,10 @@ Each tab shows its own connection on top and the shared host below it.
 
 The log lines are cut at the panel's edge here only; in the plugin they scroll horizontally. Their format, and **Save as…**, are in [§8.6](#86-call-log-format). `⚠` lines name components a call added unexpectedly. An unbound tab shows only the host section and a **Connect** prompt.
 
-**File root** (Phase 6) shows the File root of the tab's organization ([§6.8](#file-root)), or *Not set — asked for on first use*. It is read-only here. It is set, changed and cleared in the Active Approvals window ([§8.8](#88-active-approvals-window-phase-6)), and the line updates when that happens.
+The mockup shows the panel as Phase 6 changes it:
+
+- **Settings** no longer has the v1 **Record queries** checkbox. From Phase 6, record reads are grants ([§7](#phase-6--scopes-and-grants)).
+- **File root** is new. It shows the File root that applies to the tab's environment and the level it was set at ([§6.8](#file-root)), or *Not set — asked for on first use*. It is read-only here. It is set, changed and cleared in the Active Approvals window ([§8.8](#88-active-approvals-window-phase-6)), and the line updates when that happens.
 
 ### 8.2 Approval dialog
 
@@ -1430,6 +1526,15 @@ The log lines are cut at the panel's edge here only; in the plugin they scroll h
 ```
 
 For Read calls the dialog offers **Allow once**, **Allow for this session** and **Allow for this environment**, flags a query that touches records, and shows the recommended scope for the environment ([§7](#7-authorization-model)). *Always* is set only in settings. The dialog is owned by the XrmToolBox main window, so it appears whichever tab is active (C9).
+
+In Phase 6, every dialog except publisher creation offers the scopes its grant kind allows ([§7](#phase-6--scopes-and-grants)):
+
+| Grant kind | Scopes offered |
+|---|---|
+| Read and record reads | **Once**, **Session only**, **Per environment**, **Per tenant**, **Global** |
+| Write calls | **Once**, **Session only**, **Per environment** |
+
+Per tenant and Global carry a warning. Per tenant is disabled, with the reason shown, when the connection reports no tenant ID. A query that touches records is labelled as reading records, and its scopes grant `RecordRead`, not `ReadApproval`.
 
 ### 8.3 Publisher creation dialog
 
@@ -1517,7 +1622,7 @@ Every tool call is written to the log as two lines: a call line, then an outcome
 | Part | Content |
 |---|---|
 | Status | `ok`, or `error` followed by the `ToolError` code |
-| Approval | How the call was authorized: `once`, `session`, `environment` or `always`; `none` for `list_connections`; `page` for a continuation page, which runs under its first call's approval; `—` when the call never ran because it was rejected, denied or timed out |
+| Approval | How the call was authorized: `once`, `session`, `environment` or `always` — from Phase 6 `once`, `session`, `environment`, `tenant` or `global`; `none` for `list_connections`; `page` for a continuation page, which runs under its first call's approval; `—` when the call never ran because it was rejected, denied or timed out |
 | Duration | From receipt to reply, including time spent awaiting approval |
 | Return values | On `ok`, each top-level field of `structuredContent` as `name=value`, in output-schema order. Each value is truncated |
 | Error message | On `error`, the `ToolError` message in full |
@@ -1578,50 +1683,54 @@ The first time the plugin opens in an XrmToolBox installation, the tab shows a s
 ### 8.8 Active Approvals window (Phase 6)
 
 > [!NOTE]
-> **Planned, not built.** The behaviour is set out in the [Phase 6](#phase-6--planned-enhancements) table: Active Approvals, the token, scoped approvals and the File root. This section is the window's layout.
+> **Planned, not built.** The behaviour is set out in [§7, Phase 6 — scopes and grants](#phase-6--scopes-and-grants), in [§6.8, File root](#file-root) and in the [Phase 6](#phase-6--planned-enhancements) table. This section is the window's layout.
 
-The window opens from an **Active Approvals** button on the main panel of any tab. There is one window for all tabs. It lists every organization the plugin holds a grant or a File root for, whether or not a tab is bound to it now.
+The window opens from an **Active Approvals** button on the main panel of any tab. There is one window for all tabs. It lists every environment and tenant the plugin holds a grant or a File root for, whether or not a tab is bound there now.
 
 ```
-┌─ Active Approvals — every organization ───────────────────────────────────┐
+┌─ Active Approvals — every environment and tenant ─────────────────────────┐
 │ Token      : ●●●●●●●●●●●●●●●●  [Copy] [Regenerate]                        │
 │              One token for every client — regenerating affects all        │
 ├─ Session only ────────────────────────────────────────────── [Reset all] ─┤
-│ Organization       Covers   Given             From tab                    │
-│ [ClientName] DEV2  Read     14:06             [ConnectionName]  [Revoke]  │
-│ [ClientName] DEV2  Dev env  14:05             [ConnectionName]  [Revoke]  │
+│ Applies to         Covers   Given             From tab                    │
+│ [ClientName] PRD   Read     14:06             [ConnectionName]  [Revoke]  │
 ├─ Per environment ─────────────────────────────────────────── [Reset all] ─┤
-│ [ClientName] DEV   Read     2026-10-30 14:02  [ConnectionName]  [Revoke]  │
 │ [ClientName] DEV   Dev env  2026-10-30 13:58  [ConnectionName]  [Revoke]  │
 │ [ClientName] DEV   Write    2026-11-04 09:15  [ConnectionName]  [Revoke]  │
-├─ Always ──────────────────────────────────────────────────── [Reset all] ─┤
-│ All organizations  Read     2026-10-28 10:40  [ConnectionName]  [Revoke]  │
+│ [ClientName] UAT   Records  2026-10-12 11:20  [ConnectionName]  [Revoke]  │
+│   ⚠ Stale — environment ID differs from the one granted; not applied      │
+├─ Per tenant ──────────────────────────────────────────────── [Reset all] ─┤
+│ Tenant 00000000…   Read     2026-10-30 14:02  [ConnectionName]  [Revoke]  │
+│   Seen: [ClientName] DEV, [ClientName] DEV2, [ClientName] UAT             │
+├─ Global ──────────────────────────────────────────────────── [Reset all] ─┤
+│ None                                                                      │
 ├─ File roots — settings, not grants ───────────────────────────────────────┤
-│ Organization       Folder                                                 │
-│ [ClientName] DEV   C:\Repos\[ClientName]-d365            [Change] [Clear] │
-│ [ClientName] DEV2  Not set — asked for on first use      [Set]            │
+│ Applies to       Level       Folder                                       │
+│ Tenant 00000000… Tenant      C:\Repos\[ClientName]-d365  [Change] [Clear] │
+│ [ClientName] SBX Environment C:\Repos\[ClientName]-poc   [Change] [Clear] │
+│ [ClientName] TRN —           Not set                     [Set]            │
 ├───────────────────────────────────────────────────────────────────────────┤
 │ [Reset all approvals]                                           [Close]   │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
 
 - **Token.** It is shown masked, with **Copy** and **Regenerate** (H4, D8), and has moved here from the main panel.
-- **One section per scope.** There are sections for **Session only**, **Per environment** and **Always**, each with **Reset all** in its title bar. *Once* is not listed. Each row is one grant and shows:
-  - the organization's friendly name — *All organizations* for an *Always* grant;
-  - what the grant covers: *Read*, *Write* or *Dev env* confirmation;
+- **One section per scope.** There are sections for **Session only**, **Per environment**, **Per tenant** and **Global**, each with **Reset all** in its title bar. *Once* is not listed. Each row is one grant and shows:
+  - what it applies to: the environment's friendly name, or the tenant ID shortened for a tenant grant; a Global grant has no name;
+  - what it covers: *Read*, *Records*, *Write* or *Dev env* confirmation;
   - when it was given — only the time for a session grant;
   - the tab it was given from;
   - a **Revoke** button.
 
-  An empty section shows *None*. An *Always* dev-environment confirmation row carries the warning that the guard is off for every organization ([§7](#dev-environment-confirmation)).
-- **File roots.** There is one row for each organization that has a File root, and one for each bound organization that has none (*Not set*). **Set** and **Change** open the folder picker, which explains the rules in [§6.8](#file-root). **Clear** removes the File root, so the next call that takes files asks for it again. No reset clears a File root.
+  A tenant row lists, under it, the environments the plugin has seen in that tenant, because a tenant ID alone does not tell the person which tenant it is. A grant that matches on the organization ID but not on the environment or tenant ID is marked **Stale** and is not applied ([§7](#phase-6--scopes-and-grants)). It stays listed until it is revoked. An empty section shows *None*.
+- **File roots.** There is one row for each File root, showing the environment or tenant it applies to, its level and its folder. There is also a *Not set* row for each bound environment that has no File root of its own or through its tenant. **Set** and **Change** open the folder prompt, which explains the rules and asks for the level ([§6.8](#file-root)). **Clear** removes the File root; the environments it covered fall back to their tenant's File root, if any, or are asked again on the next call that takes files. No reset clears a File root.
 - **Confirmation inside the window.** **Reset all**, **Reset all approvals** and **Clear** each replace the rows they affect with a question until the person answers:
 
   ```
-  ├─ Per environment ─────────────────────────────────────────── [Reset all] ─┤
-  │ Revoke every Per environment grant, for every organization?               │
+  ├─ Per tenant ──────────────────────────────────────────────── [Reset all] ─┤
+  │ Revoke every Per tenant grant, for every tenant?                          │
   │ Calls already running finish under their approval.  [Reset] [Cancel]      │
-  ├─ Always ──────────────────────────────────────────────────── [Reset all] ─┤
+  ├─ Global ──────────────────────────────────────────────────── [Reset all] ─┤
   ```
 
 - **Live.** The window updates when a grant is given or revoked, or a File root is set, from any tab. A change applies from the next call; a call already running finishes under its approval and its File root.
@@ -2048,7 +2157,7 @@ The decision is recorded so the question is not reopened without new facts:
 | Connection registry (bind, duplicate by connection ID, duplicate by organization ID, unbind on close and on change, routing, unknown connection) | Unit tests with fake instances |
 | Record-query detector (FetchXML tables against the configuration allow-list) | Unit tests over FetchXML samples, including link-entities and aliases |
 | FetchXML rewriting (page, count, cookie; reject `all-attributes`) | Unit tests |
-| Approval policy (read scopes and dev-confirmation scopes — once, session, environment, always; persistence; revoke; timeout; per-organization isolation) | Unit tests with a fake clock, fake UI and fake settings store |
+| Approval policy (read scopes and dev-confirmation scopes — once, session, environment, always; persistence; revoke; timeout; per-organization isolation). Phase 6: four kinds with their allowed scopes; tenant scope; Write and dev-environment confirmation capped at Environment; matching on organization, environment and tenant IDs, filling missing IDs, *Stale* on a mismatch; no tenant ID disables Tenant; `SchemaVersion` upgrade that keeps the token and host settings; a downgraded file read without failing | Unit tests with a fake clock, fake UI and fake settings store |
 | Paging (cursor binding to connection, tool and arguments; cap-limited pages; XML chunking; snapshot consistency; expiry) | Unit tests with recorded fixtures and a fake clock |
 | Add-components guard (resolution before approval, fixed flags, stop on first failure, unexpected-component detection) | Unit tests with mocked `IOrganizationService` |
 | Serializers (records, metadata projections, ribbon decompression) | Unit tests with recorded fixtures — synthetic, never client data |
@@ -2058,7 +2167,7 @@ The decision is recorded so the question is not reopened without new facts:
 | Handshake sessions (issue, continue, expire, `DELETE`, unknown session) | Unit tests with a fake clock |
 | Keep-alive and cancellation (fast reply unchunked; slow reply chunked with leading spaces and still one JSON document; client disconnect withdraws a pending approval; `notifications/cancelled` in a session) | Tests against a real `HttpListener` on a loopback port |
 | Token store (generate once, DPAPI round trip, regenerate, missing or corrupt setting) | Unit tests over a fake settings store |
-| File root (Phase 6): relative and absolute paths inside; `..` escape; another folder, drive or share; a root that is a prefix of a sibling folder's name (`C:\repo` against `C:\repo2`); case; mixed separators; a symbolic link or junction on the path; a missing file; prompt when unset, cancel and timeout; per-organization isolation; change applied from the next call | Unit tests over a fake file system, fake UI and fake settings store |
+| File root (Phase 6): relative and absolute paths inside; `..` escape; another folder, drive or share; a root that is a prefix of a sibling folder's name (`C:\repo` against `C:\repo2`); case; mixed separators; a symbolic link or junction on the path; a missing file; prompt when unset, with its level, cancel and timeout; environment File root over tenant File root; tenant level disabled without a tenant ID; isolation between environments and tenants; change applied from the next call | Unit tests over a fake file system, fake UI and fake settings store |
 | Binding order (connection ID claimed synchronously in hook order; organization check after the identity call; `UpdateConnection` before `Load`) | Unit tests with fake instances and a controllable identity call |
 
 ---
@@ -2229,10 +2338,10 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 
 | Enhancement | Behaviour | What v1 does to leave room |
 |---|---|---|
-| **Active Approvals** | A button on the main panel opens one window showing every current grant across all organizations. Grants are grouped in three sections: **Session only**, **Per environment** and **Always**. Each entry shows the organization's friendly name, what the grant covers (Read approval or dev-environment confirmation, [§7](#7-authorization-model)), and when and from which tab it was given. A person can **Revoke** a single entry, use **Reset all** in one section to clear that scope, or use **Reset all approvals** to clear every section. Each reset asks for confirmation inside the window. A revocation applies from the next call, and a call that is already running finishes under its approval. *Once* scopes are not listed, because they end with their call or binding. A separate **File roots** section lists each organization's File root ([§6.8](#file-root)). It has **Change**, which opens a folder picker that explains the File root rules, and **Clear**. An organization bound in a tab but without a File root is listed as *Not set*, with **Set**. The reset buttons do not clear File roots, because a File root is a setting, not a grant. The layout is in [§8.8](#88-active-approvals-window-phase-6) | Keep every grant in one approval store, held per organization. Each entry records its kind, scope, organization ID and friendly name, grant time and originating tab. The store can list its entries, remove one entry, and clear one scope. v1's **Revoke** in a tab, and the *always* setting, become calls on that store rather than separate paths |
+| **Active Approvals** | A button on the main panel opens one window showing every current grant across all environments and tenants. Grants are grouped in four sections: **Session only**, **Per environment**, **Per tenant** and **Global**. Each entry shows what it applies to, what the grant covers (Read, record reads, Write or dev-environment confirmation, [§7](#phase-6--scopes-and-grants)), and when and from which tab it was given. A grant that no longer matches its environment is marked *Stale*. A person can **Revoke** a single entry, use **Reset all** in one section to clear that scope, or use **Reset all approvals** to clear every section. Each reset asks for confirmation inside the window. A revocation applies from the next call, and a call that is already running finishes under its approval. *Once* scopes are not listed, because they end with their call or binding. A separate **File roots** section lists each File root with its level, environment or tenant ([§6.8](#file-root)). It has **Change**, which opens the folder prompt that explains the File root rules, and **Clear**. A bound environment without a File root is listed as *Not set*, with **Set**. The reset buttons do not clear File roots, because a File root is a setting, not a grant. The layout is in [§8.8](#88-active-approvals-window-phase-6) | Keep every grant in one approval store, held per organization. Each entry records its kind, scope, organization ID and friendly name, grant time and originating tab. The store can list its entries, remove one entry, and clear one scope. v1's **Revoke** in a tab, and the *always* setting, become calls on that store rather than separate paths |
 | **Token in the Active Approvals window** | The bearer token moves off the main panel into the Active Approvals window, so the credentials and grants that decide what an agent can do sit in one place. The window shows the token masked, with **Copy** and **Regenerate**. **Copy client config** stays on the main panel for setup | Build the token display, **Copy** and **Regenerate** as one self-contained control backed by the token store (D8), so it can move without change. H4 is unchanged: one host-level token, and regenerating it affects every client |
-| **Scoped approvals for every tier but Publisher** | Every approval dialog except publisher creation offers the same four scopes: **Once**, **Session only**, **Per environment** and **Always** — Write calls included, and *Always* offered in the dialog rather than only in settings. Publisher creation stays once, with typed confirmation, and never for a session (R3). A scoped Write grant still leaves every Write call subject to the dev-environment confirmation, a non-blank reason (R12) and the fixed add flags (R1), and every call is still logged (R13). Grants are listed in Active Approvals with their tier | Keep the approval store keyed by tier as well as scope and organization, and route every dialog's choice through one scope selector, so Write grants become store entries rather than a new path. A scope other than *Once* authorizes later Write calls in advance — and that remains a person's decision, made in the dialog for one organization or, with *Always*, for all. It stays within R2 the way read scopes do today; when this is built, R2 and the instructions file's fixed safety behaviour are reworded to name scoped Write approvals explicitly |
-| **Direct web resource updates** | `update_web_resources` ([§6.8](#68-direct-update-tools-phase-6)): create or update web resources from local files in a WIP, with the overwrite check inside the tool and a targeted publish; the per-organization **File root** ([§6.8](#file-root)), asked for on first use and editable in Active Approvals. An edit-and-push loop calls it often, so scoped Write approvals make it practical | Specified after v1 was built (2026-11-03); v1 is unchanged |
+| **Scopes and grants** | The model in [§7, Phase 6 — scopes and grants](#phase-6--scopes-and-grants). The scopes are Once, Session, Environment, a new Tenant, and *Always*, shown as Global. Record reads and Write calls become grants, and the **Record queries** switch is removed. Write grants and the dev-environment confirmation go no further than Environment, and the *always* dev-environment confirmation is withdrawn. Grants record organization, environment and tenant IDs, and a grant that no longer matches is *Stale*. The settings file gets a `SchemaVersion` and an upgrade mapping. Publisher creation stays once, with typed confirmation, and never for a session (R3). A scoped Write grant still leaves every Write call subject to the dev-environment confirmation, a non-blank reason (R12) and the fixed add flags (R1), and every call is still logged (R13) | The approval store is already one store keyed by kind, scope and organization. Its enums and the settings elements gain values and fields, and nothing is renamed, so v1 grants load as they are. A scope other than *Once* authorizes later Write calls in advance — and that remains a person's decision, made in the dialog for one environment. It stays within R2 the way read scopes do today; when this is built, R2 and the instructions file's fixed safety behaviour are reworded to name scoped Write approvals explicitly |
+| **Direct web resource updates** | `update_web_resources` ([§6.8](#68-direct-update-tools-phase-6)): create or update web resources from local files in a WIP, with the overwrite check inside the tool and a targeted publish; the **File root**, set per environment or per tenant ([§6.8](#file-root)), asked for on first use and editable in Active Approvals. An edit-and-push loop calls it often, so scoped Write approvals make it practical | Specified after v1 was built (2026-11-03); v1 is unchanged |
 | **Plug-in components in `add_solution_components`** | Plug-in assemblies, steps, custom APIs and their request parameters and response properties accepted, already registered, with the same fixed behaviour, one approval for the list, read-back and log entry as the other types ([§6.6](#add_solution_components)). Custom API codes resolved per environment. Registration stays with a person until [Phase 7](#phase-7--plug-in-authoring) | v1 refuses these types with `invalid_argument`; PAC adds them (Path B). `get_required_components` and `remove_solution_component` take the wider selector too |
 | **Skill changes for direct updates** | `agent-companion-wip-edit-loop`: web resources through `update_web_resources`, with paths relative to the File root that `get_connection_info` returns; the PCF push guidance. `agent-companion-wip-shaping`: the MCP path for plug-in assemblies, steps, custom APIs, request parameters and response properties, each step added on its own | — |
 
@@ -2245,7 +2354,7 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 
 S10 ran through a throwaway SDK console with its own sign-in, not through the plugin. It establishes platform behaviour only: the tool itself is verified through the plugin at Phase 6 exit. Later spikes use the plugin and the person's PAC profile only.
 
-**Exit:** with grants of every scope in place for two organizations, each grant is listed in its section, revoking one or resetting a section takes effect on the next call, and the main panel no longer shows the token. A Write call approved *Per environment* runs the next Write to that organization without a dialog but with its log line pair; a publisher creation still prompts every time. For the direct-update tools: on the sandbox, a web resource edit is written, published and visible in the app without an import, and a stale `expectedVersion` is refused. With no File root set, the first call prompts for one, and Cancel fails it with `denied_by_user`. A relative path and an absolute path inside the root are both accepted. A `..` escape, an absolute path outside the root and a path through a junction are refused before the dialog. The File root is shown, changed and cleared in Active Approvals, and a change applies from the next call. For plug-in components: an assembly, two of its steps — one with an image — and a custom API with a request parameter and a response property, all registered beforehand, are added to a WIP by name, unique name or ID in one call. The read-back shows what the platform added with each, recorded in [notes](notes.md); nothing unexpected is left unreported. An export of the WIP carries the steps with their image and the custom API with its parameter and property. This also answers part of spike S12.
+**Exit:** with grants of every scope in place for two environments in one tenant and one in another, each grant is listed in its section, revoking one or resetting a section takes effect on the next call, and the main panel no longer shows the token. A Write call approved *Per environment* runs the next Write to that environment without a dialog but with its log line pair; Write and dev-environment confirmation offer nothing broader; a publisher creation still prompts every time. A Read granted *Per tenant* covers a second environment of that tenant bound afterwards, but not the environment in the other tenant. A record query prompts on its own even with a Read grant, and a `RecordRead` grant does not cover other reads. A v1 settings file loads: its Read grants are kept and gain environment and tenant IDs on the next binding, an *always* dev-environment confirmation is dropped, and the token is unchanged. A grant whose environment ID no longer matches is shown *Stale* and not applied. For the direct-update tools: on the sandbox, a web resource edit is written, published and visible in the app without an import, and a stale `expectedVersion` is refused. With no File root set, the first call prompts for one and its level, and Cancel fails it with `denied_by_user`. A tenant File root serves a second environment of that tenant without a prompt, and an environment File root takes precedence over it. A relative path and an absolute path inside the root are both accepted. A `..` escape, an absolute path outside the root and a path through a junction are refused before the dialog. The File root is shown, changed and cleared in Active Approvals, and a change applies from the next call. For plug-in components: an assembly, two of its steps — one with an image — and a custom API with a request parameter and a response property, all registered beforehand, are added to a WIP by name, unique name or ID in one call. The read-back shows what the platform added with each, recorded in [notes](notes.md); nothing unexpected is left unreported. An export of the WIP carries the steps with their image and the custom API with its parameter and property. This also answers part of spike S12.
 
 ### Phase 7 — Plug-in authoring
 
@@ -2292,8 +2401,8 @@ Specified with Phase 6 and split off when field use showed that plug-in authorin
 | Every Write approval | Connection, solution name, component list, fixed flags shown as OFF; the agent's reason matches what the arguments do (R12) |
 | Reviewing or handing over a session | The call log shows the expected calls and outcomes; a saved log is kept outside any repository (R13, R7) |
 | After every add | `list_solution_components` shows nothing unexpected (R1) |
-| Read approval scope | Per environment only for development environments; per session for production; *always* only with a reason ([§7](#7-authorization-model)) |
-| A query that touches records | The tables and columns are needed for the task; no more |
+| Read approval scope | Per environment only for development environments; per session for production; *always* only with a reason ([§7](#7-authorization-model)). From Phase 6: per tenant when the tenant holds only the project's development and test environments; Global only with a reason ([§7](#phase-6--scopes-and-grants)) |
+| A query that touches records | The tables and columns are needed for the task; no more. From Phase 6, the scope of a `RecordRead` grant follows the Read recommendation |
 | Before import | The overwrite check passed or a re-export was merged; in a shared development environment, others' pending changes will be published too (X11) |
 | After import | Components behave as intended in the app; the WIP solution contains only what the story touched |
 | Ribbon changes | Button rules and commands reviewed against the base ribbon, not only the diff |
