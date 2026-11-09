@@ -18,15 +18,15 @@ jobs:
     outputs:
       nupkg-name: ${{ steps.pack.outputs.nupkg-name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.x'
 
       - name: Setup NuGet
-        uses: nuget/setup-nuget@v2
+        uses: nuget/setup-nuget@v4
 
       - name: Restore
         run: dotnet restore tooling/D365ContextExporter/D365ContextExporter.sln
@@ -52,7 +52,7 @@ jobs:
           echo "nupkg-name=$name" >> $env:GITHUB_OUTPUT
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: D365ContextExporter-nupkg
           path: nupkg/*.nupkg
@@ -64,13 +64,13 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: D365ContextExporter-nupkg
           path: nupkg
 
       - name: Setup NuGet
-        uses: nuget/setup-nuget@v2
+        uses: nuget/setup-nuget@v4
 
       # Trusted publishing: exchanges the GitHub OIDC token for a short-lived nuget.org API key,
       # matched against the nuget.org policy for this repository and workflow file.
