@@ -18,28 +18,31 @@
     {
       "id": "entities",
       "type": "webapi",
-      "path": "EntityDefinitions?$select=LogicalName,DisplayName,Description,IsActivity,PrimaryIdAttribute,PrimaryNameAttribute,IsCustomEntity,IsManaged,IsCustomizable&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,RequiredLevel,IsCustomAttribute)",
-      "resultKey": "entities",
-      "maxRecords": 500
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName,Description,IsActivity,IsCustomEntity,IsManaged,IsIntersect,TableType,DataProviderId&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,AttributeTypeName,RequiredLevel,IsManaged;$filter=IsCustomAttribute eq true and IsManaged eq false and AttributeOf eq null)",
+      "resultKey": "entities"
     },
     {
-      "id": "system-forms",
-      "type": "webapi",
-      "path": "systemforms?$select=name,type,objecttypecode",
-      "resultKey": "forms",
-      "maxRecords": 5000
+      "id": "project-tables",
+      "type": "fetchxml",
+      "source": "project-tables.fetch.xml",
+      "resultKey": "projectTables"
     },
     {
-      "id": "saved-queries",
-      "type": "webapi",
-      "path": "savedqueries?$select=name,querytype,returnedtypecode",
-      "resultKey": "views",
-      "maxRecords": 5000
+      "id": "project-forms",
+      "type": "fetchxml",
+      "source": "project-forms.fetch.xml",
+      "resultKey": "forms"
+    },
+    {
+      "id": "project-views",
+      "type": "fetchxml",
+      "source": "project-views.fetch.xml",
+      "resultKey": "views"
     },
     {
       "id": "global-optionsets",
       "type": "webapi",
-      "path": "GlobalOptionSetDefinitions",
+      "path": "GlobalOptionSetDefinitions?$filter=IsManaged eq false",
       "resultKey": "globalOptionSets"
     },
     {

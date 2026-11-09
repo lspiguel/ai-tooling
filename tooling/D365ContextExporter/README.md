@@ -52,13 +52,29 @@ These specs are deployed on first-time setup:
 
 | Spec | What it captures |
 |---|---|
-| `EntityDictionary` | All entity definitions with their attributes |
-| `SecurityModel` | Security roles and privilege depths |
-| `SolutionsReference` | The complete customization reference — solutions, custom entities and extensions of standard entities, virtual tables, option sets, plug-ins and steps, custom APIs, classic workflows, cloud flows, business rules, business process flows, security roles, app modules and environment variables |
-| `FormsAndViews` | Entity forms and views |
-| `Optionsets` | Global option sets |
-| `PowerAutomateFlows` | Cloud flows with their definitions |
-| `SolutionInventory` | Solutions with publisher, version, managed state and install date |
+| `EntityDictionary` | The tables the project created or customized, with every column except lookup and choice name companions and currency base columns |
+| `SecurityModel` | The project's security roles and their privilege depths |
+| `SolutionsReference` | The complete customization reference — the project's solutions, custom tables, customized managed tables, virtual tables, option sets, plug-ins and steps, custom APIs, classic workflows, cloud flows, business rules, business process flows, security roles, app modules and environment variables |
+| `FormsAndViews` | The forms and views the project created or customized |
+| `Optionsets` | Unmanaged global option sets |
+| `PowerAutomateFlows` | The project's cloud flows with their definitions |
+| `SolutionInventory` | Visible solutions with publisher, version, managed state and install date |
+
+### What counts as the project's
+
+The sample specs describe what the project built or customized, not everything installed in the environment. They are meant to run against a **development environment**, where the project's work is unmanaged:
+
+| Component | Included when |
+|---|---|
+| Table | It is unmanaged; or it has unmanaged custom columns; or it has forms or views the project created or customized; or it is a component of a project solution. Intersect (N:N) tables are left out |
+| Column | It is an unmanaged custom column. `EntityDictionary` lists every column of the tables it includes |
+| Form, view, app | It is unmanaged, or a component of a project solution |
+| Option set, plug-in step, workflow, cloud flow, custom API, environment variable | It is unmanaged. Plug-in steps are those of unmanaged plug-in assemblies, with their state |
+| Security role | It is unmanaged, in the root business unit and not based on a Microsoft role template |
+
+A *project solution* is any visible, unmanaged solution other than `Default` and `Active`. Cloud flows named `CXP_…` are left out: Customer Insights – Journeys generates them for its journeys. Against a downstream environment, where the project's solutions are managed, most sections come out empty.
+
+A standard column the project changed without creating it — a new label or required level on a shipped column — is not listed in `SolutionsReference`.
 
 ## Folder structure
 
@@ -68,6 +84,9 @@ After first-time setup your base directory will look like this:
 Context-Exporter/
 ├── config/
 │   ├── queries/                  FetchXML query files
+│   │   ├── project-forms.fetch.xml
+│   │   ├── project-tables.fetch.xml
+│   │   ├── project-views.fetch.xml
 │   │   ├── solutions-detail.fetch.xml
 │   │   ├── security-roles.fetch.xml
 │   │   └── ...
@@ -167,7 +186,7 @@ The following functions are available in all templates:
 | `group_by_key` | `(items, key)` | Groups an array by a key; returns `[{key, items}]`. |
 | `optionset_label` | `(options, value)` | Resolves an option set integer value to its localised label. |
 | `attr_type_abbrev` | `(type)` | Abbreviates a Dataverse attribute type string (e.g. `Lookup` → `lkp`). |
-| `req_indicator` | `(requiredLevel)` | Returns `**R**` for Required, `r` for Recommended, `-` otherwise. |
+| `req_indicator` | `(requiredLevel)` | Returns `**R**` for Required or ApplicationRequired (business required), `r` for Recommended, `-` otherwise, including SystemRequired. |
 | `iso_date` | `(dateString)` | Truncates a date-time string to `yyyy-MM-dd`. |
 | `component_type_name` | `(code)` | Resolves a solution component type code to a human-readable name. |
 | `format_forms` | `(forms)` | Formats a list of form objects as `Name(type), …`. |

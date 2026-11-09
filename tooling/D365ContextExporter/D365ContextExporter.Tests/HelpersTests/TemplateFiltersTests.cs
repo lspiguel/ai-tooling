@@ -128,6 +128,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
         }
 
         [TestCase("Required", "**R**")]
+        [TestCase("ApplicationRequired", "**R**")]
         [TestCase("Recommended", "r")]
         [TestCase("SystemRequired", "-")]
         [TestCase("None", "-")]

@@ -5,6 +5,7 @@
     <attribute name="primaryentity" />
     <attribute name="category" />
     <attribute name="mode" />
+    <attribute name="statecode" />
     <attribute name="statuscode" />
     <attribute name="triggeroncreate" />
     <attribute name="triggerondelete" />
@@ -17,6 +18,7 @@
         <value>2</value>
         <value>5</value>
       </condition>
+      <condition attribute="name" operator="not-begin-with" value="CXP_" />
     </filter>
     <order attribute="category" descending="false" />
     <order attribute="primaryentity" descending="false" />

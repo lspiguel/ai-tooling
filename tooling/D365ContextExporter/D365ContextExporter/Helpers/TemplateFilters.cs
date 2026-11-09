@@ -288,9 +288,10 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             else
                 strVal = value?.ToString();
 
+            // The Web API and the SDK report business-required columns as ApplicationRequired.
             return strVal switch
             {
-                "Required" => "**R**",
+                "Required" or "ApplicationRequired" => "**R**",
                 "Recommended" => "r",
                 _ => "-",
             };

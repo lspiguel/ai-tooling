@@ -12,9 +12,14 @@
     {
       "id": "entity-attributes",
       "type": "webapi",
-      "path": "EntityDefinitions?$select=LogicalName,DisplayName,PrimaryIdAttribute,PrimaryNameAttribute,OwnershipType,IsCustomEntity,IsManaged,IsCustomizable&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,IsCustomAttribute,RequiredLevel)",
-      "resultKey": "entityAttributes",
-      "maxRecords": 500
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName,PrimaryIdAttribute,PrimaryNameAttribute,OwnershipType,IsCustomEntity,IsManaged,IsIntersect,TableType,DataProviderId&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,AttributeTypeName,IsCustomAttribute,IsManaged,RequiredLevel;$filter=AttributeOf eq null)",
+      "resultKey": "entityAttributes"
+    },
+    {
+      "id": "project-tables",
+      "type": "fetchxml",
+      "source": "project-tables.fetch.xml",
+      "resultKey": "projectTables"
     }
   ]
 }

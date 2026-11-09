@@ -5,6 +5,8 @@
     <attribute name="stage" />
     <attribute name="mode" />
     <attribute name="rank" />
+    <attribute name="statecode" />
+    <attribute name="filteringattributes" />
     <link-entity name="sdkmessage" from="sdkmessageid" to="sdkmessageid" link-type="inner" alias="msg">
       <attribute name="name" />
     </link-entity>
@@ -16,11 +18,11 @@
       <attribute name="typename" />
       <link-entity name="pluginassembly" from="pluginassemblyid" to="pluginassemblyid" link-type="inner" alias="asm">
         <attribute name="name" />
+        <filter type="and">
+          <condition attribute="ismanaged" operator="eq" value="0" />
+        </filter>
       </link-entity>
     </link-entity>
-    <filter type="and">
-      <condition attribute="ismanaged" operator="eq" value="0" />
-    </filter>
     <order attribute="name" descending="false" />
   </entity>
 </fetch>

@@ -1,0 +1,39 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="savedquery">
+    <attribute name="savedqueryid" />
+    <attribute name="name" />
+    <attribute name="querytype" />
+    <attribute name="returnedtypecode" />
+    <attribute name="isdefault" />
+    <attribute name="ismanaged" />
+    <filter type="and">
+      <condition attribute="querytype" operator="in">
+        <value>0</value>
+        <value>1</value>
+        <value>2</value>
+        <value>4</value>
+        <value>64</value>
+      </condition>
+      <filter type="or">
+        <condition attribute="ismanaged" operator="eq" value="0" />
+        <link-entity name="solutioncomponent" from="objectid" to="savedqueryid" link-type="any">
+          <filter type="and">
+            <condition attribute="componenttype" operator="eq" value="26" />
+            <link-entity name="solution" from="solutionid" to="solutionid" link-type="any">
+              <filter type="and">
+                <condition attribute="ismanaged" operator="eq" value="0" />
+                <condition attribute="isvisible" operator="eq" value="1" />
+                <condition attribute="uniquename" operator="not-in">
+                  <value>Default</value>
+                  <value>Active</value>
+                </condition>
+              </filter>
+            </link-entity>
+          </filter>
+        </link-entity>
+      </filter>
+    </filter>
+    <order attribute="returnedtypecode" descending="false" />
+    <order attribute="name" descending="false" />
+  </entity>
+</fetch>

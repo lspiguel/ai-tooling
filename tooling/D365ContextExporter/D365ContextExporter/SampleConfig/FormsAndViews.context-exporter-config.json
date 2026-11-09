@@ -12,23 +12,20 @@
     {
       "id": "entities",
       "type": "webapi",
-      "path": "EntityDefinitions?$select=LogicalName,DisplayName,IsCustomEntity,IsManaged,IsCustomizable",
-      "resultKey": "entities",
-      "maxRecords": 500
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName",
+      "resultKey": "entities"
     },
     {
-      "id": "system-forms",
-      "type": "webapi",
-      "path": "systemforms?$select=name,type,isdefault,objecttypecode",
-      "resultKey": "forms",
-      "maxRecords": 5000
+      "id": "project-forms",
+      "type": "fetchxml",
+      "source": "project-forms.fetch.xml",
+      "resultKey": "forms"
     },
     {
-      "id": "saved-queries",
-      "type": "webapi",
-      "path": "savedqueries?$select=name,querytype,isdefault,returnedtypecode",
-      "resultKey": "views",
-      "maxRecords": 5000
+      "id": "project-views",
+      "type": "fetchxml",
+      "source": "project-views.fetch.xml",
+      "resultKey": "views"
     }
   ]
 }

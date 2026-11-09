@@ -345,7 +345,7 @@ Registered by `TemplateFilters.RegisterAll`; callable as functions or with pipe 
 | `group_by_key` | items, key | Array of `{ key, items }`, in first-seen order |
 | `optionset_label` | options, value | Label of the matching option value |
 | `attr_type_abbrev` | attribute type | Short type (`Lookup` → `lkp`, `Picklist` → `opt`, …) |
-| `req_indicator` | required level | `**R**` (Required), `r` (Recommended), `-` otherwise — including `SystemRequired` |
+| `req_indicator` | required level | `**R**` (`Required` or `ApplicationRequired` — the value the Web API and SDK report for business-required columns), `r` (`Recommended`), `-` otherwise — including `SystemRequired` |
 | `iso_date` | date string | `yyyy-MM-dd`; empty for empty input |
 | `component_type_name` | solution component type | Readable name for common types; `Unknown (n)` otherwise |
 | `format_forms` | forms | `Name(type,type), …` grouped by form name |
@@ -408,21 +408,42 @@ Every file under `SampleConfig\` is an embedded resource. `FirstRunHelper` holds
 
 | Spec | Template | Queries (`resultKey`) |
 |---|---|---|
-| `EntityDictionary` | `entity-dictionary.sbn` | Web API `EntityDefinitions` with attributes (`entityAttributes`, max 500) |
-| `FormsAndViews` | `forms-and-views.sbn` | Web API `EntityDefinitions` (`entities`), `systemforms` (`forms`), `savedqueries` (`views`) |
-| `Optionsets` | `optionsets.sbn` | Web API `GlobalOptionSetDefinitions` (`globalOptionSets`) |
+| `EntityDictionary` | `entity-dictionary.sbn` | Web API `EntityDefinitions` with every column except companions (`entityAttributes`); FetchXML `project-tables` (`projectTables`) |
+| `FormsAndViews` | `forms-and-views.sbn` | Web API `EntityDefinitions` names (`entities`); FetchXML `project-forms` (`forms`), `project-views` (`views`) |
+| `Optionsets` | `optionsets.sbn` | Web API `GlobalOptionSetDefinitions`, unmanaged (`globalOptionSets`) |
 | `PowerAutomateFlows` | `power-automate-flows.sbn` | FetchXML `cloud-flows` (`flows`), including the flow definitions |
-| `SecurityModel` | `security-model.sbn` | FetchXML `security-roles` (`securityRoles`) — roles, privileges and depths |
-| `SolutionInventory` | `solution-inventory.sbn` | FetchXML `solutions-detail` (`solutions`) — solutions with publisher |
-| `SolutionsReference` | `solutions-reference.sbn` | All of the above that describe customizations: solutions, entities, forms, views, global option sets, plug-in assemblies, SDK steps, custom API requests and responses, workflows, business process flows and their stages, app modules, environment variables, security roles |
+| `SecurityModel` | `security-model.sbn` | FetchXML `security-roles` (`securityRoles`) — the project's roles, privileges and depths |
+| `SolutionInventory` | `solution-inventory.sbn` | FetchXML `solutions-detail` (`solutions`) — visible solutions with publisher |
+| `SolutionsReference` | `solutions-reference.sbn` | Web API `EntityDefinitions` with unmanaged custom columns (`entities`) and unmanaged global option sets; FetchXML `solutions-detail`, `project-tables`, `project-forms`, `project-views`, `plugin-assemblies`, `sdk-steps`, `custom-apis`, `custom-api-responses`, `workflows`, `business-process-flows`, `bpf-stages`, `app-modules`, `env-vars`, `security-roles` |
 
-`SolutionsReference` is the complete customization reference: solutions, custom entities, extensions of standard entities, virtual tables, option sets, plug-ins and steps, custom APIs, classic workflows, cloud flows, business rules, business process flows, security roles, app modules and environment variables.
+`SolutionsReference` is the complete customization reference: the project's solutions, custom tables, customized managed tables, virtual tables, option sets, plug-ins and steps (with their state), custom APIs, classic workflows, cloud flows, business rules (drafts marked), business process flows, security roles, app modules and environment variables.
 
-### 12.2 Queries and other files
+### 12.2 Customization scope
+
+The reference configuration describes what the project built or customized, not everything installed. It assumes a **development environment**, where the project's work is unmanaged; against an environment that holds the project's solutions managed, most sections are empty. A *project solution* is a visible, unmanaged solution other than `Default` and `Active` (`Default` holds every table and is excluded).
+
+| Component | Rule | Where it is applied |
+|---|---|---|
+| Table | Unmanaged; or has unmanaged custom columns; or has a form or view in scope; or is a component of a project solution. Intersect tables excluded | Templates, from `IsManaged`, the expanded columns, `project-tables`, `project-forms` and `project-views` |
+| Virtual table | `TableType` is `Virtual`, or a non-empty `DataProviderId` on a table that is not elastic | Templates |
+| Column | `SolutionsReference`: unmanaged custom columns. `EntityDictionary`: every column of an included table. Both drop columns with an `AttributeOf` (lookup and choice name companions) on the server, and currency `_base` columns in the template | Web API `$filter` inside `$expand=Attributes`; templates |
+| Form | Main, quick view, quick create or card; unmanaged or a component of a project solution | `project-forms` (a `link-type="any"` link inside an `or` filter) |
+| View | Public, Advanced Find, associated, Quick Find or lookup; unmanaged or a component of a project solution | `project-views` |
+| App module | Unmanaged or a component of a project solution | `app-modules` |
+| Global option set, workflow, cloud flow, custom API, environment variable | Unmanaged. Cloud flows named `CXP_` (generated by Customer Insights – Journeys) excluded | Queries |
+| Plug-in step | Registered on an unmanaged plug-in assembly; state included | `sdk-steps` |
+| Security role | Unmanaged, root business unit (`parentroleid` null), not based on a role template (`roletemplateid` null) | `security-roles` |
+| Solution | Visible, other than `Default` and `Active`. `SolutionsReference` lists the unmanaged ones | `solutions-detail`; template |
+
+Not covered: a standard column the project changed without creating it, such as a new label or required level. The Web API cannot filter `$expand=Attributes` to a list of IDs, so listing those would mean fetching every column of every included table.
+
+The rules were checked against a development environment on 2026-11-09 through the Agent Companion MCP: every FetchXML query above ran as shipped. The Web API `$filter` expressions could not be run through it and are confirmed by the first export.
+
+### 12.3 Queries and other files
 
 | Kind | Files |
 |---|---|
-| FetchXML (`config\queries\`) | `app-modules`, `bpf-stages`, `business-process-flows`, `cloud-flows`, `custom-api-responses`, `custom-apis`, `env-vars`, `plugin-assemblies`, `sdk-steps`, `security-roles`, `solutions-detail`, `workflows` (each `.fetch.xml`) |
+| FetchXML (`config\queries\`) | `app-modules`, `bpf-stages`, `business-process-flows`, `cloud-flows`, `custom-api-responses`, `custom-apis`, `env-vars`, `plugin-assemblies`, `project-forms`, `project-tables`, `project-views`, `sdk-steps`, `security-roles`, `solutions-detail`, `workflows` (each `.fetch.xml`) |
 | Templates (`config\transformations\`) | The seven `.sbn` files above |
 | Schema (`config\`) | `context-exporter.schema.json` — draft-07; `spec`, `transformation`, `queries` required; no additional properties; per-query `id`, `type`, `resultKey` required |
 | Legal (`LEGAL.md`) | Deployed once, with the organisation name substituted ([§5.2](#52-first-run-setup)) |
@@ -477,13 +498,14 @@ NUnit 4 with Moq and Moq.Contrib.HttpClient, `net48`, mirroring the source folde
 | `ModelsTests/ExportJobTests` | Loading and defaults |
 | `OrchestrationTests/IntermediateJsonBuilderTests` | `_meta`, raw file naming, result keys |
 | `OrchestrationTests/TemplateRendererTests` | `_spec` and `_meta`, nested objects and arrays, `include` from `transformations\`, parse errors with line and column, an undefined variable failing, a missing template, UTF-8 without BOM |
+| `OrchestrationTests/ShippedTemplatesTests` | Every shipped spec rendered through its shipped template, deployed from the embedded configuration, against one synthetic intermediate: the customization scope of [§12.2](#122-customization-scope) (which tables, forms and views appear), column types from `AttributeTypeName`, form and view type labels, step and process state, the publisher column, option order, one heading per security role |
 | `OrchestrationTests/ExportJobRunnerTests` | Through an internal constructor that takes the three query runners: a failed query stopping the render while the remaining queries run, cancellation between queries, progress, the copy to `output\`, the legal notice in the delivered file only, a spec with no queries, validation before the run folder is created |
 | `QueriesTests/*QueryRunnerTests` | Paging, `maxRecords`, empty results, missing files, HTTP errors, metadata targets |
 | `QueriesTests/*RealDataTests` | Realistic response shapes, synthetic (R2) |
 
 `OrchestrationTests/TemplateHarness` is the shared helper for the template tests: a temporary base directory with one run folder. Filters are tested by rendering rather than by calling `TemplateFilters` directly, because Scriban is compiled into the plugin and the test project also references the Scriban package.
 
-Not covered by unit tests: the shipped templates, the public `ExportJobRunner` constructor (it needs a live connection for the token) and the WinForms controls, including the upgrade dialog. Templates are verified by hand: deploy into a clean folder, run each shipped spec against a sandbox environment, check the Markdown and the legal notice.
+Not covered by unit tests: the shipped queries against a real environment, the public `ExportJobRunner` constructor (it needs a live connection for the token) and the WinForms controls, including the upgrade dialog. The shipped templates are covered only against synthetic data. So queries and templates are still verified by hand: deploy into a clean folder, run each shipped spec against a development environment, check the Markdown and the legal notice.
 
 ---
 

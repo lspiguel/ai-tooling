@@ -2,18 +2,16 @@
   <entity name="role">
     <attribute name="roleid" />
     <attribute name="name" />
-    <attribute name="businessunitid" />
-    <attribute name="ismanaged" />
-    <attribute name="iscustomizable" />
     <link-entity name="roleprivileges" from="roleid" to="roleid" link-type="outer" alias="rp">
       <attribute name="privilegedepthmask" />
       <link-entity name="privilege" from="privilegeid" to="privilegeid" link-type="outer" alias="priv">
         <attribute name="name" />
-        <attribute name="accessright" />
       </link-entity>
     </link-entity>
     <filter type="and">
       <condition attribute="ismanaged" operator="eq" value="0" />
+      <condition attribute="parentroleid" operator="null" />
+      <condition attribute="roletemplateid" operator="null" />
     </filter>
     <order attribute="name" descending="false" />
   </entity>
