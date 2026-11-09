@@ -183,6 +183,8 @@ dotnet test    tooling/D365ContextExporter/D365ContextExporter.Tests/D365Context
 
 For local development, copy the DLL to your XrmToolBox Plugins folder. See `Directory.Build.targets.example` for a template that automates this on build.
 
+The plugin's behaviour is specified in [SPEC.md](SPEC.md); its development history, design decisions and open items are in [notes.md](notes.md).
+
 ## License
 
 MIT — see [LICENSE](../../LICENSE) for details.

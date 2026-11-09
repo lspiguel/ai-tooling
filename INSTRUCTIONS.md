@@ -141,7 +141,7 @@ Three places must stay in sync. Update all of them in the same change:
 
 ## Tooling conventions — D365 Context Exporter
 
-The [D365 Context Exporter](/tooling/D365ContextExporter/README.md) is an XrmToolBox plugin (`net48`, WinForms, `Nullable` enabled, StyleCop.Analyzers enforced via [stylecop.json](/tooling/D365ContextExporter/D365ContextExporter/stylecop.json)). Tests are NUnit + Moq in [D365ContextExporter.Tests](/tooling/D365ContextExporter/D365ContextExporter.Tests/).
+The [D365 Context Exporter](/tooling/D365ContextExporter/README.md) is an XrmToolBox plugin (`net48`, WinForms, `Nullable` enabled, StyleCop.Analyzers enforced via [stylecop.json](/tooling/D365ContextExporter/D365ContextExporter/stylecop.json)). Tests are NUnit + Moq in [D365ContextExporter.Tests](/tooling/D365ContextExporter/D365ContextExporter.Tests/). It is released. The [spec](/tooling/D365ContextExporter/SPEC.md) describes it as built — its rules R1–R11 and planned fixes — and [notes.md](/tooling/D365ContextExporter/notes.md) holds the development history, decisions and open items.
 
 ```bash
 dotnet restore tooling/D365ContextExporter/D365ContextExporter.sln
