@@ -8,11 +8,13 @@ on:
     paths:
       - 'tooling/D365AgentCompanionMcp/**'
       - 'skills/agent-companion-*/**'
+      - '.github/workflows/build-and-pack-d365-agent-companion-mcp.yml'
   pull_request:
     branches: [main]
     paths:
       - 'tooling/D365AgentCompanionMcp/**'
       - 'skills/agent-companion-*/**'
+      - '.github/workflows/build-and-pack-d365-agent-companion-mcp.yml'
 
 jobs:
   build:

@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - 'tooling/D365ContextExporter/**'
+      - '.github/workflows/build-and-pack-d365-context-exporter.yml'
   pull_request:
     branches: [main]
     paths:
       - 'tooling/D365ContextExporter/**'
+      - '.github/workflows/build-and-pack-d365-context-exporter.yml'
 
 jobs:
   build:
