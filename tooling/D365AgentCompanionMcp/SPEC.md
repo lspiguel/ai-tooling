@@ -2393,6 +2393,7 @@ S10 ran through a throwaway SDK console with its own sign-in, not through the pl
 | 6a.1 | **Tool Library icon resolution.** The embedded icons were half the size XrmToolBox expects, so they looked blurry next to other tools | **Done** (2026-11-08) |
 | 6a.2 | **Automatic call log on disk.** An opt-in setting that writes every call and its outcome, in full, to a JSON file per connection and day | **Built** (2026-11-09); unit-tested, live check pending |
 | 6a.3 | **Pending spikes.** S7, S8 and S12 move here from Phase 0 and Phase 7 | S12 run (2026-11-09); S7 and S8 not run |
+| 6a.4 | **Live test of `update_web_resources`** for every web resource type, checking that every update is published. It changed §6.8: content written earlier without a publish is now published ([notes](notes.md#6a4--live-test-of-update_web_resources-2026-11-09)) | **Done** (2026-11-09) |
 
 #### 6a.1 — Tool Library icon resolution
 

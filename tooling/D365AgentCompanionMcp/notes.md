@@ -122,6 +122,7 @@ Started 2026-11-08. Follow-up work on the Phase 6 build before 1.2026.11.2 is re
 | 6a.1 | [Tool Library icon resolution](#6a1--tool-library-icon-resolution) | **Done** (2026-11-08); needs a build, and the 150px file pushed to `main`, to be seen in the Tool Library |
 | 6a.2 | [Automatic call log on disk](#6a2--automatic-call-log-on-disk) — one JSON file per connection and day, full arguments and results ([SPEC](SPEC.md#6a2--automatic-call-log-on-disk)) | **Built** (2026-11-09); unit-tested (416 tests, 0 warnings), not yet run in XrmToolBox. Specified 2026-11-08. Never reported to the agent in any tool response. One global checkbox in Active Approvals asks for the folder when ticked and is saved with the plugin settings. Decided: host calls go to `AgentCompanion-host-yyyyMMdd.json`; two connections with one name get an 8-character connection ID in the file name |
 | 6a.3 | Pending spikes S7, S8 and S12, moved from Phase 0 and Phase 7 ([SPEC](SPEC.md#6a3--pending-spikes)) | Moved (2026-11-08). [S12 run](#6a3--spike-s12-2026-11-09) (2026-11-09): registration through a WIP works; U10 was the missing `Customizations.xml` anchors and the type list. S7 and S8 not run |
+| 6a.4 | [Live test of `update_web_resources`](#6a4--live-test-of-update_web_resources-2026-11-09) — every web resource type, and that every update is published | **Done** (2026-11-09). Two defects found and fixed: every call failed on a missing `publisherid` (L5), and content written without a publish was never published later (L6). 419 tests |
 
 ### 6a.1 — Tool Library icon resolution
 
@@ -210,7 +211,34 @@ On the same data-free trial environment as S9–S11; its URL stays out of this f
 
 **Changes:** SPEC §9.10 (deferral note, the table, G1, G4, new G6 and G7, the closing line), §6a.3 and Phase 7 spike tables. Skill changes stay with Phase 7; what goes into each skill, file by file, is in [SPEC — Skill changes from spike S12](SPEC.md#skill-changes-from-spike-s12) (findings S12.1–S12.11).
 
-**Left in the trial environment.** Solutions `S12Shapes` (holds the managed `ListTables` with one parameter and one property), `S12Register` (the assembly, three steps, `new_S12Api`), `S12Carry91` (the assembly) and `S12Carry92` (`StepA`'s step, `new_S12Api` and what the platform added with it). Under them: assembly `Spike.S12.Plugins` with types `StepA`, `StepB`, `StepC` and `ApiPlugin`; the three steps on *Update of contact*, **all disabled**, `StepA`'s with a pre-image; the custom API `new_S12Api` with `Input` and `Echo`. The steps only trace. Removing these needs the Plugin Registration Tool or XrmToolBox — the person's to do.
+### 6a.4 — Live test of `update_web_resources`, 2026-11-09
+
+On the trial environment, through the plugin (1.2026.11.2, rebuilt twice during the test) and the person's PAC profile. One WIP, `WRTest`, under the default publisher; two versions of a file for each of the 11 types the tool maps — `.html` 1, `.css` 2, `.js` 3, `.xml` 4, `.png` 5, `.jpg` 6, `.gif` 7, `.xsl` 9, `.ico` 10, `.svg` 11, `.resx` 12 — under the File root.
+
+**How publishing was checked.** `pac env fetch` over `webresource.content` returns the **published** content (S10), so after each call the SHA-256 of every resource's content was compared with the local files. A control — three resources written with `publish: false` — still read as the old version, with their `versionnumber` risen: the check sees what users get, not what was written.
+
+| Run | Call | Result | Published content |
+|---|---|---|---|
+| — | First call, installed build | `dataverse_error`: *Object reference not set to an instance of an object*, before the dialog; nothing written | — |
+| 1 | Create all 11 (v1) | All `created`, `published: true` | All 11 v1 ✔ |
+| 2 | v2 of html, js, png, `publish: false` | `updated`, `published: false` | Still v1 (control) ✔ |
+| 3 | All 11 to v2, publish on — before the L6 fix | 8 `updated`; html, js, png `unchanged`; top-level `published: true` | 8 v2 ✔; **html, js, png still v1** ✘ |
+| 4 | Run 3 repeated — after the fix | html, js, png `unchanged` with `published: true`, versions risen by the publish; the other 8 `unchanged`, `published: false` | All 11 v2 ✔ |
+| 5 | All 11 back to v1 | All `updated`, `published: true` | All 11 v1 ✔ |
+| — | `.xap` (type 8) | `invalid_argument` before the dialog, listing the accepted extensions | — |
+
+The WIP read back with exactly the 11 resources (behaviour 0) and nothing unexpected after every call. No type behaved differently from another: the platform accepted, stored and published each one, text and binary alike.
+
+**Findings, fixed.**
+
+| # | Defect | Fix |
+|---|---|---|
+| L5 | Every `update_web_resources` call failed in preparation: `SolutionTools.FindSolution` retrieved only `uniquename` and `ismanaged`, and `WebResourceTools.Prefix` dereferenced the missing `publisherid`. The unit tests passed because the fake returned every solution column whatever the query asked for | `FindSolution` also retrieves `publisherid`. `WebResourceData` returns only the columns a query names; with that change alone, the web resource tests failed as live |
+| L6 | An item matching the *unpublished* content was `unchanged` and left out of the publish, so content written earlier with `publish: false` (or in the maker portal) stayed unpublished, while the call reported `published: true`. The unit test for identical content asserted that behaviour | SPEC §6.8 steps 3–4 first: an `unchanged` item whose published content differs is published without being written again; each result gets `published`. Code, dialog text and tool description follow; the fake keeps unpublished and published content apart, as the platform does (an update changes only the unpublished; a publish copies it). Three new tests. The edit-loop skill's direct-update step 5 says how to read `published` |
+
+**Left in the trial environment.** Solution `WRTest` with the 11 web resources `new_/wrtest/*`, published at v1. The test files are in the File root under `wrtest\`. Removing the resources is the person's (Q14).
+
+**Left in the trial environment (S12).** Solutions `S12Shapes` (holds the managed `ListTables` with one parameter and one property), `S12Register` (the assembly, three steps, `new_S12Api`), `S12Carry91` (the assembly) and `S12Carry92` (`StepA`'s step, `new_S12Api` and what the platform added with it). Under them: assembly `Spike.S12.Plugins` with types `StepA`, `StepB`, `StepC` and `ApiPlugin`; the three steps on *Update of contact*, **all disabled**, `StepA`'s with a pre-image; the custom API `new_S12Api` with `Input` and `Echo`. The steps only trace. Removing these needs the Plugin Registration Tool or XrmToolBox — the person's to do.
 
 ---
 
