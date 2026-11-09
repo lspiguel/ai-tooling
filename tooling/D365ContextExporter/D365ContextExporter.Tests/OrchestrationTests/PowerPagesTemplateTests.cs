@@ -58,7 +58,8 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
             File.WriteAllText(Path.Combine(runDir, "intermediate.json"), Intermediate().ToString());
             var job = ExportJob.Load(Path.Combine(_baseDir, "config", "PowerPages.context-exporter-config.json"));
             new TemplateRenderer(_ => { }).Render(job, _baseDir, runDir);
-            _output = File.ReadAllText(Path.Combine(runDir, "output.md"));
+            // Line breaks in the output come from the template file, which git may check out with CRLF (as CI does on Windows).
+            _output = File.ReadAllText(Path.Combine(runDir, "output.md")).Replace("\r\n", "\n");
         }
 
         [OneTimeTearDown]
