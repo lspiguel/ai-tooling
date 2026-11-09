@@ -49,9 +49,10 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
     { ""MetadataId"": """ + ContactId + @""", ""LogicalName"": ""contact"", ""DisplayName"": { ""UserLocalizedLabel"": { ""Label"": ""Contact"" } }, ""IsCustomEntity"": false, ""IsManaged"": true, ""IsIntersect"": false, ""TableType"": ""Standard"", ""Attributes"": [] },
     { ""MetadataId"": """ + UntouchedId + @""", ""LogicalName"": ""msdyn_untouched"", ""DisplayName"": { ""UserLocalizedLabel"": { ""Label"": ""Untouched"" } }, ""IsCustomEntity"": true, ""IsManaged"": true, ""IsIntersect"": false, ""TableType"": ""Standard"", ""Attributes"": [] },
     { ""MetadataId"": ""11111111-0000-0000-0000-000000000005"", ""LogicalName"": ""con_vt_feed"", ""DisplayName"": { ""UserLocalizedLabel"": { ""Label"": ""Feed"" } }, ""IsCustomEntity"": true, ""IsManaged"": false, ""IsIntersect"": false, ""TableType"": ""Virtual"", ""Attributes"": [] },
+    { ""MetadataId"": ""11111111-0000-0000-0000-000000000007"", ""LogicalName"": ""appointment"", ""DisplayName"": { ""UserLocalizedLabel"": { ""Label"": ""Appointment"" } }, ""IsCustomEntity"": false, ""IsManaged"": true, ""IsIntersect"": false, ""TableType"": ""Standard"", ""Attributes"": [] },
     { ""MetadataId"": ""11111111-0000-0000-0000-000000000006"", ""LogicalName"": ""con_account_contact"", ""DisplayName"": null, ""IsCustomEntity"": true, ""IsManaged"": false, ""IsIntersect"": true, ""TableType"": ""Standard"", ""Attributes"": [] }
   ],
-  ""projectTables"": [ { ""objectid"": """ + ContactId + @""" } ],
+  ""projectTables"": [ { ""objectid"": """ + ContactId + @""" }, { ""objectid"": ""11111111-0000-0000-0000-000000000007"" } ],
   ""forms"": [
     { ""name"": ""Project Main"", ""type"": 2, ""objecttypecode"": ""con_project"", ""isdefault"": true, ""ismanaged"": false },
     { ""name"": ""Contact QV"", ""type"": 6, ""objecttypecode"": ""contact"", ""isdefault"": false, ""ismanaged"": true }
@@ -73,17 +74,23 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
   ""workflows"": [
     { ""name"": ""Project - Notify"", ""category"": 0, ""primaryentity"": ""con_project"", ""statecode"": 0, ""triggeroncreate"": true },
     { ""name"": ""Project rule"", ""category"": 2, ""primaryentity"": ""con_project"", ""statecode"": 1 },
-    { ""name"": ""Project flow"", ""category"": 5, ""primaryentity"": ""none"", ""statecode"": 1 }
+    { ""name"": ""Project flow"", ""category"": 5, ""primaryentity"": ""none"", ""statecode"": 1, ""clientdata"": ""{\""properties\"":{\""definition\"":{\""triggers\"":{\""manual\"":{\""type\"":\""Request\"",\""kind\"":\""Http\""}}}}}"" }
   ],
   ""businessProcessFlows"": [ { ""workflowid"": """ + BpfId + @""", ""name"": ""Project Process"", ""primaryentity"": ""con_project"", ""statuscode"": 1 } ],
-  ""bpfStages"": [ { ""stagename"": ""Plan"", ""processid"": { ""id"": """ + BpfId + @""", ""logicalName"": ""workflow"", ""name"": ""Project Process"" }, ""primaryentitytypecode"": ""con_project"" } ],
+  ""bpfStages"": [
+    { ""stagename"": ""Plan"", ""processid"": { ""id"": """ + BpfId + @""", ""logicalName"": ""workflow"", ""name"": ""Project Process"" }, ""primaryentitytypecode"": ""con_project"" },
+    { ""stagename"": ""Plan"", ""processid"": { ""id"": """ + BpfId + @""", ""logicalName"": ""workflow"", ""name"": ""Project Process"" }, ""primaryentitytypecode"": ""con_project"" }
+  ],
   ""appModules"": [ { ""name"": ""Contoso App"", ""uniquename"": ""con_App"", ""ismanaged"": false } ],
   ""envVars"": [ { ""schemaname"": ""con_ApiUrl"", ""displayname"": ""API URL"", ""type"": 100000000 } ],
   ""securityRoles"": [
     { ""name"": ""Contoso Manager"", ""rp.privilegedepthmask"": 8, ""priv.name"": ""prvReadcon_project"" },
-    { ""name"": ""Contoso Manager"", ""rp.privilegedepthmask"": 1, ""priv.name"": ""prvWritecon_project"" }
+    { ""name"": ""Contoso Manager"", ""rp.privilegedepthmask"": 1, ""priv.name"": ""prvWritecon_project"" },
+    { ""name"": ""Contoso Manager"", ""rp.privilegedepthmask"": 2, ""priv.name"": ""prvAppendTocon_project"" },
+    { ""name"": ""Contoso Manager"", ""rp.privilegedepthmask"": 4, ""priv.name"": ""prvAppendcon_project"" },
+    { ""name"": ""Contoso Manager"", ""rp.privilegedepthmask"": 8, ""priv.name"": ""prvExportToExcel"" }
   ],
-  ""flows"": [ { ""name"": ""Project flow"", ""statecode"": 1, ""primaryentity"": ""none"", ""ismanaged"": false, ""clientdata"": ""{}"", ""createdon"": ""2026-01-01T00:00:00Z"", ""modifiedon"": ""2026-01-01T00:00:00Z"" } ]
+  ""flows"": [ { ""name"": ""Project flow"", ""statecode"": 1, ""primaryentity"": ""none"", ""ismanaged"": false, ""clientdata"": ""{\""properties\"":{\""definition\"":{\""triggers\"":{\""manual\"":{\""type\"":\""Request\"",\""kind\"":\""Http\""}}}}}"", ""createdon"": ""2026-01-01T00:00:00Z"", ""modifiedon"": ""2026-01-01T00:00:00Z"" } ]
 }";
 
         private string _baseDir = string.Empty;
@@ -125,6 +132,8 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
             Assert.That(output, Does.Contain("### contact — \"Contact\""), "managed table in a project solution");
             Assert.That(output, Does.Not.Contain("msdyn_untouched"), "managed table nobody customized");
             Assert.That(output, Does.Not.Contain("### con_account_contact"), "intersect table");
+            Assert.That(output, Does.Not.Contain("### appointment"), "in a project solution but nothing to show: no block");
+            Assert.That(output, Does.Contain("**Also in project solutions** — no project columns, forms or views; typically there for a relationship, a ribbon or as a dependency: appointment"));
             Assert.That(output.IndexOf("### con_vt_feed", StringComparison.Ordinal), Is.GreaterThan(output.IndexOf("## Virtual Tables", StringComparison.Ordinal)), "virtual table in its own section");
         }
 
@@ -154,6 +163,8 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
             Assert.That(output, Does.Contain("Second (2), First (1)"), "options in defined order");
             Assert.That(output, Does.Not.Contain("msdyn_shipped"), "managed option set");
             Assert.That(output, Does.Contain("- Contoso Manager"));
+            Assert.That(output, Does.Contain("| Project flow | HTTP request | Activated |"), "trigger read from the flow definition");
+            Assert.That(output.Split(new[] { "| Plan | con_project |" }, StringSplitOptions.None).Length - 1, Is.EqualTo(1), "repeated BPF stage records listed once");
         }
 
         [Test]
@@ -185,8 +196,8 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
             var output = RenderSpec("SecurityModel");
 
             Assert.That(output.Split(new[] { "## Contoso Manager" }, StringSplitOptions.None).Length - 1, Is.EqualTo(1));
-            Assert.That(output, Does.Contain("| prvReadcon_project | Organization |"));
-            Assert.That(output, Does.Contain("| prvWritecon_project | User |"));
+            Assert.That(output, Does.Contain("| con_project |  | Org | User |  | Parent BU | BU |  |  |"), "one matrix row per table; AppendTo kept apart from Append");
+            Assert.That(output, Does.Contain("**Other privileges:** prvExportToExcel (Org)"));
         }
 
         [Test]
@@ -205,6 +216,15 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
 
             Assert.That(output.IndexOf("| 2 | Second |", StringComparison.Ordinal), Is.LessThan(output.IndexOf("| 1 | First |", StringComparison.Ordinal)));
             Assert.That(output, Does.Not.Contain("msdyn_shipped"), "managed option sets are filtered in the template; the endpoint does not support $filter");
+        }
+
+        [Test]
+        public void PowerAutomateFlows_ShowsTriggerFromDefinition()
+        {
+            var output = RenderSpec("PowerAutomateFlows");
+
+            Assert.That(output, Does.Contain("| Project flow | Active | HTTP request | No |"));
+            Assert.That(output, Does.Contain("**Trigger:** HTTP request"));
         }
 
         private string RenderSpec(string spec) =>

@@ -114,6 +114,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "queries", "project-tables.fetch.xml")), Is.True, "project-tables query");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "queries", "project-forms.fetch.xml")), Is.True, "project-forms query");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "queries", "project-views.fetch.xml")), Is.True, "project-views query");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "queries", "security-role-names.fetch.xml")), Is.True, "security-role-names query");
             Assert.That(File.Exists(Path.Combine(_baseDir, "LEGAL.md")), Is.True, "LEGAL.md");
         }
 

@@ -49,20 +49,33 @@ environment: {{ _meta.environment.url }}
 
   custom_tables = []
   customized_tables = []
+  # Managed tables in a project solution with no project columns, forms or views to show
+  # (in the solution for a relationship, a ribbon or as a dependency): listed by name only.
+  solution_only_tables = []
   virtual_tables = []
   for e in entities | array.sort "LogicalName"
     if e.IsIntersect
       continue
     end
     attrs = e.Attributes ?? []
+    has_columns = false
+    for a in attrs
+      if !(a.AttributeType == "Money" && (a.LogicalName | string.ends_with "_base"))
+        has_columns = true
+        break
+      end
+    end
+    has_content = has_columns || forms_by_table[e.LogicalName] != null || views_by_table[e.LogicalName] != null
+    customized = has_content || project_table_ids[e.MetadataId] != null
     is_virtual = e.TableType == "Virtual" || (e.TableType != "Elastic" && e.DataProviderId != null && e.DataProviderId != "00000000-0000-0000-0000-000000000000")
-    customized = attrs.size > 0 || project_table_ids[e.MetadataId] != null || forms_by_table[e.LogicalName] != null || views_by_table[e.LogicalName] != null
     if is_virtual && (!e.IsManaged || customized)
       virtual_tables = virtual_tables | array.add e
     else if !e.IsManaged
       custom_tables = custom_tables | array.add e
-    else if customized
+    else if has_content
       customized_tables = customized_tables | array.add e
+    else if customized
+      solution_only_tables = solution_only_tables | array.add e.LogicalName
     end
   end
 
@@ -168,6 +181,10 @@ Unmanaged tables — created by the project or an unmanaged partner solution.
 
 Tables installed by Microsoft or ISV managed solutions that the project customized. Only the project's columns, forms and views are listed.
 {{ for t in customized_tables }}{{ render_table t (t.IsCustomEntity ? "" : " *(standard)*") }}{{ end }}
+{{- if solution_only_tables.size > 0 }}
+
+**Also in project solutions** — no project columns, forms or views; typically there for a relationship, a ribbon or as a dependency: {{ solution_only_tables | array.join ", " }}
+{{- end }}
 
 ---
 
@@ -234,7 +251,7 @@ Steps registered on the project's (unmanaged) plug-in assemblies. Disabled steps
   for group in customApiResponses | group_by_key "uniquename"
     api_resp_map[group.key] = group.items
   end
-}}
+-}}
 
 | API | Request Params | Response |
 |---|---|---|
@@ -286,10 +303,9 @@ Unmanaged processes. Drafts are marked; they do not run.
   end
   classic_wfs = classic_wfs | array.sort "name"
   cloud_wfs = cloud_wfs | array.sort "name"
-}}
-{{ for ent_group in classic_wfs | group_by_key "primaryentity" -}}
-{{ if ent_group.key != null && ent_group.key != "" }}
-
+-}}
+{{ for ent_group in classic_wfs | group_by_key "primaryentity" }}
+{{- if ent_group.key == null || ent_group.key == ""; continue; end -}}
 #### {{ ent_group.key }}
 
 | Name | Trigger | State |
@@ -298,27 +314,24 @@ Unmanaged processes. Drafts are marked; they do not run.
 | {{ wf.name }} | {{ wf | classic_trigger }} | {{ if wf.statecode == 1 }}Activated{{ else }}**Draft**{{ end }} |
 {{ end }}
 {{ end -}}
-{{ end }}
 
 ### Cloud Flows
 
-| Name | Table | State |
+| Name | Trigger | State |
 |---|---|---|
 {{ for wf in cloud_wfs -}}
-| {{ wf.name }} | {{ if wf.primaryentity != null && wf.primaryentity != "none" }}{{ wf.primaryentity }}{{ else }}—{{ end }} | {{ if wf.statecode == 1 }}Activated{{ else }}**Draft**{{ end }} |
+| {{ wf.name }} | {{ wf.clientdata | flow_trigger_info }} | {{ if wf.statecode == 1 }}Activated{{ else }}**Draft**{{ end }} |
 {{ end }}
-
 ### Business Rules
 
-{{ for ent_group in brs | group_by_key "primaryentity" -}}
-{{ if ent_group.key != null && ent_group.key != "" }}
+{{ for ent_group in brs | group_by_key "primaryentity" }}
+{{- if ent_group.key == null || ent_group.key == ""; continue; end -}}
 #### {{ ent_group.key }}
 
 {{ for r in ent_group.items | array.sort "name" -}}
 - {{ r.name }}{{ if r.statecode != 1 }} **(draft)**{{ end }}
 {{ end }}
 {{ end -}}
-{{ end }}
 
 ---
 
@@ -336,13 +349,21 @@ Unmanaged processes. Drafts are marked; they do not run.
       bpf_stage_map[pid_id] = bpf_stage_map[pid_id] | array.add stage
     end
   end
-}}
-{{ for bpf in businessProcessFlows | array.sort "name" -}}
-{{
+-}}
+{{ for bpf in businessProcessFlows | array.sort "name" }}
+{{- 
   bpf_id = bpf.workflowid ?? bpf._id
-  stages = bpf_stage_map[bpf_id] ?? []
-}}
-
+  # A process can hold several stage records with the same name and table; list each stage once.
+  stages = []
+  seen_stages = {}
+  for stage in bpf_stage_map[bpf_id] ?? []
+    stage_key = stage.stagename + "|" + (stage.primaryentitytypecode ?? "")
+    if seen_stages[stage_key] == null
+      seen_stages[stage_key] = true
+      stages = stages | array.add stage
+    end
+  end
+-}}
 ### {{ bpf.name }}{{ if (bpf.statuscode ?? 2) != 2 }} **(draft)**{{ end }}
 
 **Table:** `{{ bpf.primaryentity }}`
@@ -352,11 +373,11 @@ Unmanaged processes. Drafts are marked; they do not run.
 |---|---|
 {{ for stage in stages | array.sort "stagename" -}}
 | {{ stage.stagename }} | {{ stage.primaryentitytypecode ?? bpf.primaryentity }} |
-{{ end }}
+{{ end -}}
 {{ else -}}
 _No stages found._
-{{ end -}}
 {{ end }}
+{{ end -}}
 
 ---
 

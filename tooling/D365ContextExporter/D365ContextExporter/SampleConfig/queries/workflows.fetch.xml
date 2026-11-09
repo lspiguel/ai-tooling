@@ -10,6 +10,7 @@
     <attribute name="triggeroncreate" />
     <attribute name="triggerondelete" />
     <attribute name="triggeronupdateattributelist" />
+    <attribute name="clientdata" />
     <filter type="and">
       <condition attribute="ismanaged" operator="eq" value="0" />
       <condition attribute="type" operator="eq" value="1" />

@@ -189,13 +189,14 @@ The following functions are available in all templates:
 | `req_indicator` | `(requiredLevel)` | Returns `**R**` for Required or ApplicationRequired (business required), `r` for Recommended, `-` otherwise, including SystemRequired. |
 | `iso_date` | `(dateString)` | Truncates a date-time string to `yyyy-MM-dd`. |
 | `component_type_name` | `(code)` | Resolves a solution component type code to a human-readable name. |
-| `format_forms` | `(forms)` | Formats a list of form objects as `Name(type), …`. |
+| `format_forms` | `(forms)` | Formats a list of form objects as `Name(type), …`, with the documented form types (`main`, `quickView`, `quickCreate`, `card`, `dialog`, …). |
 | `format_views` | `(views)` | Formats a list of view objects as a comma-separated name list. |
 | `entity_forms` | `(forms, entityLogicalName)` | Filters a form array to those belonging to the given entity. |
 | `entity_views` | `(views, entityLogicalName)` | Filters a view array to those belonging to the given entity. |
 | `plugin_stage` | `(code)` | Resolves a plugin stage integer (10/20/40/45) to `PreVal`, `Pre`, or `Post`. |
 | `plugin_mode` | `(code)` | Resolves a plugin mode integer (0/1) to `Sync` or `Async`. |
-| `flow_trigger` | `(name)` | Infers the trigger type of a cloud flow from its name (`HTTP`, `Sched`, `Child`, `Manual`, `Auto`). |
+| `flow_trigger` | `(name)` | Guesses the trigger type of a cloud flow from its name (`HTTP`, `Sched`, `Child`, `Manual`, `Auto`). Unreliable — prefer `flow_trigger_info`. |
+| `flow_trigger_info` | `(clientdata)` | Describes a cloud flow's trigger from its definition (`workflow.clientdata`): for example `Dataverse: Added or Modified on contact (scope Organization); columns: …`, `Scheduled: every 1 Day`, `HTTP request`, `Manual or child flow`, `Power Apps`, `Power Pages`, `Selected row: contacts`, `Business process flow step`. `—` when there is no definition. |
 | `classic_trigger` | `(workflow)` | Returns the trigger string for a classic workflow object (`Create/Update/Delete`). |
 | `envvar_type` | `(code)` | Resolves an environment variable type integer to its type name. |
 | `api_param_type` | `(code)` | Resolves a custom API parameter type integer to a short type string. |

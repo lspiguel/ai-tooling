@@ -1,5 +1,7 @@
 using Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests;
 
+using Newtonsoft.Json.Linq;
+
 using NUnit.Framework;
 
 namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
@@ -168,9 +170,50 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
         {
             var output = Render(
                 "{{ format_forms forms }}",
-                "{ \"forms\": [ { \"Name\": \"Account\", \"Type\": 8 }, { \"Name\": \"Account\", \"Type\": 7 }, { \"Name\": \"Account\", \"Type\": 8 }, { \"Name\": \"Card\", \"Type\": 11 } ] }");
+                "{ \"forms\": [ { \"Name\": \"Account\", \"Type\": 2 }, { \"Name\": \"Account\", \"Type\": 6 }, { \"Name\": \"Account\", \"Type\": 2 }, { \"Name\": \"Card\", \"Type\": 11 } ] }");
 
-            Assert.That(output, Is.EqualTo("Account(main,quick), Card(card)"));
+            Assert.That(output, Is.EqualTo("Account(main,quickView), Card(card)"));
+        }
+
+        [Test]
+        public void FormatForms_UsesDocumentedTypeCodes()
+        {
+            var output = Render(
+                "{{ format_forms forms }}",
+                "{ \"forms\": [ { \"Name\": \"A\", \"Type\": 7 }, { \"Name\": \"B\", \"Type\": 8 }, { \"Name\": \"C\", \"Type\": 999 } ] }");
+
+            Assert.That(output, Is.EqualTo("A(quickCreate), B(dialog), C(999)"));
+        }
+
+        // ── Cloud flow triggers ───────────────────────────────────────────
+
+        [TestCase("{\"type\":\"Recurrence\",\"recurrence\":{\"frequency\":\"Minute\",\"interval\":10}}", "Scheduled: every 10 Minute")]
+        [TestCase("{\"type\":\"Request\",\"kind\":\"Http\"}", "HTTP request")]
+        [TestCase("{\"type\":\"Request\",\"kind\":\"Button\"}", "Manual or child flow")]
+        [TestCase("{\"type\":\"Request\",\"kind\":\"PowerAppV2\"}", "Power Apps")]
+        [TestCase("{\"type\":\"Request\",\"kind\":\"PowerPages\"}", "Power Pages")]
+        [TestCase("{\"type\":\"Request\",\"kind\":\"ApiConnection\",\"inputs\":{\"operationId\":\"RecordSelected\",\"parameters\":{\"entityName\":\"contacts\"}}}", "Selected row: contacts")]
+        [TestCase("{\"type\":\"OpenApiConnectionWebhook\",\"inputs\":{\"host\":{\"apiId\":\"/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps\",\"operationId\":\"SubscribeWebhookTrigger\"},\"parameters\":{\"subscriptionRequest/message\":4,\"subscriptionRequest/entityname\":\"contact\",\"subscriptionRequest/scope\":4,\"subscriptionRequest/filteringattributes\":\"firstname,lastname\"}}}", "Dataverse: Added or Modified on contact (scope Organization); columns: firstname,lastname")]
+        [TestCase("{\"type\":\"OpenApiConnectionWebhook\",\"inputs\":{\"host\":{\"apiId\":\"/providers/Microsoft.PowerApps/apis/shared_d365marketingforapps\",\"operationId\":\"Orchestration_RegisterWebhookTriggerV2\"}}}", "Customer Insights – Journeys")]
+        [TestCase("{\"type\":\"OpenApiConnection\",\"inputs\":{\"host\":{\"apiId\":\"/providers/Microsoft.PowerApps/apis/shared_sharepointonline\",\"operationId\":\"GetOnNewItems\"}}}", "sharepointonline: GetOnNewItems")]
+        [TestCase("{\"type\":\"Request\",\"kind\":\"ApiConnection\",\"inputs\":{\"operationId\":\"FlowStepRun\"}}", "Business process flow step")]
+        [TestCase("{\"type\":\"OpenApiConnectionWebhook\",\"inputs\":{\"host\":{\"apiId\":\"/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps\",\"operationId\":\"BusinessEventsTrigger\"},\"parameters\":{\"subscriptionRequest/entityname\":\"contact\",\"subscriptionRequest/sdkmessagename\":\"con_SendInvite\"}}}", "Dataverse action performed: con_SendInvite on contact")]
+        public void FlowTriggerInfo_DescribesTrigger(string trigger, string expected)
+        {
+            var clientData = "{\"properties\":{\"definition\":{\"triggers\":{\"t\":" + trigger + "}}}}";
+            var intermediate = new JObject { ["f"] = new JObject { ["clientdata"] = clientData } }.ToString();
+
+            Assert.That(Render("{{ flow_trigger_info f.clientdata }}", intermediate), Is.EqualTo(expected));
+        }
+
+        [TestCase("")]
+        [TestCase("not json")]
+        [TestCase("{\"properties\":{\"definition\":{\"triggers\":{}}}}")]
+        public void FlowTriggerInfo_NoTrigger_ReturnsDash(string clientData)
+        {
+            var intermediate = new JObject { ["f"] = new JObject { ["clientdata"] = clientData } }.ToString();
+
+            Assert.That(Render("{{ flow_trigger_info f.clientdata }}", intermediate), Is.EqualTo("—"));
         }
 
         [Test]

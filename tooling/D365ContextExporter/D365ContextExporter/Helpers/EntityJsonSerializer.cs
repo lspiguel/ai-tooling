@@ -61,6 +61,9 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
                     return m.Value;
                 case AliasedValue av:
                     return ConvertValue(av.Value);
+                case BooleanManagedProperty bmp:
+                    // For example iscustomizable or canbedeleted; ToString() would give the type name.
+                    return bmp.Value;
                 case EntityCollection ec:
                     return ec.Entities.Select(e => SerializeEntity(e, Array.Empty<string>())).ToList();
                 case DateTime dt:

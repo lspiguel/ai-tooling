@@ -264,6 +264,7 @@ Each `Entity` becomes a dictionary keyed by attribute name — aliased columns k
 | `Money` | decimal |
 | `AliasedValue` | its inner value, converted by the same rules |
 | `EntityCollection` | array of serialized entities (no deny list applied inside) |
+| `BooleanManagedProperty` | its boolean `Value` (for example `iscustomizable`) |
 | `DateTime` | UTC, `yyyy-MM-ddTHH:mm:ssZ` |
 | `Guid` | string |
 | `bool`, `int`, `long`, `double`, `decimal`, `string`, `null` | unchanged |
@@ -348,13 +349,14 @@ Registered by `TemplateFilters.RegisterAll`; callable as functions or with pipe 
 | `req_indicator` | required level | `**R**` (`Required` or `ApplicationRequired` — the value the Web API and SDK report for business-required columns), `r` (`Recommended`), `-` otherwise — including `SystemRequired` |
 | `iso_date` | date string | `yyyy-MM-dd`; empty for empty input |
 | `component_type_name` | solution component type | Readable name for common types; `Unknown (n)` otherwise |
-| `format_forms` | forms | `Name(type,type), …` grouped by form name |
+| `format_forms` | forms | `Name(type,type), …` grouped by form name, with the documented `systemform.type` values (`main` 2, `quickView` 6, `quickCreate` 7, `dialog` 8, `card` 11, …) |
 | `format_views` | views | Comma-separated unique view names, skipping special-purpose query types (16, 32, 64, 128, 256, 512, 1024, 4096, 16384); `—` when none |
 | `entity_forms` | forms, entity logical name | Forms of one entity |
 | `entity_views` | views, entity logical name | Views of one entity |
 | `plugin_stage` | stage | `PreVal` (10), `Pre` (20), `Post` (40, 45) |
 | `plugin_mode` | mode | `Sync` (0), `Async` (1) |
-| `flow_trigger` | flow name | `HTTP`, `Sched`, `Child`, `Manual` or `Auto`, inferred from the name |
+| `flow_trigger` | flow name | `HTTP`, `Sched`, `Child`, `Manual` or `Auto`, guessed from the name — wrong for 68 of 471 flows in a reviewed environment; kept for existing templates |
+| `flow_trigger_info` | flow definition (`clientdata`) | The trigger read from the definition: Dataverse change type, table, scope, columns and filter (codes as in `callbackregistration`); Dataverse action performed; schedule; HTTP request; manual or child flow; Power Apps; Power Pages; Copilot; selected row; business process flow step; Customer Insights – Journeys; otherwise `connector: operation`. `—` without a definition |
 | `classic_trigger` | workflow | `Create/Update/Delete` from the trigger flags; `Manual` when none is set |
 | `envvar_type` | type | `String`, `Number`, `Boolean`, `JSON`, `DataSource`, `Secret` |
 | `api_param_type` | type | Short custom API parameter type (`bool`, `str`, `EntityReference`, …) |
@@ -412,11 +414,11 @@ Every file under `SampleConfig\` is an embedded resource. `FirstRunHelper` holds
 | `FormsAndViews` | `forms-and-views.sbn` | Web API `EntityDefinitions` names (`entities`); FetchXML `project-forms` (`forms`), `project-views` (`views`) |
 | `Optionsets` | `optionsets.sbn` | Web API `GlobalOptionSetDefinitions` (`globalOptionSets`), filtered to unmanaged in the template |
 | `PowerAutomateFlows` | `power-automate-flows.sbn` | FetchXML `cloud-flows` (`flows`), including the flow definitions |
-| `SecurityModel` | `security-model.sbn` | FetchXML `security-roles` (`securityRoles`) — the project's roles, privileges and depths |
+| `SecurityModel` | `security-model.sbn` | FetchXML `security-roles` (`securityRoles`) — the project's roles, with a table × action matrix of privilege depths and the other privileges listed |
 | `SolutionInventory` | `solution-inventory.sbn` | FetchXML `solutions-detail` (`solutions`) — visible solutions with publisher |
-| `SolutionsReference` | `solutions-reference.sbn` | Web API `EntityDefinitions` with unmanaged custom columns (`entities`) and `GlobalOptionSetDefinitions`; FetchXML `solutions-detail`, `project-tables`, `project-forms`, `project-views`, `plugin-assemblies`, `sdk-steps`, `custom-apis`, `custom-api-responses`, `workflows`, `business-process-flows`, `bpf-stages`, `app-modules`, `env-vars`, `security-roles` |
+| `SolutionsReference` | `solutions-reference.sbn` | Web API `EntityDefinitions` with unmanaged custom columns (`entities`) and `GlobalOptionSetDefinitions`; FetchXML `solutions-detail`, `project-tables`, `project-forms`, `project-views`, `plugin-assemblies`, `sdk-steps`, `custom-apis`, `custom-api-responses`, `workflows` (with the flow definitions, for the trigger), `business-process-flows`, `bpf-stages`, `app-modules`, `env-vars`, `security-role-names` |
 
-`SolutionsReference` is the complete customization reference: the project's solutions, custom tables, customized managed tables, virtual tables, option sets, plug-ins and steps (with their state), custom APIs, classic workflows, cloud flows, business rules (drafts marked), business process flows, security roles, app modules and environment variables.
+`SolutionsReference` is the complete customization reference: the project's solutions, custom tables, customized managed tables, virtual tables, option sets, plug-ins and steps (with their state), custom APIs, classic workflows, cloud flows, business rules (drafts marked), business process flows (each stage once), security roles, app modules and environment variables. Cloud flows show the trigger read from their definition. Managed tables that are in a project solution but have no project columns, forms or views are listed by name in one line.
 
 ### 12.2 Customization scope
 
@@ -433,7 +435,7 @@ The reference configuration describes what the project built or customized, not 
 | Global option set | Unmanaged | Templates — `GlobalOptionSetDefinitions` rejects `$filter` (HTTP 405), so all global option sets are fetched |
 | Workflow, cloud flow, custom API, environment variable | Unmanaged. Cloud flows named `CXP_` (generated by Customer Insights – Journeys) excluded | Queries |
 | Plug-in step | Registered on an unmanaged plug-in assembly; state included | `sdk-steps` |
-| Security role | Unmanaged, root business unit (`parentroleid` null), not based on a role template (`roletemplateid` null) | `security-roles` |
+| Security role | Unmanaged, root business unit (`parentroleid` null), not based on a role template (`roletemplateid` null) | `security-roles`; `security-role-names` (names only, for `SolutionsReference`) |
 | Solution | Visible, other than `Default` and `Active`. `SolutionsReference` lists the unmanaged ones | `solutions-detail`; template |
 
 Not covered: a standard column the project changed without creating it, such as a new label or required level. The Web API cannot filter `$expand=Attributes` to a list of IDs, so listing those would mean fetching every column of every included table.
@@ -444,7 +446,7 @@ The rules were checked against a development environment on 2026-11-09 through t
 
 | Kind | Files |
 |---|---|
-| FetchXML (`config\queries\`) | `app-modules`, `bpf-stages`, `business-process-flows`, `cloud-flows`, `custom-api-responses`, `custom-apis`, `env-vars`, `plugin-assemblies`, `project-forms`, `project-tables`, `project-views`, `sdk-steps`, `security-roles`, `solutions-detail`, `workflows` (each `.fetch.xml`) |
+| FetchXML (`config\queries\`) | `app-modules`, `bpf-stages`, `business-process-flows`, `cloud-flows`, `custom-api-responses`, `custom-apis`, `env-vars`, `plugin-assemblies`, `project-forms`, `project-tables`, `project-views`, `sdk-steps`, `security-role-names`, `security-roles`, `solutions-detail`, `workflows` (each `.fetch.xml`) |
 | Templates (`config\transformations\`) | The seven `.sbn` files above |
 | Schema (`config\`) | `context-exporter.schema.json` — draft-07; `spec`, `transformation`, `queries` required; no additional properties; per-query `id`, `type`, `resultKey` required |
 | Legal (`LEGAL.md`) | Deployed once, with the organisation name substituted ([§5.2](#52-first-run-setup)) |
@@ -495,11 +497,11 @@ NUnit 4 with Moq and Moq.Contrib.HttpClient, `net48`, mirroring the source folde
 | `HelpersTests/ConfigValidatorTests` | Each violation in [§6.3](#63-validation), and all reported together |
 | `HelpersTests/EntityJsonSerializerTests` | Every SDK type in [§7.4](#74-serialization-of-fetchxml-results), deny list, nulls, nested aliased values |
 | `HelpersTests/FirstRunHelperTests` | `IsConfigured`, deploy without overwrite, upgrade overwrite sparing `LEGAL.md` and files of other names, the full file list, organisation-name substitution, the upgrade backup (edited files only, never overwriting an earlier backup, hidden from spec discovery) and `version.txt`. `CheckVersion` through an internal overload that takes the current version and the confirmation, so missing, same, different-accepted and different-declined are tested without a dialog or the build's version |
-| `HelpersTests/TemplateFiltersTests` | Every function in [§9.3](#93-custom-functions), rendered through a template, with the edge cases: unknown component type, empty `markdown_table`, empty `iso_date`, `req_indicator` of `SystemRequired`, the `group_by_key` shape, `pluck` uniqueness, the `display_label` fallback |
+| `HelpersTests/TemplateFiltersTests` | Every function in [§9.3](#93-custom-functions), rendered through a template — `flow_trigger_info` once per trigger kind, from synthetic definitions — with the edge cases: unknown component type, empty `markdown_table`, empty `iso_date`, `req_indicator` of `SystemRequired`, the `group_by_key` shape, `pluck` uniqueness, the `display_label` fallback |
 | `ModelsTests/ExportJobTests` | Loading and defaults |
 | `OrchestrationTests/IntermediateJsonBuilderTests` | `_meta`, raw file naming, result keys |
 | `OrchestrationTests/TemplateRendererTests` | `_spec` and `_meta`, nested objects and arrays, `include` from `transformations\`, parse errors with line and column, an undefined variable failing, a missing template, UTF-8 without BOM |
-| `OrchestrationTests/ShippedTemplatesTests` | Every shipped spec rendered through its shipped template, deployed from the embedded configuration, against one synthetic intermediate: the customization scope of [§12.2](#122-customization-scope) (which tables, forms and views appear), column types from `AttributeTypeName`, form and view type labels, step and process state, the publisher column, option order, one heading per security role |
+| `OrchestrationTests/ShippedTemplatesTests` | Every shipped spec rendered through its shipped template, deployed from the embedded configuration, against one synthetic intermediate: the customization scope of [§12.2](#122-customization-scope) (which tables, forms and views appear), column types from `AttributeTypeName`, form and view type labels, step and process state, cloud flow triggers from the definition, the one-line list of solution-only tables, BPF stages listed once, the publisher column, option order, the security role privilege matrix |
 | `OrchestrationTests/ExportJobRunnerTests` | Through an internal constructor that takes the three query runners: a failed query stopping the render while the remaining queries run, cancellation between queries, progress, the copy to `output\`, the legal notice in the delivered file only, a spec with no queries, validation before the run folder is created |
 | `QueriesTests/*QueryRunnerTests` | Paging, `maxRecords`, empty results, missing files, HTTP errors, metadata targets |
 | `QueriesTests/*RealDataTests` | Realistic response shapes, synthetic (R2) |

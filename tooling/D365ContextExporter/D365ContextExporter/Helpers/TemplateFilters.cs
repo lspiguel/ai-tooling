@@ -11,6 +11,9 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
     using System.Linq;
     using System.Text.RegularExpressions;
 
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
+
     using Scriban.Runtime;
 
     /// <summary>C# port of all custom filter functions from <c>filters.py</c>. Registered on the root <see cref="ScriptObject"/> before rendering.</summary>
@@ -57,12 +60,42 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             ["PartyList"] = "lkp",
         };
 
+        // systemform.type: https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/systemform
         private static readonly IReadOnlyDictionary<int, string> FormTypeShort = new Dictionary<int, string>
         {
-            [7] = "quick",
-            [8] = "main",
+            [0] = "dashboard",
+            [2] = "main",
+            [5] = "mobileExpress",
+            [6] = "quickView",
+            [7] = "quickCreate",
+            [8] = "dialog",
+            [9] = "taskFlow",
+            [10] = "interactionDashboard",
             [11] = "card",
-            [106] = "quickCreate",
+            [12] = "mainInteractive",
+            [13] = "contextualDashboard",
+            [103] = "powerBIDashboard",
+        };
+
+        // callbackregistration.message and .scope, used by the Dataverse "When a row is added, modified or deleted" trigger:
+        // https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/callbackregistration
+        private static readonly IReadOnlyDictionary<int, string> FlowChangeTypeMap = new Dictionary<int, string>
+        {
+            [1] = "Added",
+            [2] = "Deleted",
+            [3] = "Modified",
+            [4] = "Added or Modified",
+            [5] = "Added or Deleted",
+            [6] = "Modified or Deleted",
+            [7] = "Added, Modified or Deleted",
+        };
+
+        private static readonly IReadOnlyDictionary<int, string> FlowScopeMap = new Dictionary<int, string>
+        {
+            [1] = "User",
+            [2] = "Business Unit",
+            [3] = "Parent: Child Business Units",
+            [4] = "Organization",
         };
 
         private static readonly IReadOnlyDictionary<int, string> PluginStageMap = new Dictionary<int, string>
@@ -138,6 +171,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             target.Import("plugin_stage", new Func<object, string>(PluginStage));
             target.Import("plugin_mode", new Func<object, string>(PluginMode));
             target.Import("flow_trigger", new Func<string, string>(FlowTrigger));
+            target.Import("flow_trigger_info", new Func<object, string>(FlowTriggerInfo));
             target.Import("classic_trigger", new Func<ScriptObject, string>(ClassicTrigger));
             target.Import("envvar_type", new Func<object, string>(EnvvarType));
             target.Import("api_param_type", new Func<object, string>(ApiParamType));
@@ -469,6 +503,125 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             }
 
             return "Auto";
+        }
+
+        /// <summary>Describes a cloud flow's trigger from its definition (<c>workflow.clientdata</c>).</summary>
+        private static string FlowTriggerInfo(object clientData)
+        {
+            JProperty? trigger;
+            try
+            {
+                var json = clientData?.ToString();
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    return "—";
+                }
+
+                var triggers = JObject.Parse(json!).SelectToken("properties.definition.triggers") as JObject;
+                trigger = triggers?.Properties().FirstOrDefault();
+            }
+            catch (JsonException)
+            {
+                return "—";
+            }
+
+            if (trigger?.Value is not JObject t)
+            {
+                return "—";
+            }
+
+            var type = (string?)t["type"] ?? string.Empty;
+            var kind = (string?)t["kind"] ?? string.Empty;
+            var inputs = t["inputs"] as JObject;
+            var parameters = inputs?["parameters"] as JObject;
+            var operation = (string?)inputs?.SelectToken("host.operationId") ?? (string?)inputs?["operationId"] ?? string.Empty;
+
+            if (type.Equals("Recurrence", StringComparison.OrdinalIgnoreCase))
+            {
+                var recurrence = t["recurrence"];
+                return $"Scheduled: every {(string?)recurrence?["interval"]} {(string?)recurrence?["frequency"]}".TrimEnd();
+            }
+
+            if (type.Equals("Request", StringComparison.OrdinalIgnoreCase))
+            {
+                switch (kind.ToLowerInvariant())
+                {
+                    case "http":
+                        return "HTTP request";
+                    case "button":
+                        return "Manual or child flow";
+                    case "powerapp":
+                    case "powerappv2":
+                        return "Power Apps";
+                    case "powerpages":
+                        return "Power Pages";
+                    case "skills":
+                        return "Copilot";
+                    case "apiconnection":
+                        var selected = (string?)parameters?["entityName"];
+                        if (operation == "RecordSelected" && !string.IsNullOrEmpty(selected))
+                        {
+                            return $"Selected row: {selected}";
+                        }
+
+                        return operation == "FlowStepRun"
+                            ? "Business process flow step"
+                            : $"Manual: {(operation.Length > 0 ? operation : "selected row or business process flow step")}";
+                    default:
+                        return $"Request ({kind})";
+                }
+            }
+
+            if (operation == "SubscribeWebhookTrigger")
+            {
+                var change = ToInt(parameters?["subscriptionRequest/message"]?.ToObject<object>());
+                var scope = ToInt(parameters?["subscriptionRequest/scope"]?.ToObject<object>());
+                var text = $"Dataverse: {(FlowChangeTypeMap.TryGetValue(change, out var c) ? c : "Changed")} on {(string?)parameters?["subscriptionRequest/entityname"] ?? "?"}";
+                if (FlowScopeMap.TryGetValue(scope, out var s))
+                {
+                    text += $" (scope {s})";
+                }
+
+                var columns = (string?)parameters?["subscriptionRequest/filteringattributes"];
+                if (!string.IsNullOrWhiteSpace(columns))
+                {
+                    text += $"; columns: {columns}";
+                }
+
+                var filter = (string?)parameters?["subscriptionRequest/filterexpression"];
+                if (!string.IsNullOrWhiteSpace(filter))
+                {
+                    text += $"; filter: {filter}";
+                }
+
+                return text;
+            }
+
+            if (operation == "BusinessEventsTrigger")
+            {
+                var message = (string?)parameters?["subscriptionRequest/sdkmessagename"] ?? "?";
+                var table = (string?)parameters?["subscriptionRequest/entityname"];
+                return string.IsNullOrEmpty(table) ? $"Dataverse action performed: {message}" : $"Dataverse action performed: {message} on {table}";
+            }
+
+            var connector = ((string?)inputs?.SelectToken("host.apiId") ?? (string?)inputs?.SelectToken("host.connectionName") ?? string.Empty)
+                .Split('/').Last();
+            if (connector.StartsWith("shared_", StringComparison.OrdinalIgnoreCase))
+            {
+                connector = connector.Substring("shared_".Length);
+            }
+
+            if (connector.Equals("d365marketingforapps", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Customer Insights – Journeys";
+            }
+
+            if (connector.Length > 0 || operation.Length > 0)
+            {
+                return $"{(connector.Length > 0 ? connector : type)}: {operation}".TrimEnd(':', ' ');
+            }
+
+            return type.Length > 0 ? type : "—";
         }
 
         private static string ClassicTrigger(ScriptObject wf)

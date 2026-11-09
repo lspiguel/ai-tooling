@@ -100,9 +100,9 @@
       "resultKey": "envVars"
     },
     {
-      "id": "security-roles",
+      "id": "security-role-names",
       "type": "fetchxml",
-      "source": "security-roles.fetch.xml",
+      "source": "security-role-names.fetch.xml",
       "resultKey": "securityRoles"
     }
   ]

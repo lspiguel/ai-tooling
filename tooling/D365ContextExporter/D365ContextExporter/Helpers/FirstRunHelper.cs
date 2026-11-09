@@ -38,6 +38,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             ("SampleConfig.queries.project-tables.fetch.xml",         @"config\queries\project-tables.fetch.xml"),
             ("SampleConfig.queries.project-views.fetch.xml",          @"config\queries\project-views.fetch.xml"),
             ("SampleConfig.queries.sdk-steps.fetch.xml",              @"config\queries\sdk-steps.fetch.xml"),
+            ("SampleConfig.queries.security-role-names.fetch.xml",    @"config\queries\security-role-names.fetch.xml"),
             ("SampleConfig.queries.security-roles.fetch.xml",         @"config\queries\security-roles.fetch.xml"),
             ("SampleConfig.queries.solutions-detail.fetch.xml",       @"config\queries\solutions-detail.fetch.xml"),
             ("SampleConfig.queries.workflows.fetch.xml",              @"config\queries\workflows.fetch.xml"),
