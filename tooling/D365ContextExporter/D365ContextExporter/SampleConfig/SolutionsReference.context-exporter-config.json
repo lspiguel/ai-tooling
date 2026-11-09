@@ -42,7 +42,7 @@
     {
       "id": "global-optionsets",
       "type": "webapi",
-      "path": "GlobalOptionSetDefinitions?$filter=IsManaged eq false",
+      "path": "GlobalOptionSetDefinitions",
       "resultKey": "globalOptionSets"
     },
     {

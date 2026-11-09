@@ -189,6 +189,9 @@ Unmanaged global choices. Values are listed in the order they are defined.
 |---|---|---|
 {{ for os in globalOptionSets | array.sort "Name" -}}
 {{-
+  if os.IsManaged
+    continue
+  end
   opt_labels = []
   for opt in (os.Options ?? [])
     opt_labels = opt_labels | array.add ((opt.Label | display_label ("" + opt.Value)) + " (" + opt.Value + ")")

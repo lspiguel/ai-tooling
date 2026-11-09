@@ -61,8 +61,10 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
     { ""name"": ""Project Lookup"", ""querytype"": 64, ""returnedtypecode"": ""con_project"", ""isdefault"": false, ""ismanaged"": false }
   ],
   ""globalOptionSets"": [
-    { ""Name"": ""con_status"", ""DisplayName"": { ""UserLocalizedLabel"": { ""Label"": ""Status"" } }, ""OptionSetType"": ""Picklist"",
-      ""Options"": [ { ""Value"": 2, ""Label"": { ""UserLocalizedLabel"": { ""Label"": ""Second"" } } }, { ""Value"": 1, ""Label"": { ""UserLocalizedLabel"": { ""Label"": ""First"" } } } ] }
+    { ""Name"": ""con_status"", ""DisplayName"": { ""UserLocalizedLabel"": { ""Label"": ""Status"" } }, ""OptionSetType"": ""Picklist"", ""IsManaged"": false,
+      ""Options"": [ { ""Value"": 2, ""Label"": { ""UserLocalizedLabel"": { ""Label"": ""Second"" } } }, { ""Value"": 1, ""Label"": { ""UserLocalizedLabel"": { ""Label"": ""First"" } } } ] },
+    { ""Name"": ""msdyn_shipped"", ""DisplayName"": { ""UserLocalizedLabel"": { ""Label"": ""Shipped"" } }, ""OptionSetType"": ""Picklist"", ""IsManaged"": true,
+      ""Options"": [ { ""Value"": 1, ""Label"": { ""UserLocalizedLabel"": { ""Label"": ""One"" } } } ] }
   ],
   ""pluginAssemblies"": [ { ""name"": ""Contoso.Plugins"", ""pt.typename"": ""Contoso.Plugins.ProjectPlugin"" } ],
   ""sdkSteps"": [ { ""name"": ""Contoso.Plugins.ProjectPlugin: Update of con_project"", ""flt.primaryobjecttypecode"": ""con_project"", ""msg.name"": ""Update"", ""stage"": 40, ""mode"": 0, ""statecode"": 1, ""filteringattributes"": ""con_name"" } ],
@@ -150,6 +152,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
             Assert.That(output, Does.Contain("| con_name | **Disabled** |"), "disabled step");
             Assert.That(output, Does.Contain("| Project - Notify | Create | **Draft** |"), "draft classic workflow");
             Assert.That(output, Does.Contain("Second (2), First (1)"), "options in defined order");
+            Assert.That(output, Does.Not.Contain("msdyn_shipped"), "managed option set");
             Assert.That(output, Does.Contain("- Contoso Manager"));
         }
 
@@ -201,6 +204,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
             var output = RenderSpec("Optionsets");
 
             Assert.That(output.IndexOf("| 2 | Second |", StringComparison.Ordinal), Is.LessThan(output.IndexOf("| 1 | First |", StringComparison.Ordinal)));
+            Assert.That(output, Does.Not.Contain("msdyn_shipped"), "managed option sets are filtered in the template; the endpoint does not support $filter");
         }
 
         private string RenderSpec(string spec) =>
