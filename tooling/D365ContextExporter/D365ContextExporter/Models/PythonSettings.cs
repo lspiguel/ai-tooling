@@ -7,14 +7,13 @@ namespace Lspiguel.Xrm.D365ContextExporter.Models
 {
     using Newtonsoft.Json;
 
-    /// <summary>Controls how the Python runtime is located and invoked.</summary>
+    /// <summary>
+    /// The former Python runtime settings. Ignored: templates are rendered in-process with Scriban.
+    /// Kept so config files written before the move to Scriban still deserialize.
+    /// </summary>
     public sealed class PythonSettings
     {
-        /// <summary>
-        /// Gets or sets the interpreter resolution strategy.
-        /// <c>"auto"</c> (default) searches PATH for <c>py.exe</c> then <c>python.exe</c>, skipping Windows Store stubs.
-        /// Any other value is treated as an absolute path to <c>python.exe</c>.
-        /// </summary>
+        /// <summary>Gets or sets the former interpreter setting. Ignored.</summary>
         [JsonProperty("interpreter")]
         public string Interpreter { get; set; } = "auto";
     }

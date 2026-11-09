@@ -224,6 +224,7 @@ First plan (2026-05-18): run `transform.py` in process with IronPython 3, Jinja2
 | 2026-06-18 | #20 | — | README rewritten for the release; `infographic.html` / `.png` added |
 | 2026-07-15 | #25 | 1.2026.7.1 | Progress label placement; the PowerAutomateFlows spec restored and business process flow queries fixed; JSON schema moved into `SampleConfig\` and deployed to `config\` beside the specs, so their `"./context-exporter.schema.json"` reference resolves; unused `solutions`, `solutions-components` and `solutions-and-entities` queries removed; Scriban 7.2.5 |
 | 2026-07-26 | #28 | 1.2026.7.2 | **Tool Library update from 1.2026.6.1 to 1.2026.7.1 failed:** "The process cannot access the file `…\Plugins\D365ContextExporter\System.Text.Json.dll` because it is being used by another process." XrmToolBox locks every DLL in a `Plugins` subfolder shortly after start-up, even if the tool is never opened. Fix: the `System.Text.Json` package reference and the `AssemblyResolve` handler removed — Scriban's source-include build already compiles without System.Text.Json (`SCRIBAN_NO_SYSTEM_TEXT_JSON`), at the cost of `object.from_json` / `object.to_json`. The package now ships no loose dependency. The nuspec release notes give the one-time manual clean-up for people upgrading from an older version. Recorded as SPEC R4 and R5 and in INSTRUCTIONS.md |
+| 2026-11-09 | — | unreleased | The planned fixes F1–F5 from [SPEC §15.1](SPEC.md#151-planned-fixes): `Directory.Build.targets.example` copies only the DLL and PDB (F1); README and welcome dialog sample-spec drift fixed (F2); `"python"` removed from the shipped specs and deprecated in the schema, schema `$id` set to this repository (F3); unit tests for `TemplateFilters`, `TemplateRenderer`, `ExportJobRunner` and `CheckVersion`, through internal seams that take the query runners and the version and confirmation (F4); edited shipped files backed up under `config\backup\` before an upgrade overwrites them (F5). The F4 tests found that parse errors reported zero-based lines and columns; now counted from one |
 
 ---
 
@@ -243,26 +244,27 @@ First plan (2026-05-18): run `transform.py` in process with IronPython 3, Jinja2
 | D10 | No DLL beside the plugin; no System.Text.Json | Locked subfolder DLLs broke Tool Library updates | #28 |
 | D11 | Late binding only | Tables change too fast for generated classes | Throughout |
 | D12 | Publish with trusted publishing | No stored API key | Phase 4 → CI |
+| D13 | An upgrade backs up an edited shipped file before replacing it, into a versioned folder below `config\` that is never overwritten | **Yes** silently discarded edits while the dialog said custom files were safe (O13); a backup keeps the overwrite simple and the edit recoverable | F5 |
 
 ---
 
 ## Open items
 
-Found while deriving the spec from the code on 2026-11-09. None changes the plugin's core behaviour; most are documentation drift. O1, O2, O3 (with O5), O6 and O13 have decided fixes in [SPEC §15.1](SPEC.md#151-planned-fixes), as F1–F5.
+Found while deriving the spec from the code on 2026-11-09. None changes the plugin's core behaviour; most are documentation drift. O1, O2, O3 (with O5), O6 and O13 had decided fixes in [SPEC §15.1](SPEC.md#151-planned-fixes), as F1–F5; those are built (unreleased), and marked below.
 
-| # | Item | Where |
-|---|---|---|
-| O1 | `Directory.Build.targets.example` still describes the private-lib subfolder and copies `Scriban.dll`, `System.Text.Json.dll` and `System.Text.Encodings.Web.dll`, none of which exist since #28 | `D365ContextExporter/Directory.Build.targets.example` |
-| O2 | README lists six sample specs; seven ship (PowerAutomateFlows is missing). The descriptions of SolutionsReference and SolutionInventory appear swapped. The folder tree omits `power-automate-flows.sbn` and the schema. The welcome dialog also says six | `README.md`, `Resources/WelcomeQuickStart.html` |
-| O3 | The schema still documents `python` (interpreter discovery, `venv`) as live, and every shipped spec still carries `"python"` (Phase 5 H4). The schema's `$id` names a different repository URL | `SampleConfig/context-exporter.schema.json`, `SampleConfig/*.json` |
-| O4 | README and schema say `frontMatter` is "injected as YAML front-matter into the output"; the plugin only passes it to `_meta.frontMatter` and the shipped templates emit the block | `README.md`, schema |
-| O5 | Stale comments: `ExportJob.Transformation` says Jinja2; `PythonSettings.Interpreter` describes interpreter discovery; the csproj mentions adding `Microsoft.PowerPlatform.Dataverse.Client` in Phase 2; the nuspec keeps a commented-out schema entry | Source |
-| O6 | No unit tests for `TemplateRenderer`, `TemplateFilters` or `ExportJobRunner`, although Phase 5 planned them; `CheckVersion` and `version.txt` are untested | Tests |
-| O7 | No warning when `LEGAL.md` still contains `[ORGANISATION NAME]` (planned in Phase 4) | `ConfigValidator` |
-| O8 | The attribute deny list applies only to FetchXML results; Web API and metadata results are not filtered. Decide whether that is intended and document it | `ExportJobRunner`, README |
-| O9 | `maxRecords` is checked per page, so a result can exceed it by up to one page | Query runners |
-| O10 | The validator resolves a FetchXML `source` with `Path.Combine`, the runner with `PathResolver` (which expands `%VAR%`): a source using an environment variable passes the runner but fails validation | `ConfigValidator` |
-| O11 | The folder dialog hides the new-folder button, while the Quick Start says "choose (or create)" a folder | `BaseDirectoryPickerControl` |
-| O12 | README screenshot placeholder (Phase 4 H3) | `README.md` |
-| O13 | The upgrade dialog says custom files are not modified; edits to a *shipped* file (same name) are overwritten on **Yes** | `FirstRunHelper.CheckVersion` |
-| O14 | The schema requires at least one query; the plugin accepts a spec with none and produces nothing | Schema, `ExportJobRunner` |
+| # | Item | Where | Status |
+|---|---|---|---|
+| O1 | `Directory.Build.targets.example` still describes the private-lib subfolder and copies `Scriban.dll`, `System.Text.Json.dll` and `System.Text.Encodings.Web.dll`, none of which exist since #28 | `D365ContextExporter/Directory.Build.targets.example` | Fixed (F1) |
+| O2 | README lists six sample specs; seven ship (PowerAutomateFlows is missing). The descriptions of SolutionsReference and SolutionInventory appear swapped. The folder tree omits `power-automate-flows.sbn` and the schema. The welcome dialog also says six | `README.md`, `Resources/WelcomeQuickStart.html` | Fixed (F2) |
+| O3 | The schema still documents `python` (interpreter discovery, `venv`) as live, and every shipped spec still carries `"python"` (Phase 5 H4). The schema's `$id` names a different repository URL | `SampleConfig/context-exporter.schema.json`, `SampleConfig/*.json` | Fixed (F3) |
+| O4 | README and schema say `frontMatter` is "injected as YAML front-matter into the output"; the plugin only passes it to `_meta.frontMatter` and the shipped templates emit the block | `README.md`, schema | Open |
+| O5 | Stale comments: `ExportJob.Transformation` says Jinja2; `PythonSettings.Interpreter` describes interpreter discovery; the csproj mentions adding `Microsoft.PowerPlatform.Dataverse.Client` in Phase 2; the nuspec keeps a commented-out schema entry | Source | Partly fixed (F3): `ExportJob.Transformation` and `PythonSettings`. The csproj and nuspec comments remain |
+| O6 | No unit tests for `TemplateRenderer`, `TemplateFilters` or `ExportJobRunner`, although Phase 5 planned them; `CheckVersion` and `version.txt` are untested | Tests | Fixed (F4) |
+| O7 | No warning when `LEGAL.md` still contains `[ORGANISATION NAME]` (planned in Phase 4) | `ConfigValidator` | Open |
+| O8 | The attribute deny list applies only to FetchXML results; Web API and metadata results are not filtered. Decide whether that is intended and document it | `ExportJobRunner`, README | Open |
+| O9 | `maxRecords` is checked per page, so a result can exceed it by up to one page | Query runners | Open |
+| O10 | The validator resolves a FetchXML `source` with `Path.Combine`, the runner with `PathResolver` (which expands `%VAR%`): a source using an environment variable passes the runner but fails validation | `ConfigValidator` | Open |
+| O11 | The folder dialog hides the new-folder button, while the Quick Start says "choose (or create)" a folder | `BaseDirectoryPickerControl` | Open |
+| O12 | README screenshot placeholder (Phase 4 H3) | `README.md` | Open |
+| O13 | The upgrade dialog says custom files are not modified; edits to a *shipped* file (same name) are overwritten on **Yes** | `FirstRunHelper.CheckVersion` | Fixed (F5) |
+| O14 | The schema requires at least one query; the plugin accepts a spec with none and produces nothing | Schema, `ExportJobRunner` | Open |

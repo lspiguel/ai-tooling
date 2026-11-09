@@ -7,9 +7,6 @@
     "generatedBy": "D365 CE Context Exporter",
     "purpose": "AI assistant grounding context — full customization reference"
   },
-  "python": {
-    "interpreter": "auto"
-  },
   "transformation": "solutions-reference.sbn",
   "queries": [
     {

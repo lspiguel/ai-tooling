@@ -40,7 +40,7 @@ The plugin connects to your Dataverse environment, runs a set of FetchXML and We
 2. **Connect** — connect XrmToolBox to your Dataverse environment.
 3. **Pick a base directory** — click the folder picker and choose (or create) an empty folder. On first use the plugin will offer to deploy the reference configuration there.
 4. **Run first-time setup** — accept the prompt to deploy sample specs, FetchXML queries, and Scriban templates to the folder.
-5. **Select a spec** — choose one of the available specs from the dropdown (six sample specs are provided out of the box).
+5. **Select a spec** — choose one of the available specs from the dropdown (sample specs are provided out of the box).
 6. **Click Run** — the plugin executes all queries, renders the template, and places the output in `output\<SpecName>.context.md`.
 7. **Upload** — attach or paste the `.context.md` file into your AI assistant conversation as grounding context.
 
@@ -48,16 +48,17 @@ The plugin connects to your Dataverse environment, runs a set of FetchXML and We
 
 ## Sample specs
 
-Six specs are deployed on first-time setup:
+These specs are deployed on first-time setup:
 
 | Spec | What it captures |
 |---|---|
 | `EntityDictionary` | All entity definitions with their attributes |
 | `SecurityModel` | Security roles and privilege depths |
-| `SolutionsReference` | Solution hierarchy and components |
+| `SolutionsReference` | The complete customization reference — solutions, custom entities and extensions of standard entities, virtual tables, option sets, plug-ins and steps, custom APIs, classic workflows, cloud flows, business rules, business process flows, security roles, app modules and environment variables |
 | `FormsAndViews` | Entity forms and views |
 | `Optionsets` | Global option sets |
-| `SolutionInventory` | Solutions, plugins, flows, environment variables, custom APIs |
+| `PowerAutomateFlows` | Cloud flows with their definitions |
+| `SolutionInventory` | Solutions with publisher, version, managed state and install date |
 
 ## Folder structure
 
@@ -74,15 +75,18 @@ Context-Exporter/
 │   │   ├── entity-dictionary.sbn
 │   │   ├── forms-and-views.sbn
 │   │   ├── optionsets.sbn
+│   │   ├── power-automate-flows.sbn
 │   │   ├── security-model.sbn
 │   │   ├── solution-inventory.sbn
 │   │   └── solutions-reference.sbn
 │   ├── EntityDictionary.context-exporter-config.json
 │   ├── FormsAndViews.context-exporter-config.json
 │   ├── Optionsets.context-exporter-config.json
+│   ├── PowerAutomateFlows.context-exporter-config.json
 │   ├── SecurityModel.context-exporter-config.json
 │   ├── SolutionInventory.context-exporter-config.json
-│   └── SolutionsReference.context-exporter-config.json
+│   ├── SolutionsReference.context-exporter-config.json
+│   └── context-exporter.schema.json   JSON schema for editor IntelliSense
 ├── output/                       Rendered grounding files (git-ignored)
 │   └── EntityDictionary.context.md
 ├── runs/                         Per-run working directories (git-ignored)
@@ -95,7 +99,12 @@ Context-Exporter/
 
 ## Plugin upgrades
 
-When the plugin detects that its version differs from the `version.txt` in your base directory, it offers to redeploy the reference configuration (queries, templates, and sample specs). Your `LEGAL.md` and any custom files are never overwritten during an upgrade.
+When the plugin detects that its version differs from the `version.txt` in your base directory, it offers to redeploy the reference configuration (queries, templates, and sample specs).
+
+- **Yes** replaces every shipped query, template and sample spec with the new version. If you edited one of them, your copy is backed up first to `config/backup/<previous version>/`, under the same path it had below `config/` — so an edited `config/queries/security-roles.fetch.xml` is kept as `config/backup/<previous version>/queries/security-roles.fetch.xml`. Backups are never deleted or overwritten; carry your edits across by hand.
+- **No** leaves every file as it is and does not ask again for this version.
+
+Either way, your `LEGAL.md` and any file whose name the plugin does not ship are never touched. To keep a customised spec, query or template safe from upgrades, save it under a name of your own.
 
 ## Configuration reference
 

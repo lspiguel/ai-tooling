@@ -56,7 +56,7 @@ The design separates three concerns:
 | R5 | **Templates must not call `object.from_json` / `object.to_json`.** Scriban is compiled without System.Text.Json support; these built-ins throw | Consequence of R4; query results are already template variables |
 | R6 | **Late-bound SDK access only** — no early-bound classes | Tables change too fast in a live environment to keep generated classes current |
 | R7 | **Transformation is configuration.** Adding a query, template or spec needs no rebuild of the plugin | The whole point of the spec/template split ([§1](#1-problem)) |
-| R8 | **Upgrades touch only files the plugin shipped, and only with consent.** Redeploying the reference configuration is offered, never forced; files of other names and `LEGAL.md` are never touched | User-authored specs, queries and templates live in the same folders |
+| R8 | **Upgrades touch only files the plugin shipped, and only with consent.** Redeploying the reference configuration is offered, never forced; a shipped file the person edited is backed up under `config\backup\` before it is replaced — the one place an upgrade writes besides the shipped files and `version.txt`; files of other names and `LEGAL.md` are never touched | User-authored specs, queries and templates live in the same folders |
 | R9 | **Runs are never deleted.** Every run keeps its own timestamped folder; the plugin never cleans `runs\` | A run is the evidence for what a grounding file contained |
 | R10 | **Version bumps touch two files** — `AssemblyVersion` / `FileVersion` / `Version` in the `.csproj` and `<version>` in the `.nuspec`, kept identical. Scheme `1.YYYY.M.N` | Tool Library validation; the base directory upgrade check compares the assembly version ([§5.3](#53-upgrade)) |
 | R11 | **A new template filter** goes in `TemplateFilters.cs` and in the README's built-in function table | Template authors only see the README |
@@ -165,7 +165,9 @@ After the first-run step, the plugin compares `version.txt` with its own assembl
 |---|---|
 | `version.txt` missing | Written with the current version, silently (a folder set up before the check existed) |
 | Same version | Nothing |
-| Different version (newer or older) | Dialog offers to update the reference files. **Yes:** every file in the deployment list is overwritten — a person's edits to a shipped file are lost — then `version.txt` is updated. **No:** `version.txt` is updated so the offer does not return for this version |
+| Different version (newer or older) | Dialog offers to update the reference files, saying that shipped queries, templates and sample specs are replaced, edited ones are backed up first, and `LEGAL.md` and files of other names are not touched. **Yes:** every file in the deployment list is overwritten, after any whose content differs from the new version is backed up (below); then `version.txt` is updated. **No:** `version.txt` is updated so the offer does not return for this version |
+
+**Backup.** Before overwriting a shipped file whose content differs from the new version, the upgrade copies it to `config\backup\<previous version>\` under the same path relative to `config\` — `config\queries\x.fetch.xml` goes to `config\backup\<previous version>\queries\x.fetch.xml` — and logs `[Setup] Backed up`. The previous version is the one read from `version.txt`. If that backup folder already exists from an earlier upgrade, the next free name `<previous version>-2`, `-3`, … is used, so a backup is never overwritten. The folder is created only when a file needs backing up, and the plugin never deletes it (as with runs, R9). Backed-up specs sit below `config\`'s top level, so the spec picker ignores them.
 
 Never touched by an upgrade: `LEGAL.md`, and every file whose name is not in the deployment list (R8). A file removed from the deployment list in a later version stays in the user's folder.
 
@@ -186,7 +188,7 @@ A spec is a `*.context-exporter-config.json` file directly under `config\`. The 
 | `legal` | string | no | empty | Path to the legal notice, relative to the base directory (absolute and `%VAR%` allowed). Empty: no notice |
 | `frontMatter` | object of strings | no | empty | Copied to `_meta.frontMatter`. The plugin does not write front matter itself — the shipped templates emit it as a YAML block ([§9.2](#92-template-context)) |
 | `output.attributeDenyList` | string[] | no | `password`, `secret`, `token`, `key` | Case-insensitive substrings; matching attribute names are dropped from FetchXML results ([§7.4](#74-serialization-of-fetchxml-results)) |
-| `python` | object | no | — | Ignored. Accepted so configs from before Phase 5 still load |
+| `python` | object | no | — | Ignored. Accepted so configs from before Phase 5 still load; the shipped specs no longer carry it, and the schema marks it deprecated |
 | `$schema` | string | no | — | Editor hint; the shipped specs use `"./context-exporter.schema.json"` |
 
 ### 6.2 Query definition
@@ -309,7 +311,7 @@ The intermediate is the contract between queries and templates: a template sees 
 `TemplateRenderer` renders in process with Scriban (7.2.5, source-embedded; [§13.1](#131-dependencies)).
 
 1. Resolve `config\transformations\<transformation>`; a missing file is an error.
-2. Parse. Parse errors fail the run with every message as `file(line,column): message`.
+2. Parse. Parse errors fail the run with every message as `file(line,column): message`, line and column counted from one.
 3. Load `intermediate.json` and convert it recursively: JSON objects to `ScriptObject`, arrays to `ScriptArray`, values to their .NET value.
 4. Add `_spec` and register the custom filters ([§9.3](#93-custom-functions)).
 5. Render with `StrictVariables = true` (an undefined variable is an error, not an empty string), `LoopLimit = int.MaxValue` and `LimitToString = 0` (no limits — large environments produce long loops and long strings). `include` resolves file names against `config\transformations\`.
@@ -470,13 +472,18 @@ NUnit 4 with Moq and Moq.Contrib.HttpClient, `net48`, mirroring the source folde
 | `HelpersTests/PathResolverTests` | Absolute, relative and `%VAR%` resolution; spec discovery; spec name from path |
 | `HelpersTests/ConfigValidatorTests` | Each violation in [§6.3](#63-validation), and all reported together |
 | `HelpersTests/EntityJsonSerializerTests` | Every SDK type in [§7.4](#74-serialization-of-fetchxml-results), deny list, nulls, nested aliased values |
-| `HelpersTests/FirstRunHelperTests` | `IsConfigured`, deploy without overwrite, upgrade overwrite sparing `LEGAL.md`, the full file list, organisation-name substitution. `version.txt` and `CheckVersion` are not covered — the version tests were removed because they failed whenever a rebuild changed the version |
+| `HelpersTests/FirstRunHelperTests` | `IsConfigured`, deploy without overwrite, upgrade overwrite sparing `LEGAL.md` and files of other names, the full file list, organisation-name substitution, the upgrade backup (edited files only, never overwriting an earlier backup, hidden from spec discovery) and `version.txt`. `CheckVersion` through an internal overload that takes the current version and the confirmation, so missing, same, different-accepted and different-declined are tested without a dialog or the build's version |
+| `HelpersTests/TemplateFiltersTests` | Every function in [§9.3](#93-custom-functions), rendered through a template, with the edge cases: unknown component type, empty `markdown_table`, empty `iso_date`, `req_indicator` of `SystemRequired`, the `group_by_key` shape, `pluck` uniqueness, the `display_label` fallback |
 | `ModelsTests/ExportJobTests` | Loading and defaults |
 | `OrchestrationTests/IntermediateJsonBuilderTests` | `_meta`, raw file naming, result keys |
+| `OrchestrationTests/TemplateRendererTests` | `_spec` and `_meta`, nested objects and arrays, `include` from `transformations\`, parse errors with line and column, an undefined variable failing, a missing template, UTF-8 without BOM |
+| `OrchestrationTests/ExportJobRunnerTests` | Through an internal constructor that takes the three query runners: a failed query stopping the render while the remaining queries run, cancellation between queries, progress, the copy to `output\`, the legal notice in the delivered file only, a spec with no queries, validation before the run folder is created |
 | `QueriesTests/*QueryRunnerTests` | Paging, `maxRecords`, empty results, missing files, HTTP errors, metadata targets |
 | `QueriesTests/*RealDataTests` | Realistic response shapes, synthetic (R2) |
 
-Not covered by unit tests: `TemplateRenderer`, `TemplateFilters`, `ExportJobRunner` and the WinForms controls. Templates are verified by hand: deploy into a clean folder, run each shipped spec against a sandbox environment, check the Markdown and the legal notice.
+`OrchestrationTests/TemplateHarness` is the shared helper for the template tests: a temporary base directory with one run folder. Filters are tested by rendering rather than by calling `TemplateFilters` directly, because Scriban is compiled into the plugin and the test project also references the Scriban package.
+
+Not covered by unit tests: the shipped templates, the public `ExportJobRunner` constructor (it needs a live connection for the token) and the WinForms controls, including the upgrade dialog. Templates are verified by hand: deploy into a clean folder, run each shipped spec against a sandbox environment, check the Markdown and the legal notice.
 
 ---
 
@@ -484,7 +491,9 @@ Not covered by unit tests: `TemplateRenderer`, `TemplateFilters`, `ExportJobRunn
 
 ### 15.1 Planned fixes
 
-Fixes decided for open items in [notes.md](notes.md#open-items). F1–F4 change documentation, the schema and tests, not how a run behaves; F5 changes the upgrade ([§5.3](#53-upgrade)), and when it is built §5.3 and R8 change with it. A fix that changes an embedded file — the welcome HTML, `SampleConfig\` — reaches users with the next version (R10), and a `SampleConfig\` change reaches a base directory only if the person accepts the upgrade.
+Fixes decided for open items in [notes.md](notes.md#open-items). F1–F4 change documentation, the schema and tests, not how a run behaves; F5 changes the upgrade ([§5.3](#53-upgrade)) and R8. A fix that changes an embedded file — the welcome HTML, `SampleConfig\` — reaches users with the next version (R10), and a `SampleConfig\` change reaches a base directory only if the person accepts the upgrade.
+
+**Status:** F1–F5 are built and the sections above describe them; they are not yet released. Writing the F4 tests also found that parse errors reported zero-based lines and columns; [§9.1](#91-engine) now counts from one.
 
 | # | Open item | Fix |
 |---|---|---|

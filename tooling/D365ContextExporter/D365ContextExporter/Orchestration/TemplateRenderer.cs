@@ -57,10 +57,11 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
 
             if (template.HasErrors)
             {
+                // Scriban positions are zero-based; editors count lines and columns from one.
                 var errors = string.Join(
                     Environment.NewLine,
                     template.Messages.Select(m =>
-                        $"{m.Span.FileName}({m.Span.Start.Line},{m.Span.Start.Column}): {m.Message}"));
+                        $"{m.Span.FileName}({m.Span.Start.Line + 1},{m.Span.Start.Column + 1}): {m.Message}"));
                 throw new InvalidOperationException(
                     $"Template parse errors in '{job.Transformation}':{Environment.NewLine}{errors}");
             }

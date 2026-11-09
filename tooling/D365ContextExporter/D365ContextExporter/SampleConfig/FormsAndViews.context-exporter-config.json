@@ -7,9 +7,6 @@
     "generatedBy": "D365 CE Context Exporter",
     "purpose": "AI assistant grounding context — forms and views"
   },
-  "python": {
-    "interpreter": "auto"
-  },
   "transformation": "forms-and-views.sbn",
   "queries": [
     {

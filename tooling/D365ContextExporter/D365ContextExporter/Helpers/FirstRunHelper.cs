@@ -16,6 +16,10 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
     /// <summary>Manages the lifecycle of the reference configuration in a base directory.</summary>
     internal static class FirstRunHelper
     {
+        // Every entry in DeployedFiles lives under config\; backups keep the path below it.
+        private const string ConfigPrefix = @"config\";
+        private const string ResourcePrefix = "Lspiguel.Xrm.D365ContextExporter.";
+
         private static readonly Assembly Asm = Assembly.GetExecutingAssembly();
 
         // Files deployed by DeployReferenceConfig, grouped by target subfolder relative to baseDir.
@@ -87,16 +91,69 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             return result == DialogResult.Yes;
         }
 
-        /// <summary>Extracts all embedded sample files to <paramref name="baseDir"/>.</summary>
+        /// <summary>Extracts all embedded sample files to <paramref name="baseDir"/> for first-run setup; files that already exist are skipped.</summary>
         /// <param name="baseDir">The target base directory.</param>
         /// <param name="owner">Parent window for dialogs.</param>
         /// <param name="log">Log delegate.</param>
-        /// <param name="overwrite">
-        /// When <c>false</c> (first-run): existing files are skipped.
-        /// When <c>true</c> (upgrade): all files except LEGAL.md are overwritten.
-        /// </param>
-        public static void DeployReferenceConfig(string baseDir, IWin32Window owner, Action<string> log, bool overwrite = false)
+        public static void DeployReferenceConfig(string baseDir, IWin32Window owner, Action<string> log)
+            => DeployReferenceConfig(baseDir, owner, log, CurrentVersion(), previousVersion: null);
+
+        /// <summary>Checks <paramref name="baseDir"/> for a version mismatch and offers an upgrade if needed.</summary>
+        /// <param name="baseDir">The base directory.</param>
+        /// <param name="owner">Parent window for dialogs.</param>
+        /// <param name="log">Log delegate.</param>
+        public static void CheckVersion(string baseDir, IWin32Window owner, Action<string> log)
+            => CheckVersion(baseDir, CurrentVersion(), (stored, current) => ConfirmUpgrade(owner, stored, current), owner, log);
+
+        /// <summary>Checks <paramref name="baseDir"/> for a version mismatch against <paramref name="currentVersion"/> and upgrades if <paramref name="confirmUpgrade"/> accepts.</summary>
+        /// <param name="baseDir">The base directory.</param>
+        /// <param name="currentVersion">The plugin version to compare with <c>version.txt</c>.</param>
+        /// <param name="confirmUpgrade">Called with (stored version, current version) when they differ; returns <c>true</c> to upgrade.</param>
+        /// <param name="owner">Parent window for dialogs.</param>
+        /// <param name="log">Log delegate.</param>
+        internal static void CheckVersion(string baseDir, string currentVersion, Func<string, string, bool> confirmUpgrade, IWin32Window owner, Action<string> log)
         {
+            var versionPath = Path.Combine(baseDir, "version.txt");
+
+            if (!File.Exists(versionPath))
+            {
+                // Directory configured before this feature shipped — write version silently.
+                File.WriteAllText(versionPath, currentVersion, Encoding.UTF8);
+                return;
+            }
+
+            var stored = File.ReadAllText(versionPath).Trim();
+            if (stored == currentVersion)
+            {
+                return;
+            }
+
+            if (confirmUpgrade(stored, currentVersion))
+            {
+                DeployReferenceConfig(baseDir, owner, log, currentVersion, previousVersion: stored);
+            }
+            else
+            {
+                File.WriteAllText(versionPath, currentVersion, Encoding.UTF8);
+                log("[Setup] Upgrade skipped by user.");
+            }
+        }
+
+        /// <summary>Extracts all embedded sample files to <paramref name="baseDir"/> and writes <c>version.txt</c>.</summary>
+        /// <param name="baseDir">The target base directory.</param>
+        /// <param name="owner">Parent window for dialogs.</param>
+        /// <param name="log">Log delegate.</param>
+        /// <param name="currentVersion">The version written to <c>version.txt</c>.</param>
+        /// <param name="previousVersion">
+        /// <c>null</c> for first-run setup: existing files are skipped.
+        /// Otherwise an upgrade from this version: every shipped file is overwritten, and one whose content differs from
+        /// the new version is first copied to <c>config\backup\&lt;previousVersion&gt;\</c>. LEGAL.md is never overwritten.
+        /// </param>
+        internal static void DeployReferenceConfig(string baseDir, IWin32Window owner, Action<string> log, string currentVersion, string? previousVersion)
+        {
+            var upgrade = previousVersion != null;
+            string? backupRoot = upgrade ? FindBackupRoot(baseDir, previousVersion!) : null;
+
             // Ensure directories exist.
             Directory.CreateDirectory(Path.Combine(baseDir, "config", "queries"));
             Directory.CreateDirectory(Path.Combine(baseDir, "config", "transformations"));
@@ -105,14 +162,25 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             foreach (var (resourceSuffix, relativeDest) in DeployedFiles)
             {
                 var destPath = Path.Combine(baseDir, relativeDest);
-                if (!overwrite && File.Exists(destPath))
+                var exists = File.Exists(destPath);
+                if (!upgrade && exists)
                 {
                     log($"[Setup] Skipped (exists): {destPath}");
                     continue;
                 }
 
-                var resourceName = "Lspiguel.Xrm.D365ContextExporter." + resourceSuffix;
-                WriteResource(resourceName, destPath, log, overwrite ? "[Setup] Updated" : "[Setup] Deployed");
+                var content = ReadResource(ResourcePrefix + resourceSuffix);
+                if (exists && backupRoot != null && File.ReadAllText(destPath) != content)
+                {
+                    var backupPath = Path.Combine(backupRoot, relativeDest.Substring(ConfigPrefix.Length));
+                    Directory.CreateDirectory(Path.GetDirectoryName(backupPath) ?? backupRoot);
+                    File.Copy(destPath, backupPath);
+                    log($"[Setup] Backed up: {destPath} -> {backupPath}");
+                }
+
+                Directory.CreateDirectory(Path.GetDirectoryName(destPath) ?? baseDir);
+                File.WriteAllText(destPath, content, Encoding.UTF8);
+                log($"{(upgrade ? "[Setup] Updated" : "[Setup] Deployed")}: {destPath}");
             }
 
             // Deploy LEGAL.md — first-run only; never overwritten on upgrade.
@@ -120,8 +188,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             if (!File.Exists(legalDest))
             {
                 var orgName = PromptOrgName(owner);
-                var legalResource = "Lspiguel.Xrm.D365ContextExporter." + LegalResourceSuffix;
-                var template = ReadResource(legalResource);
+                var template = ReadResource(ResourcePrefix + LegalResourceSuffix);
                 var content = ApplyOrgName(template, orgName);
                 Directory.CreateDirectory(Path.GetDirectoryName(legalDest)!);
                 File.WriteAllText(legalDest, content, Encoding.UTF8);
@@ -134,47 +201,8 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
 
             // Write version.txt.
             var versionPath = Path.Combine(baseDir, "version.txt");
-            File.WriteAllText(versionPath, CurrentVersion(), Encoding.UTF8);
-            log($"[Setup] version.txt written: {CurrentVersion()}");
-        }
-
-        /// <summary>Checks <paramref name="baseDir"/> for a version mismatch and offers an upgrade if needed.</summary>
-        public static void CheckVersion(string baseDir, IWin32Window owner, Action<string> log)
-        {
-            var versionPath = Path.Combine(baseDir, "version.txt");
-            var current = CurrentVersion();
-
-            if (!File.Exists(versionPath))
-            {
-                // Directory configured before this feature shipped — write version silently.
-                File.WriteAllText(versionPath, current, Encoding.UTF8);
-                return;
-            }
-
-            var stored = File.ReadAllText(versionPath).Trim();
-            if (stored == current)
-            {
-                return;
-            }
-
-            var result = MessageBox.Show(
-                owner,
-                $"The plugin has been updated from {stored} to {current}.\n\n" +
-                "Would you like to update the reference configuration files (queries, templates, and sample specs)? " +
-                "Your LEGAL.md and any custom files will not be modified.",
-                "Plugin Updated",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Information);
-
-            if (result == DialogResult.Yes)
-            {
-                DeployReferenceConfig(baseDir, owner, log, overwrite: true);
-            }
-            else
-            {
-                File.WriteAllText(versionPath, current, Encoding.UTF8);
-                log("[Setup] Upgrade skipped by user.");
-            }
+            File.WriteAllText(versionPath, currentVersion, Encoding.UTF8);
+            log($"[Setup] version.txt written: {currentVersion}");
         }
 
         /// <summary>Replaces all occurrences of <c>[ORGANISATION NAME]</c> in <paramref name="template"/> with <paramref name="orgName"/>.</summary>
@@ -202,6 +230,42 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
                 "My Organisation");
         }
 
+        private static bool ConfirmUpgrade(IWin32Window owner, string stored, string current)
+        {
+            var message =
+                $"The plugin has been updated from {stored} to {current}.\n\n" +
+                "Would you like to update the reference configuration? The shipped queries, templates and sample specs will be replaced. " +
+                "Any of them you have edited are backed up first, under config\\backup\\.\n\n" +
+                "Your LEGAL.md and files with other names are not touched.";
+
+            var result = MessageBox.Show(owner, message, "Plugin Updated", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+
+            return result == DialogResult.Yes;
+        }
+
+        /// <summary>
+        /// Returns the folder that backs up edited shipped files during an upgrade from <paramref name="previousVersion"/>:
+        /// <c>config\backup\&lt;previousVersion&gt;</c>, or <c>…-2</c>, <c>…-3</c> when an earlier backup already holds that name,
+        /// so an existing backup is never overwritten. The folder is created only when a file is backed up.
+        /// </summary>
+        private static string FindBackupRoot(string baseDir, string previousVersion)
+        {
+            var name = string.Join("_", previousVersion.Split(Path.GetInvalidFileNameChars()));
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                name = "unknown";
+            }
+
+            var backupDir = Path.Combine(baseDir, "config", "backup");
+            var candidate = Path.Combine(backupDir, name);
+            for (var n = 2; Directory.Exists(candidate); n++)
+            {
+                candidate = Path.Combine(backupDir, $"{name}-{n}");
+            }
+
+            return candidate;
+        }
+
         private static string CurrentVersion() =>
             Asm.GetName().Version?.ToString() ?? "1.0.0.0";
 
@@ -211,14 +275,6 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
                 ?? throw new InvalidOperationException($"Embedded resource not found: {resourceName}");
             using var reader = new StreamReader(stream, Encoding.UTF8);
             return reader.ReadToEnd();
-        }
-
-        private static void WriteResource(string resourceName, string destPath, Action<string> log, string logPrefix)
-        {
-            var content = ReadResource(resourceName);
-            Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
-            File.WriteAllText(destPath, content, Encoding.UTF8);
-            log($"{logPrefix}: {destPath}");
         }
     }
 }

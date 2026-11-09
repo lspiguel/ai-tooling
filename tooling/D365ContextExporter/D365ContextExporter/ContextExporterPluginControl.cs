@@ -195,7 +195,7 @@ namespace Lspiguel.Xrm.D365ContextExporter
 
             if (!FirstRunHelper.IsConfigured(dir) && FirstRunHelper.OfferSetup(dir, this))
             {
-                FirstRunHelper.DeployReferenceConfig(dir, this, log, overwrite: false);
+                FirstRunHelper.DeployReferenceConfig(dir, this, log);
                 this.specPicker.LoadSpecs(dir);
             }
 

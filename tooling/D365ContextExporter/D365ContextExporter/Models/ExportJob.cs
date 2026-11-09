@@ -22,7 +22,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Models
         [JsonProperty("version")]
         public string Version { get; set; } = "1.0.0";
 
-        /// <summary>Gets or sets the Jinja2 template filename used to transform query results.</summary>
+        /// <summary>Gets or sets the Scriban template file name, in <c>config\transformations\</c>, used to render query results.</summary>
         [JsonProperty("transformation")]
         public string Transformation { get; set; } = string.Empty;
 
