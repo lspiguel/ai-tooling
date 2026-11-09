@@ -19,6 +19,7 @@ These notes merge the original plan and the six phase plans (`d365-context-expor
 | — | Business process flows, cloud flows spec, template fixes | 2026-06-12 (#18) | 0.2026.0.7 |
 | [6](#phase-6--scriban-source-embedding-and-welcome-dialog) | Scriban source-embedded; welcome dialog | 2026-06-12 (#19) | 1.2026.6.1 |
 | [Releases](#post-phase-6--releases) | README and infographic; July release candidate; System.Text.Json removed | 2026-06-18 → 2026-07-26 (#20, #25, #28) | 1.2026.7.1 → 1.2026.7.2 |
+| [Planned fixes](#post-phase-6--releases) | F1–F5 from [SPEC §15.1](SPEC.md#151-planned-fixes): developer targets, README drift, `python` deprecation, unit tests, upgrade backup | Not yet merged | Unreleased — needs a version bump |
 
 Released in the XrmToolBox Tool Library. Remaining work is in [Open items](#open-items).
 
@@ -137,7 +138,7 @@ Unit tests for all five components, with `IOrganizationService` mocked by Moq an
 
 - The plan proposed three sample specs (EntityDictionary, SecurityModel, SolutionsReference); six shipped by Phase 5 and seven by #25.
 - The planned validator *warning* when `LEGAL.md` still contains `[ORGANISATION NAME]` was not built ([O7](#open-items)).
-- The plan said deployed scripts would never be overwritten; the upgrade path does overwrite every shipped file on consent. With the scripts gone in Phase 5 this now applies to queries, templates and specs.
+- The plan said deployed scripts would never be overwritten; the upgrade path does overwrite every shipped file on consent. With the scripts gone in Phase 5 this now applies to queries, templates and specs. Since F5, a shipped file the person edited is backed up under `config\backup\` before it is overwritten ([D13](#decisions)).
 - A unit test that did not work in GitHub Actions was dropped.
 
 **Human tasks.**
@@ -151,7 +152,7 @@ Unit tests for all five components, with `IOrganizationService` mocked by Moq an
 | H5 | End-to-end sandbox test of the sample specs | Carried into Phase 5 H3 |
 | H6 | Publish to the Tool Library | Done |
 
-**After Phase 4, before Phase 5** (2026-05-06 → 05-09, inside #17): namespace and package id changed to `Lspiguel.Xrm.D365ContextExporter`; several rounds of nuspec metadata and dependency fixes; version scheme moved to `0.2026.0.x`; a fix for opening the plugin with no connection; requirement versions relaxed to minimums; UI fixes. The `FirstRunHelper` version tests were removed because they failed whenever a rebuild changed the assembly version.
+**After Phase 4, before Phase 5** (2026-05-06 → 05-09, inside #17): namespace and package id changed to `Lspiguel.Xrm.D365ContextExporter`; several rounds of nuspec metadata and dependency fixes; version scheme moved to `0.2026.0.x`; a fix for opening the plugin with no connection; requirement versions relaxed to minimums; UI fixes. The `FirstRunHelper` version tests were removed because they failed whenever a rebuild changed the assembly version. F4 restored that coverage through an internal `CheckVersion` overload that takes the current version and the confirmation as parameters.
 
 ---
 
@@ -165,7 +166,7 @@ First plan (2026-05-18): run `transform.py` in process with IronPython 3, Jinja2
 
 ### Built: Scriban
 
-- `TemplateRenderer` replaced `PythonInvoker` and `transform.py`: parse (errors with file, line, column), intermediate converted recursively to `ScriptObject` / `ScriptArray`, `_spec` added, `StrictVariables = true` (the equivalent of `StrictUndefined`), a file-system loader for `include`, output written as UTF-8 without BOM.
+- `TemplateRenderer` replaced `PythonInvoker` and `transform.py`: parse (errors with file, line, column — printed zero-based, as Scriban holds them, until the F4 tests caught it), intermediate converted recursively to `ScriptObject` / `ScriptArray`, `_spec` added, `StrictVariables = true` (the equivalent of `StrictUndefined`), a file-system loader for `include`, output written as UTF-8 without BOM.
 - `TemplateFilters` ported the 19 filters and added three during implementation: `entity_forms`, `entity_views`, `priv_depth`. `group_by_key` now returns `{ key, items }` objects instead of tuples.
 - All templates ported to Scriban and **renamed `.j2` → `.sbn`** (the plan had kept `.j2` so specs would not change; the specs were updated instead).
 - Token counting removed: no `token_count.txt`, no header.
@@ -182,9 +183,9 @@ First plan (2026-05-18): run `transform.py` in process with IronPython 3, Jinja2
 | # | Task | Outcome |
 |---|---|---|
 | H1 | Port the templates to Scriban | Done |
-| H2 | Check `TemplateFilters` against `filters.py` | Not recorded; no automated tests ([O6](#open-items)) |
+| H2 | Check `TemplateFilters` against `filters.py` | Not recorded. Automated tests for every filter were added later, in F4 ([O6](#open-items)) |
 | H3 | End-to-end test of the sample specs | Not recorded in detail; the forms-and-views and whitespace fixes above came out of real runs |
-| H4 | Remove `python` from the sample specs; mark it deprecated in the schema | **Not done** ([O3](#open-items)) |
+| H4 | Remove `python` from the sample specs; mark it deprecated in the schema | Done later, in F3 ([O3](#open-items)) |
 
 **Jinja2 to Scriban — the differences that mattered when porting.**
 
@@ -224,7 +225,7 @@ First plan (2026-05-18): run `transform.py` in process with IronPython 3, Jinja2
 | 2026-06-18 | #20 | — | README rewritten for the release; `infographic.html` / `.png` added |
 | 2026-07-15 | #25 | 1.2026.7.1 | Progress label placement; the PowerAutomateFlows spec restored and business process flow queries fixed; JSON schema moved into `SampleConfig\` and deployed to `config\` beside the specs, so their `"./context-exporter.schema.json"` reference resolves; unused `solutions`, `solutions-components` and `solutions-and-entities` queries removed; Scriban 7.2.5 |
 | 2026-07-26 | #28 | 1.2026.7.2 | **Tool Library update from 1.2026.6.1 to 1.2026.7.1 failed:** "The process cannot access the file `…\Plugins\D365ContextExporter\System.Text.Json.dll` because it is being used by another process." XrmToolBox locks every DLL in a `Plugins` subfolder shortly after start-up, even if the tool is never opened. Fix: the `System.Text.Json` package reference and the `AssemblyResolve` handler removed — Scriban's source-include build already compiles without System.Text.Json (`SCRIBAN_NO_SYSTEM_TEXT_JSON`), at the cost of `object.from_json` / `object.to_json`. The package now ships no loose dependency. The nuspec release notes give the one-time manual clean-up for people upgrading from an older version. Recorded as SPEC R4 and R5 and in INSTRUCTIONS.md |
-| 2026-11-09 | — | unreleased | The planned fixes F1–F5 from [SPEC §15.1](SPEC.md#151-planned-fixes): `Directory.Build.targets.example` copies only the DLL and PDB (F1); README and welcome dialog sample-spec drift fixed (F2); `"python"` removed from the shipped specs and deprecated in the schema, schema `$id` set to this repository (F3); unit tests for `TemplateFilters`, `TemplateRenderer`, `ExportJobRunner` and `CheckVersion`, through internal seams that take the query runners and the version and confirmation (F4); edited shipped files backed up under `config\backup\` before an upgrade overwrites them (F5). The F4 tests found that parse errors reported zero-based lines and columns; now counted from one |
+| 2026-11-09 | — | unreleased | The planned fixes F1–F5 from [SPEC §15.1](SPEC.md#151-planned-fixes): `Directory.Build.targets.example` copies only the DLL and PDB (F1); README and welcome dialog sample-spec drift fixed (F2); `"python"` removed from the shipped specs and deprecated in the schema, schema `$id` set to this repository (F3); unit tests for `TemplateFilters`, `TemplateRenderer`, `ExportJobRunner` and `CheckVersion`, through internal seams that take the query runners and the version and confirmation (F4); edited shipped files backed up under `config\backup\` before an upgrade overwrites them (F5). The F4 tests found that parse errors reported zero-based lines and columns; now counted from one. 90 tests added, 228 in all. Not yet checked by hand: the new upgrade dialog wording in XrmToolBox, and an upgrade over a base directory with edited files |
 
 ---
 
@@ -255,7 +256,7 @@ Found while deriving the spec from the code on 2026-11-09. None changes the plug
 | # | Item | Where | Status |
 |---|---|---|---|
 | O1 | `Directory.Build.targets.example` still describes the private-lib subfolder and copies `Scriban.dll`, `System.Text.Json.dll` and `System.Text.Encodings.Web.dll`, none of which exist since #28 | `D365ContextExporter/Directory.Build.targets.example` | Fixed (F1) |
-| O2 | README lists six sample specs; seven ship (PowerAutomateFlows is missing). The descriptions of SolutionsReference and SolutionInventory appear swapped. The folder tree omits `power-automate-flows.sbn` and the schema. The welcome dialog also says six | `README.md`, `Resources/WelcomeQuickStart.html` | Fixed (F2) |
+| O2 | README lists six sample specs; seven ship (PowerAutomateFlows is missing). The descriptions of SolutionsReference and SolutionInventory appear swapped. The folder tree omits `power-automate-flows.sbn` and the schema. The welcome dialog also says six | `README.md`, `Resources/WelcomeQuickStart.html` | Fixed (F2). The welcome dialog in fact said "several", not six; its wording now matches the README's |
 | O3 | The schema still documents `python` (interpreter discovery, `venv`) as live, and every shipped spec still carries `"python"` (Phase 5 H4). The schema's `$id` names a different repository URL | `SampleConfig/context-exporter.schema.json`, `SampleConfig/*.json` | Fixed (F3) |
 | O4 | README and schema say `frontMatter` is "injected as YAML front-matter into the output"; the plugin only passes it to `_meta.frontMatter` and the shipped templates emit the block | `README.md`, schema | Open |
 | O5 | Stale comments: `ExportJob.Transformation` says Jinja2; `PythonSettings.Interpreter` describes interpreter discovery; the csproj mentions adding `Microsoft.PowerPlatform.Dataverse.Client` in Phase 2; the nuspec keeps a commented-out schema entry | Source | Partly fixed (F3): `ExportJob.Transformation` and `PythonSettings`. The csproj and nuspec comments remain |
