@@ -11,7 +11,7 @@ nuget.exe pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExport
     <authors>Luciano Spiguel</authors>
     <owners>Luciano Spiguel</owners>
     <projectUrl>https://github.com/lspiguel/ai-tooling</projectUrl>
-    <iconUrl>https://raw.githubusercontent.com/lspiguel/ai-tooling/refs/heads/main/tooling/D365ContextExporter/D365ContextExporter/d365-context-exporter-icon-c-128px-transparent.png</iconUrl>
+    <iconUrl>https://raw.githubusercontent.com/lspiguel/ai-tooling/refs/heads/main/tooling/D365ContextExporter/D365ContextExporter/d365-context-exporter-icon-c-150px-transparent.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>XrmToolBox plugin to produce grounding files for AI assistants</summary>
     <description>
