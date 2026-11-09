@@ -151,7 +151,7 @@ dotnet test    tooling/D365ContextExporter/D365ContextExporter.Tests/D365Context
 
 ### Rules specific to this plugin
 
-- **Never call `object.from_json` / `object.to_json` in a Scriban template.** Scriban is compiled into the assembly from source with its System.Text.Json support removed; those built-ins throw at runtime. Query results are already parsed into template variables — there is nothing left to deserialise.
+- **Never call `object.from_json` / `object.to_json` in a Scriban template.** Scriban is compiled into the assembly from source with its System.Text.Json support removed; those built-ins throw at runtime. Query results are already parsed into template variables; JSON text held in a column is parsed with the plugin's `parse_json` function.
 - **Do not add package references that ship a DLL next to the plugin.** A private `System.Text.Json.dll` caused XrmToolBox to lock the file, breaking update and uninstall from the Tool Library. If a dependency is unavoidable, source-include it (`PackageScribanIncludeSource` + `IncludeAssets="Build"` is the working pattern) and say why in the PR.
 - **No early binding.** Tables change too fast in a live D365 CE environment for generated early-bound classes to be worth the regeneration cost. Use late-bound access throughout.
 - **Version bumps touch two files.** `AssemblyVersion` / `FileVersion` / `Version` in [D365ContextExporter.csproj](/tooling/D365ContextExporter/D365ContextExporter/D365ContextExporter.csproj) and `<version>` in [D365ContextExporter.nuspec](/tooling/D365ContextExporter/D365ContextExporter/D365ContextExporter.nuspec), kept identical. Scheme is `1.YYYY.M.N`.

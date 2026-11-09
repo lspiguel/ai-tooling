@@ -172,6 +172,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             target.Import("plugin_mode", new Func<object, string>(PluginMode));
             target.Import("flow_trigger", new Func<string, string>(FlowTrigger));
             target.Import("flow_trigger_info", new Func<object, string>(FlowTriggerInfo));
+            target.Import("parse_json", new Func<object, object?>(ParseJson));
             target.Import("classic_trigger", new Func<ScriptObject, string>(ClassicTrigger));
             target.Import("envvar_type", new Func<object, string>(EnvvarType));
             target.Import("api_param_type", new Func<object, string>(ApiParamType));
@@ -503,6 +504,28 @@ namespace Lspiguel.Xrm.D365ContextExporter.Helpers
             }
 
             return "Auto";
+        }
+
+        /// <summary>
+        /// Parses a JSON string held in a column (for example <c>powerpagecomponent.content</c>) into Scriban objects and arrays.
+        /// The safe replacement for Scriban's <c>object.from_json</c>, which this build cannot use (R5). <c>null</c> for empty or invalid JSON.
+        /// </summary>
+        private static object? ParseJson(object json)
+        {
+            var text = json?.ToString();
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return null;
+            }
+
+            try
+            {
+                return Orchestration.TemplateRenderer.ConvertJToken(JToken.Parse(text!));
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
         }
 
         /// <summary>Describes a cloud flow's trigger from its definition (<c>workflow.clientdata</c>).</summary>

@@ -58,6 +58,7 @@ These specs are deployed on first-time setup:
 | `FormsAndViews` | The forms and views the project created or customized |
 | `Optionsets` | Unmanaged global option sets |
 | `PowerAutomateFlows` | The project's cloud flows with their definitions |
+| `PowerPages` | Power Pages sites on the enhanced data model: the page map (URLs, templates, the forms and lists each page hosts, access rules), web roles and what each can do, table permissions, basic forms, lists, multistep forms and their steps, cloud flows, Web API exposure, site settings, templates and navigation |
 | `SolutionInventory` | Visible solutions with publisher, version, managed state and install date |
 
 ### What counts as the project's
@@ -76,6 +77,8 @@ A *project solution* is any visible, unmanaged solution other than `Default` and
 
 A standard column the project changed without creating it — a new label or required level on a shipped column — is not listed in `SolutionsReference`.
 
+`PowerPages` covers every active site on the enhanced data model, and only active components. Sites on the standard data model (`adx_` tables) are not covered. Page HTML, web template source and custom JavaScript are not exported, only whether a page or form has custom code and how long it is. The values of site settings whose names contain *secret*, *password*, *key*, *token*, *credential*, *connectionstring* or *certificate* are never read from Dataverse; only their names are listed.
+
 ## Folder structure
 
 After first-time setup your base directory will look like this:
@@ -84,6 +87,9 @@ After first-time setup your base directory will look like this:
 Context-Exporter/
 ├── config/
 │   ├── queries/                  FetchXML query files
+│   │   ├── power-pages-component-names.fetch.xml
+│   │   ├── power-pages-components.fetch.xml
+│   │   ├── power-pages-sites.fetch.xml
 │   │   ├── project-forms.fetch.xml
 │   │   ├── project-tables.fetch.xml
 │   │   ├── project-views.fetch.xml
@@ -95,6 +101,7 @@ Context-Exporter/
 │   │   ├── forms-and-views.sbn
 │   │   ├── optionsets.sbn
 │   │   ├── power-automate-flows.sbn
+│   │   ├── power-pages.sbn
 │   │   ├── security-model.sbn
 │   │   ├── solution-inventory.sbn
 │   │   └── solutions-reference.sbn
@@ -102,6 +109,7 @@ Context-Exporter/
 │   ├── FormsAndViews.context-exporter-config.json
 │   ├── Optionsets.context-exporter-config.json
 │   ├── PowerAutomateFlows.context-exporter-config.json
+│   ├── PowerPages.context-exporter-config.json
 │   ├── SecurityModel.context-exporter-config.json
 │   ├── SolutionInventory.context-exporter-config.json
 │   ├── SolutionsReference.context-exporter-config.json
@@ -169,8 +177,9 @@ Templates use the [Scriban](https://github.com/scriban/scriban) template languag
 > XrmToolBox to lock the file, which broke updating and uninstalling the tool from the
 > Tool Library ("The process cannot access the file … because it is being used by another
 > process"). You should not need them anyway — query results are already parsed and
-> available as template variables, so there is no JSON left to deserialise by the time a
-> template runs.
+> available as template variables. When a column holds JSON text — Power Pages keeps each
+> component's settings in `powerpagecomponent.content`, for example — use the `parse_json`
+> function instead.
 
 ### Built-in template functions
 
@@ -196,6 +205,7 @@ The following functions are available in all templates:
 | `plugin_stage` | `(code)` | Resolves a plugin stage integer (10/20/40/45) to `PreVal`, `Pre`, or `Post`. |
 | `plugin_mode` | `(code)` | Resolves a plugin mode integer (0/1) to `Sync` or `Async`. |
 | `flow_trigger` | `(name)` | Guesses the trigger type of a cloud flow from its name (`HTTP`, `Sched`, `Child`, `Manual`, `Auto`). Unreliable — prefer `flow_trigger_info`. |
+| `parse_json` | `(text)` | Parses JSON text held in a column into objects and arrays, for example `{{ c = row.content | parse_json }}{{ c.partialurl }}`. `null` for empty or invalid JSON. Use it instead of `object.from_json`. |
 | `flow_trigger_info` | `(clientdata)` | Describes a cloud flow's trigger from its definition (`workflow.clientdata`): for example `Dataverse: Added or Modified on contact (scope Organization); columns: …`, `Scheduled: every 1 Day`, `HTTP request`, `Manual or child flow`, `Power Apps`, `Power Pages`, `Selected row: contacts`, `Business process flow step`. `—` when there is no definition. |
 | `classic_trigger` | `(workflow)` | Returns the trigger string for a classic workflow object (`Create/Update/Delete`). |
 | `envvar_type` | `(code)` | Resolves an environment variable type integer to its type name. |

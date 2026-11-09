@@ -115,6 +115,9 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "queries", "project-forms.fetch.xml")), Is.True, "project-forms query");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "queries", "project-views.fetch.xml")), Is.True, "project-views query");
             Assert.That(File.Exists(Path.Combine(_baseDir, "config", "queries", "security-role-names.fetch.xml")), Is.True, "security-role-names query");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "PowerPages.context-exporter-config.json")), Is.True, "PowerPages spec");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "transformations", "power-pages.sbn")), Is.True, "power-pages transformation");
+            Assert.That(File.Exists(Path.Combine(_baseDir, "config", "queries", "power-pages-components.fetch.xml")), Is.True, "power-pages-components query");
             Assert.That(File.Exists(Path.Combine(_baseDir, "LEGAL.md")), Is.True, "LEGAL.md");
         }
 

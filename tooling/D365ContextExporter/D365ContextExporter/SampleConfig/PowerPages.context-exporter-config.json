@@ -1,0 +1,31 @@
+{
+  "$schema": "./context-exporter.schema.json",
+  "spec": "PowerPages",
+  "version": "1.0.0",
+  "legal": "LEGAL.md",
+  "frontMatter": {
+    "generatedBy": "D365 CE Context Exporter",
+    "purpose": "AI assistant grounding context — Power Pages sites: pages, security and configuration"
+  },
+  "transformation": "power-pages.sbn",
+  "queries": [
+    {
+      "id": "power-pages-sites",
+      "type": "fetchxml",
+      "source": "power-pages-sites.fetch.xml",
+      "resultKey": "ppSites"
+    },
+    {
+      "id": "power-pages-components",
+      "type": "fetchxml",
+      "source": "power-pages-components.fetch.xml",
+      "resultKey": "ppComponents"
+    },
+    {
+      "id": "power-pages-component-names",
+      "type": "fetchxml",
+      "source": "power-pages-component-names.fetch.xml",
+      "resultKey": "ppComponentNames"
+    }
+  ]
+}

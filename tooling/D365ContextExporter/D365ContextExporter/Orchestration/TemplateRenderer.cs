@@ -94,7 +94,10 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
             this.log($"[Render] output.md written ({new FileInfo(outputPath).Length} bytes)");
         }
 
-        private static object? ConvertJToken(JToken token)
+        /// <summary>Converts a parsed JSON token into Scriban values: objects to <see cref="ScriptObject"/>, arrays to <see cref="ScriptArray"/>, values to .NET values.</summary>
+        /// <param name="token">The JSON token.</param>
+        /// <returns>The converted value, or <c>null</c>.</returns>
+        internal static object? ConvertJToken(JToken token)
         {
             return token switch
             {

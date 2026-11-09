@@ -53,7 +53,7 @@ The design separates three concerns:
 | R2 | **No client data in the repository** — sample configs, queries, templates, tests and fixtures are synthetic. Base directories with real output stay outside the repository | Client data boundary |
 | R3 | **The legal notice is added by the plugin, not by a template.** A spec that names a `legal` file gets its content prepended to the delivered file; a user's `LEGAL.md` is never overwritten | The boundary notice must not depend on template authors remembering it |
 | R4 | **No DLL ships next to the plugin.** Dependencies are source-embedded (Scriban) or provided by XrmToolBox (Newtonsoft.Json, SDK). The package holds only the plugin DLL and its PDB in `Plugins\` | XrmToolBox locks DLLs in `Plugins` subfolders at start-up, which broke Tool Library update and uninstall ([notes](notes.md#post-phase-6--releases)) |
-| R5 | **Templates must not call `object.from_json` / `object.to_json`.** Scriban is compiled without System.Text.Json support; these built-ins throw | Consequence of R4; query results are already template variables |
+| R5 | **Templates must not call `object.from_json` / `object.to_json`.** Scriban is compiled without System.Text.Json support; these built-ins throw. JSON text in a column is parsed with the `parse_json` function instead ([§9.3](#93-custom-functions)) | Consequence of R4; query results are already template variables |
 | R6 | **Late-bound SDK access only** — no early-bound classes | Tables change too fast in a live environment to keep generated classes current |
 | R7 | **Transformation is configuration.** Adding a query, template or spec needs no rebuild of the plugin | The whole point of the spec/template split ([§1](#1-problem)) |
 | R8 | **Upgrades touch only files the plugin shipped, and only with consent.** Redeploying the reference configuration is offered, never forced; a shipped file the person edited is backed up under `config\backup\` before it is replaced — the one place an upgrade writes besides the shipped files and `version.txt`; files of other names and `LEGAL.md` are never touched | User-authored specs, queries and templates live in the same folders |
@@ -72,7 +72,7 @@ R2, R4, R5, R6, R8, R10 and R11 are also stated in [INSTRUCTIONS.md](/INSTRUCTIO
 - One XrmToolBox connection at a time, supplied by XrmToolBox's connection manager; the plugin holds no credentials.
 - Three query types: FetchXML, Dataverse Web API (OData GET), and the typed metadata SDK.
 - One template per spec, rendering one Markdown file per run.
-- A reference configuration (seven specs, their queries and templates, a JSON schema and a legal notice) deployed into the user's base directory on first use and redeployed on upgrade by consent.
+- A reference configuration (eight specs, their queries and templates, a JSON schema and a legal notice) deployed into the user's base directory on first use and redeployed on upgrade by consent.
 - Distribution through the XrmToolBox Tool Library as a NuGet package.
 
 ### Out of scope
@@ -356,6 +356,7 @@ Registered by `TemplateFilters.RegisterAll`; callable as functions or with pipe 
 | `plugin_stage` | stage | `PreVal` (10), `Pre` (20), `Post` (40, 45) |
 | `plugin_mode` | mode | `Sync` (0), `Async` (1) |
 | `flow_trigger` | flow name | `HTTP`, `Sched`, `Child`, `Manual` or `Auto`, guessed from the name — wrong for 68 of 471 flows in a reviewed environment; kept for existing templates |
+| `parse_json` | JSON text | Objects and arrays, converted as the intermediate is ([§9.1](#91-engine)); `null` for empty or invalid JSON. Newtonsoft.Json, provided by XrmToolBox (R4) |
 | `flow_trigger_info` | flow definition (`clientdata`) | The trigger read from the definition: Dataverse change type, table, scope, columns and filter (codes as in `callbackregistration`); Dataverse action performed; schedule; HTTP request; manual or child flow; Power Apps; Power Pages; Copilot; selected row; business process flow step; Customer Insights – Journeys; otherwise `connector: operation`. `—` without a definition |
 | `classic_trigger` | workflow | `Create/Update/Delete` from the trigger flags; `Manual` when none is set |
 | `envvar_type` | type | `String`, `Number`, `Boolean`, `JSON`, `DataSource`, `Secret` |
@@ -414,6 +415,7 @@ Every file under `SampleConfig\` is an embedded resource. `FirstRunHelper` holds
 | `FormsAndViews` | `forms-and-views.sbn` | Web API `EntityDefinitions` names (`entities`); FetchXML `project-forms` (`forms`), `project-views` (`views`) |
 | `Optionsets` | `optionsets.sbn` | Web API `GlobalOptionSetDefinitions` (`globalOptionSets`), filtered to unmanaged in the template |
 | `PowerAutomateFlows` | `power-automate-flows.sbn` | FetchXML `cloud-flows` (`flows`), including the flow definitions |
+| `PowerPages` | `power-pages.sbn` | FetchXML `power-pages-sites` (`ppSites`), `power-pages-components` (`ppComponents`, with `content`), `power-pages-component-names` (`ppComponentNames`, names only) |
 | `SecurityModel` | `security-model.sbn` | FetchXML `security-roles` (`securityRoles`) — the project's roles, with a table × action matrix of privilege depths and the other privileges listed |
 | `SolutionInventory` | `solution-inventory.sbn` | FetchXML `solutions-detail` (`solutions`) — visible solutions with publisher |
 | `SolutionsReference` | `solutions-reference.sbn` | Web API `EntityDefinitions` with unmanaged custom columns (`entities`) and `GlobalOptionSetDefinitions`; FetchXML `solutions-detail`, `project-tables`, `project-forms`, `project-views`, `plugin-assemblies`, `sdk-steps`, `custom-apis`, `custom-api-responses`, `workflows` (with the flow definitions, for the trigger), `business-process-flows`, `bpf-stages`, `app-modules`, `env-vars`, `security-role-names` |
@@ -435,6 +437,7 @@ The reference configuration describes what the project built or customized, not 
 | Global option set | Unmanaged | Templates — `GlobalOptionSetDefinitions` rejects `$filter` (HTTP 405), so all global option sets are fetched |
 | Workflow, cloud flow, custom API, environment variable | Unmanaged. Cloud flows named `CXP_` (generated by Customer Insights – Journeys) excluded | Queries |
 | Plug-in step | Registered on an unmanaged plug-in assembly; state included | `sdk-steps` |
+| Power Pages site and component | Active sites on the enhanced data model, and their active components. Web templates, web files and site settings whose names contain *secret*, *password*, *key*, *token*, *credential*, *connectionstring* or *certificate* are read by name only, so their content is never fetched | `power-pages-*` queries |
 | Security role | Unmanaged, root business unit (`parentroleid` null), not based on a role template (`roletemplateid` null) | `security-roles`; `security-role-names` (names only, for `SolutionsReference`) |
 | Solution | Visible, other than `Default` and `Active`. `SolutionsReference` lists the unmanaged ones | `solutions-detail`; template |
 
@@ -446,8 +449,8 @@ The rules were checked against a development environment on 2026-11-09 through t
 
 | Kind | Files |
 |---|---|
-| FetchXML (`config\queries\`) | `app-modules`, `bpf-stages`, `business-process-flows`, `cloud-flows`, `custom-api-responses`, `custom-apis`, `env-vars`, `plugin-assemblies`, `project-forms`, `project-tables`, `project-views`, `sdk-steps`, `security-role-names`, `security-roles`, `solutions-detail`, `workflows` (each `.fetch.xml`) |
-| Templates (`config\transformations\`) | The seven `.sbn` files above |
+| FetchXML (`config\queries\`) | `app-modules`, `bpf-stages`, `business-process-flows`, `cloud-flows`, `custom-api-responses`, `custom-apis`, `env-vars`, `plugin-assemblies`, `power-pages-component-names`, `power-pages-components`, `power-pages-sites`, `project-forms`, `project-tables`, `project-views`, `sdk-steps`, `security-role-names`, `security-roles`, `solutions-detail`, `workflows` (each `.fetch.xml`) |
+| Templates (`config\transformations\`) | The eight `.sbn` files above |
 | Schema (`config\`) | `context-exporter.schema.json` — draft-07; `spec`, `transformation`, `queries` required; no additional properties; per-query `id`, `type`, `resultKey` required |
 | Legal (`LEGAL.md`) | Deployed once, with the organisation name substituted ([§5.2](#52-first-run-setup)) |
 
@@ -501,6 +504,7 @@ NUnit 4 with Moq and Moq.Contrib.HttpClient, `net48`, mirroring the source folde
 | `ModelsTests/ExportJobTests` | Loading and defaults |
 | `OrchestrationTests/IntermediateJsonBuilderTests` | `_meta`, raw file naming, result keys |
 | `OrchestrationTests/TemplateRendererTests` | `_spec` and `_meta`, nested objects and arrays, `include` from `transformations\`, parse errors with line and column, an undefined variable failing, a missing template, UTF-8 without BOM |
+| `OrchestrationTests/PowerPagesTemplateTests` | The PowerPages spec against one synthetic enhanced-data-model site: URL paths from the parent chain, hosted forms and lists, access rules, custom-code flags, roles and what each can do, table permission scope and parent, multistep step order, Web API exposure, a sensitive setting masked and a name-only one listed, templates and navigation |
 | `OrchestrationTests/ShippedTemplatesTests` | Every shipped spec rendered through its shipped template, deployed from the embedded configuration, against one synthetic intermediate: the customization scope of [§12.2](#122-customization-scope) (which tables, forms and views appear), column types from `AttributeTypeName`, form and view type labels, step and process state, cloud flow triggers from the definition, the one-line list of solution-only tables, BPF stages listed once, the publisher column, option order, the security role privilege matrix |
 | `OrchestrationTests/ExportJobRunnerTests` | Through an internal constructor that takes the three query runners: a failed query stopping the render while the remaining queries run, cancellation between queries, progress, the copy to `output\`, the legal notice in the delivered file only, a spec with no queries, validation before the run folder is created |
 | `QueriesTests/*QueryRunnerTests` | Paging, `maxRecords`, empty results, missing files, HTTP errors, metadata targets |
@@ -535,7 +539,7 @@ Open issues labelled [D365 Context Exporter](https://github.com/lspiguel/ai-tool
 | Issue | Opened | Request | Bearing on this spec |
 |---|---|---|---|
 | [#21](https://github.com/lspiguel/ai-tooling/issues/21) Sample configurations for relationships | 2026-06-21 | A relationship list per table in `SolutionsReference`, and a new spec for all relationships with extended information | Configuration only (R7). The `metadata` runner already has a `relationships` target ([§7.3](#73-metadata)); no shipped spec uses it. A new spec joins the deployment list ([§12](#12-reference-configuration)) |
-| [#22](https://github.com/lspiguel/ai-tooling/issues/22) Specs for Power Pages | 2026-06-21 | Page list, permissions, site settings | Configuration only: FetchXML queries, a template and a spec. Overlaps the Power Pages entry under the shared template catalogue in [§15.3](#153-ideas) |
+| [#22](https://github.com/lspiguel/ai-tooling/issues/22) Specs for Power Pages | 2026-06-21 | Page list, permissions, site settings | **Built, unreleased:** the `PowerPages` spec ([§12.1](#121-specs)), for sites on the enhanced data model. Needed one new function, `parse_json`, because the enhanced model keeps each component's settings as JSON in `powerpagecomponent.content`. Sites on the standard data model (`adx_` tables) are not covered |
 | [#23](https://github.com/lspiguel/ai-tooling/issues/23) Choose a solution to export entities, forms, views and option sets from | 2026-06-26 | Limit an export to the components of chosen solutions; today's output covers the whole environment and is large | Maintainer's reply (2026-07-22): filter the solutions query, then filter entities by solution in the `solutions-reference.sbn` entities loop. The hard part is keeping standard tables that are customized (such as account) while dropping others. Configuration only unless a solution picker is wanted in the UI ([§11](#11-user-experience)) |
 | [#31](https://github.com/lspiguel/ai-tooling/issues/31) Output to PDF or other formats | 2026-07-29 | Microsoft 365 Copilot Notebooks accept only Office and PDF files | Changes [§10](#10-output-and-legal-notice) and the out-of-scope line on non-Markdown output ([§3](#3-scope)). Any converter must be source-embedded or framework-provided, with no loose DLLs (R4) — the issue says so too |
 | [#33](https://github.com/lspiguel/ai-tooling/issues/33) "Run all" specs button | 2026-08-07 | Run every spec in the base directory after a confirmation that warns it can take a long time; the result panel then offers only to open the output folder | Changes [§11](#11-user-experience). Each spec would still get its own run folder and output file (R9); how one spec's failure affects the rest needs deciding |

@@ -1,0 +1,12 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="powerpagesite">
+    <attribute name="powerpagesiteid" />
+    <attribute name="name" />
+    <attribute name="primarydomainname" />
+    <attribute name="datamodelversion" />
+    <filter type="and">
+      <condition attribute="statecode" operator="eq" value="0" />
+    </filter>
+    <order attribute="name" descending="false" />
+  </entity>
+</fetch>

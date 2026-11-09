@@ -1,0 +1,573 @@
+---
+{{ for pair in _meta.frontMatter }}
+{{ pair.key }}: {{ pair.value -}}
+{{ end }}
+exportedAt: {{ _meta.exportedAtUtc | date.to_string "%Y-%m-%dT%H:%M:%SZ" }}
+environment: {{ _meta.environment.url }}
+
+---
+
+# Power Pages — {{ _meta.environment.orgName }}
+
+> Active Power Pages sites on the enhanced data model (`powerpagesite` / `powerpagecomponent`), and their active components. For each site: what visitors see (the page map and which forms and lists each page hosts), who can do what (web roles, table permissions, page access rules), and how it is built (forms, multistep forms, cloud flows, Web API exposure, site settings, templates and navigation).
+> Not included: sites on the standard data model (`adx_` tables), page HTML, web template source and custom JavaScript (only its presence and size), and the values of site settings whose names suggest a secret — those values are never read from Dataverse.
+
+{{
+  # powerpagecomponent.powerpagecomponenttype
+  # https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/powerpagecomponent
+  type_labels = {}
+  type_labels["1"] = "Publishing State"
+  type_labels["2"] = "Web Page"
+  type_labels["3"] = "Web File"
+  type_labels["4"] = "Web Link Set"
+  type_labels["5"] = "Web Link"
+  type_labels["6"] = "Page Template"
+  type_labels["7"] = "Content Snippet"
+  type_labels["8"] = "Web Template"
+  type_labels["9"] = "Site Setting"
+  type_labels["10"] = "Web Page Access Control Rule"
+  type_labels["11"] = "Web Role"
+  type_labels["13"] = "Site Marker"
+  type_labels["15"] = "Basic Form"
+  type_labels["17"] = "List"
+  type_labels["18"] = "Table Permission"
+  type_labels["19"] = "Multistep Form"
+  type_labels["20"] = "Multistep Form Step"
+  type_labels["30"] = "Redirect"
+  type_labels["33"] = "Cloud Flow"
+
+  # Table permission access type (mspp_entitypermission.mspp_scope)
+  scope_labels = {}
+  scope_labels["756150000"] = "Global"
+  scope_labels["756150001"] = "Contact"
+  scope_labels["756150002"] = "Account"
+  scope_labels["756150003"] = "Parent"
+  scope_labels["756150004"] = "Self"
+  scope_labels["756150005"] = "Custom"
+
+  # Basic form and step mode (mspp_entityform.mspp_mode)
+  mode_labels = {}
+  mode_labels["100000000"] = "Insert"
+  mode_labels["100000001"] = "Edit"
+  mode_labels["100000002"] = "Read only"
+
+  # Multistep form step type (mspp_webformstep.mspp_type)
+  step_labels = {}
+  step_labels["100000000"] = "Condition"
+  step_labels["100000001"] = "Load form"
+  step_labels["100000002"] = "Load tab"
+  step_labels["100000003"] = "Redirect"
+  step_labels["100000004"] = "Load user control"
+
+  # Page template type (mspp_pagetemplate.mspp_type)
+  template_labels = {}
+  template_labels["756150000"] = "Rewrite"
+  template_labels["756150001"] = "Web template"
+
+  names = {}
+  comps = []
+  for r in ppComponents
+    item = {}
+    item.id = r.powerpagecomponentid ?? r._id
+    item.name = r.name ?? ""
+    item.type = r.powerpagecomponenttype
+    item.site = r.powerpagesiteid != null ? r.powerpagesiteid.id : ""
+    item.lang = r.powerpagesitelanguageid != null ? r.powerpagesitelanguageid.name : null
+    item.c = (r.content | parse_json) ?? {}
+    names[item.id] = item.name
+    comps = comps | array.add item
+  end
+
+  # Web templates, web files and sensitive site settings: names only.
+  name_only = []
+  for r in ppComponentNames
+    item = {}
+    item.id = r.powerpagecomponentid ?? r._id
+    item.name = r.name ?? ""
+    item.type = r.powerpagecomponenttype
+    item.site = r.powerpagesiteid != null ? r.powerpagesiteid.id : ""
+    names[item.id] = item.name
+    name_only = name_only | array.add item
+  end
+
+  func cell(text)
+    if text == null
+      ret ""
+    end
+    ret ("" + text) | string.replace "|" "\\|" | string.replace "\r" "" | string.replace "\n" " "
+  end
+
+  func name_of(id)
+    if id == null || id == ""
+      ret "—"
+    end
+    ret names[id] ?? "(not found)"
+  end
+
+  func names_of(ids)
+    if ids == null || ids.size == 0
+      ret "—"
+    end
+    $parts = []
+    for one_id in ids
+      $parts = $parts | array.add (name_of one_id)
+    end
+    ret $parts | array.sort | array.join ", "
+  end
+
+  func has_text(value)
+    ret value != null && ("" + value | string.strip) != ""
+  end
+
+  func code_size(value)
+    if !(has_text value)
+      ret "—"
+    end
+    ret "Yes (" + (("" + value) | string.split "\n").size + " lines)"
+  end
+
+  func sensitive(name)
+    $n = ("" + name) | string.downcase
+    ret ($n | string.contains "secret") || ($n | string.contains "password") || ($n | string.contains "key") || ($n | string.contains "token") || ($n | string.contains "credential") || ($n | string.contains "connectionstring") || ($n | string.contains "certificate")
+  end
+
+  # URL path of a root web page, from its partial URL and its parents' (home is "/").
+  func page_path(page)
+    $segments = []
+    $cur = page
+    $guard = 0
+    while $cur != null && $guard < 30
+      $pu = $cur.c.partialurl ?? ""
+      if $pu != "" && $pu != "/"
+        $segments = $segments | array.insert_at 0 $pu
+      end
+      $parent = $cur.c.parentpageid
+      $cur = ($parent != null && $parent != "") ? roots_by_id[$parent] : null
+      $guard = $guard + 1
+    end
+    ret "/" + ($segments | array.join "/")
+  end
+
+  func privileges(c)
+    $p = []
+    if c.create; $p = $p | array.add "Create"; end
+    if c.read; $p = $p | array.add "Read"; end
+    if c.write; $p = $p | array.add "Write"; end
+    if c.delete; $p = $p | array.add "Delete"; end
+    if c.append; $p = $p | array.add "Append"; end
+    if c.appendto; $p = $p | array.add "Append To"; end
+    ret $p.size > 0 ? ($p | array.join ", ") : "None"
+  end
+-}}
+{{ if ppSites.size == 0 -}}
+_No active Power Pages sites on the enhanced data model._
+{{ end -}}
+{{ for site in ppSites | array.sort "name" }}
+{{-
+  sid = site.powerpagesiteid ?? site._id
+  roots = []
+  content_pages = []
+  states = []
+  roles = []
+  perms = []
+  rules = []
+  bforms = []
+  lists = []
+  mforms = []
+  steps = []
+  flows = []
+  settings = []
+  ptemplates = []
+  snippets = []
+  markers = []
+  linksets = []
+  links = []
+  redirects = []
+  for x in comps
+    if x.site != sid
+      continue
+    end
+    case x.type
+      when 1
+        states = states | array.add x
+      when 2
+        if x.c.isroot
+          roots = roots | array.add x
+        else
+          content_pages = content_pages | array.add x
+        end
+      when 4
+        linksets = linksets | array.add x
+      when 5
+        links = links | array.add x
+      when 6
+        ptemplates = ptemplates | array.add x
+      when 7
+        snippets = snippets | array.add x
+      when 9
+        settings = settings | array.add x
+      when 10
+        rules = rules | array.add x
+      when 11
+        roles = roles | array.add x
+      when 13
+        markers = markers | array.add x
+      when 15
+        bforms = bforms | array.add x
+      when 17
+        lists = lists | array.add x
+      when 18
+        perms = perms | array.add x
+      when 19
+        mforms = mforms | array.add x
+      when 20
+        steps = steps | array.add x
+      when 30
+        redirects = redirects | array.add x
+      when 33
+        flows = flows | array.add x
+    end
+  end
+  webtemplates = []
+  webfiles = []
+  secret_settings = []
+  for x in name_only
+    if x.site != sid
+      continue
+    end
+    case x.type
+      when 8
+        webtemplates = webtemplates | array.add x
+      when 3
+        webfiles = webfiles | array.add x
+      when 9
+        secret_settings = secret_settings | array.add x
+    end
+  end
+
+  roots_by_id = {}
+  for p in roots
+    roots_by_id[p.id] = p
+  end
+  content_by_root = {}
+  for p in content_pages
+    rid = p.c.rootwebpageid
+    if rid != null
+      content_by_root[rid] = (content_by_root[rid] ?? []) | array.add p
+    end
+  end
+
+  # Which pages host each form, list and multistep form (set on the root or a content page).
+  hosted_by = {}
+  for p in roots
+    for v in [p] | array.concat (content_by_root[p.id] ?? [])
+      for target in [v.c.entityform, v.c.entitylist, v.c.webform]
+        if target != null && target != ""
+          current = hosted_by[target] ?? []
+          if !(current | array.contains p.name)
+            hosted_by[target] = current | array.add p.name
+          end
+        end
+      end
+    end
+  end
+
+  rules_by_page = {}
+  for r in rules
+    pid = r.c.webpageid
+    if pid != null
+      rules_by_page[pid] = (rules_by_page[pid] ?? []) | array.add r
+    end
+  end
+
+  page_rows = []
+  for p in roots
+    row = {}
+    row.path = page_path p
+    row.page = p
+    page_rows = page_rows | array.add row
+  end
+  page_rows = page_rows | array.sort "path"
+-}}
+## Site: {{ site.name }}
+
+| Domain | Data model | Pages | Web roles | Table permissions | Basic forms | Lists | Multistep forms | Site settings |
+|---|---|---|---|---|---|---|---|---|
+| {{ site.primarydomainname ?? "—" }} | {{ site.datamodelversion ?? "—" }} | {{ roots.size }} | {{ roles.size }} | {{ perms.size }} | {{ bforms.size }} | {{ lists.size }} | {{ mforms.size }} | {{ settings.size + secret_settings.size }} |
+
+### Page map
+
+One row per page, ordered by URL. **Hosts** is the basic form, list or multistep form shown on the page; **Access** lists its page access control rules. **Custom code** marks pages with their own JavaScript or CSS.
+
+| URL | Page | Template | State | In sitemap | Hosts | Access | Custom code | Languages |
+|---|---|---|---|---|---|---|---|---|
+{{ for row in page_rows -}}
+{{-
+  p = row.page
+  variants = content_by_root[p.id] ?? []
+  hosts = []
+  code = []
+  langs = []
+  for v in [p] | array.concat variants
+    if v.c.entityform != null && v.c.entityform != ""
+      hosts = hosts | array.add ("Basic form: " + (name_of v.c.entityform))
+    end
+    if v.c.entitylist != null && v.c.entitylist != ""
+      hosts = hosts | array.add ("List: " + (name_of v.c.entitylist))
+    end
+    if v.c.webform != null && v.c.webform != ""
+      hosts = hosts | array.add ("Multistep form: " + (name_of v.c.webform))
+    end
+    if (has_text v.c.customjavascript) && !(code | array.contains "JS")
+      code = code | array.add "JS"
+    end
+    if (has_text v.c.customcss) && !(code | array.contains "CSS")
+      code = code | array.add "CSS"
+    end
+    if v.lang != null && !(langs | array.contains v.lang)
+      langs = langs | array.add v.lang
+    end
+  end
+  access = []
+  for r in rules_by_page[p.id] ?? []
+    access = access | array.add ((r.c.right == 2 ? "Restrict read" : "Grant change") + " (" + (names_of r.c.adx_webpageaccesscontrolrule_webrole) + ")")
+  end
+-}}
+| `{{ row.path }}` | {{ cell p.name }} | {{ cell (name_of p.c.pagetemplateid) }} | {{ name_of p.c.publishingstateid }} | {{ p.c.hiddenfromsitemap ? "Hidden" : "Yes" }} | {{ cell (hosts | array.uniq | array.join "; ") }} | {{ cell (access | array.join "; ") }} | {{ code | array.join ", " }} | {{ cell (langs | array.join ", ") }} |
+{{ end }}
+### Web roles
+
+| Web role | Assigned automatically to | Table permissions | Page access rules | Cloud flows |
+|---|---|---|---|---|
+{{ for role in roles | array.sort "name" -}}
+{{-
+  auto = []
+  if role.c.anonymoususersrole; auto = auto | array.add "Anonymous users"; end
+  if role.c.authenticatedusersrole; auto = auto | array.add "Authenticated users"; end
+  n_perms = 0
+  for x in perms; if (x.c.adx_entitypermission_webrole ?? []) | array.contains role.id; n_perms = n_perms + 1; end; end
+  n_rules = 0
+  for x in rules; if (x.c.adx_webpageaccesscontrolrule_webrole ?? []) | array.contains role.id; n_rules = n_rules + 1; end; end
+  n_flows = 0
+  for x in flows; if (x.c.adx_CloudFlowConsumer_adx_webrole ?? []) | array.contains role.id; n_flows = n_flows + 1; end; end
+-}}
+| {{ cell role.name }} | {{ auto.size > 0 ? (auto | array.join ", ") : "— (assigned to contacts)" }} | {{ n_perms }} | {{ n_rules }} | {{ n_flows }} |
+{{ end }}
+#### What each role can do
+
+Tables a member of the role can reach through table permissions granted to the role directly (child permissions with **Parent** access type apply through their parent).
+
+{{ for role in roles | array.sort "name" -}}
+{{-
+  grants = []
+  for x in perms
+    if (x.c.adx_entitypermission_webrole ?? []) | array.contains role.id
+      grants = grants | array.add ("`" + (x.c.entitylogicalname ?? "?") + "` " + (scope_labels["" + x.c.scope] ?? ("" + x.c.scope)) + ": " + (privileges x.c))
+    end
+  end
+-}}
+- **{{ role.name }}** — {{ grants.size > 0 ? (grants | array.sort | array.join "; ") : "no table permissions" }}
+{{ end }}
+### Table permissions
+
+| Permission | Table | Access type | Privileges | Web roles | Relationship |
+|---|---|---|---|---|---|
+{{ for x in perms | array.sort "name" -}}
+{{-
+  c = x.c
+  scope = scope_labels["" + c.scope] ?? ("" + c.scope)
+  rel = "—"
+  if c.scope == 756150001
+    rel = c.contactrelationship ?? "—"
+  else if c.scope == 756150002
+    rel = c.accountrelationship ?? "—"
+  else if c.scope == 756150003
+    rel = "Parent: " + (name_of c.parententitypermission) + " via " + (c.parentrelationship ?? "?")
+  end
+  perm_roles = c.adx_entitypermission_webrole ?? []
+-}}
+{{- roles_text = perm_roles.size > 0 ? (names_of perm_roles) : (c.scope == 756150003 ? "(through parent)" : "—") -}}
+| {{ cell x.name }} | `{{ c.entitylogicalname }}` | {{ scope }} | {{ privileges c }} | {{ cell roles_text }} | {{ cell rel }} |
+{{ end }}
+### Page access control rules
+
+| Page | Right | Scope | Web roles |
+|---|---|---|---|
+{{ for r in rules | array.sort "name" -}}
+| {{ cell (name_of r.c.webpageid) }} | {{ r.c.right == 2 ? "Restrict read" : "Grant change" }} | {{ r.c.scope == 2 ? "Exclude direct child web files" : "All content" }} | {{ cell (names_of r.c.adx_webpageaccesscontrolrule_webrole) }} |
+{{ end }}
+### Basic forms
+
+| Basic form | Table | Dataverse form | Mode | Table permissions | On pages | Custom JavaScript |
+|---|---|---|---|---|---|---|
+{{ for f in bforms | array.sort "name" -}}
+| {{ cell f.name }} | `{{ f.c.entityname }}` | {{ cell f.c.formname }}{{ if has_text f.c.tabname }} (tab {{ cell f.c.tabname }}){{ end }} | {{ mode_labels["" + f.c.mode] ?? "—" }} | {{ f.c.entitypermissionsenabled ? "Enforced" : "**Not enforced**" }} | {{ cell ((hosted_by[f.id] ?? []) | array.sort | array.join ", ") }} | {{ code_size f.c.registerstartupscript }} |
+{{ end }}
+### Lists
+
+| List | Table | Details page | Create page | Search | Table permissions | On pages | Custom JavaScript |
+|---|---|---|---|---|---|---|---|
+{{ for l in lists | array.sort "name" -}}
+| {{ cell l.name }} | `{{ l.c.entityname }}` | {{ cell (name_of l.c.webpagefordetailsview) }} | {{ cell (name_of l.c.webpageforcreate) }} | {{ l.c.searchenabled ? "Yes" : "No" }} | {{ l.c.entitypermissionsenabled ? "Enforced" : "**Not enforced**" }} | {{ cell ((hosted_by[l.id] ?? []) | array.sort | array.join ", ") }} | {{ code_size l.c.registerstartupscript }} |
+{{ end }}
+### Multistep forms
+{{ for m in mforms | array.sort "name" }}
+{{-
+  # Steps in order: from the start step along Next Step; steps reached only through conditions follow.
+  steps_by_id = {}
+  for s in steps
+    if s.c.webform == m.id
+      steps_by_id[s.id] = s
+    end
+  end
+  ordered = []
+  seen = {}
+  cur = m.c.startstep
+  guard = 0
+  while cur != null && cur != "" && seen[cur] == null && guard < 100
+    seen[cur] = true
+    if steps_by_id[cur] != null
+      ordered = ordered | array.add steps_by_id[cur]
+      cur = steps_by_id[cur].c.nextstep
+    else
+      cur = null
+    end
+    guard = guard + 1
+  end
+  for s in steps
+    if s.c.webform == m.id && seen[s.id] == null
+      ordered = ordered | array.add s
+    end
+  end
+  m_pages = hosted_by[m.id] ?? []
+-}}
+
+#### {{ m.name }}
+
+On pages: {{ m_pages.size > 0 ? (m_pages | array.sort | array.join ", ") : "—" }} · Authentication required: {{ m.c.authenticationrequired ? "Yes" : "No" }} · Edit existing record: {{ m.c.editexistingrecordpermitted ? "Yes" : "No" }} · Multiple records per user: {{ m.c.multiplerecordsperuserpermitted ? "Yes" : "No" }}
+
+| # | Step | Type | Table | Form | Mode | Custom JavaScript |
+|---|---|---|---|---|---|---|
+{{ for s in ordered -}}
+| {{ for.index + 1 }} | {{ cell s.name }} | {{ step_labels["" + s.c.type] ?? "—" }} | {{ s.c.targetentitylogicalname != null ? "`" + s.c.targetentitylogicalname + "`" : "—" }} | {{ cell (s.c.formname ?? "—") }}{{ if has_text s.c.tabname }} (tab {{ cell s.c.tabname }}){{ end }} | {{ mode_labels["" + s.c.mode] ?? "—" }} | {{ code_size s.c.registerstartupscript }} |
+{{ end -}}
+{{ end }}
+### Cloud flows
+
+Flows the site calls through the Power Pages connector. Their definitions and triggers are in the PowerAutomateFlows and SolutionsReference exports.
+
+| Cloud flow | Web roles |
+|---|---|
+{{ for f in flows | array.sort "name" -}}
+| {{ cell f.name }} | {{ cell (names_of f.c.adx_CloudFlowConsumer_adx_webrole) }} |
+{{ end }}
+{{
+  webapi = {}
+  webapi_tables = []
+  for s in settings
+    parts = (s.name ?? "") | string.split "/"
+    if parts.size == 3 && (parts[0] | string.downcase) == "webapi"
+      tbl = parts[1]
+      if webapi[tbl] == null
+        webapi[tbl] = {}
+        webapi_tables = webapi_tables | array.add tbl
+      end
+      webapi[tbl][parts[2] | string.downcase] = s.c.value
+    end
+  end
+-}}
+### Web API
+
+Tables exposed to client-side code through the Power Pages Web API (`Webapi/<table>/enabled` and `Webapi/<table>/fields` site settings). Table permissions still apply.
+
+{{ if webapi_tables.size > 0 -}}
+| Table | Enabled | Fields |
+|---|---|---|
+{{ for tbl in webapi_tables | array.sort -}}
+| `{{ tbl }}` | {{ webapi[tbl].enabled ?? "—" }} | {{ cell (webapi[tbl].fields ?? "—") }} |
+{{ end -}}
+{{ else -}}
+_No tables exposed._
+{{ end }}
+{{
+  groups = {}
+  group_names = []
+  for s in settings
+    g = ((s.name ?? "") | string.split "/")[0]
+    if groups[g] == null
+      groups[g] = []
+      group_names = group_names | array.add g
+    end
+    groups[g] = groups[g] | array.add s
+  end
+-}}
+### Site settings
+{{ for g in group_names | array.sort }}
+#### {{ g }}
+
+| Setting | Value |
+|---|---|
+{{ for s in groups[g] | array.sort "name" -}}
+{{- value = (sensitive s.name) ? "(value withheld)" : (s.c.value ?? "") -}}
+| `{{ cell s.name }}` | {{ cell (("" + value) | string.truncate 200) }} |
+{{ end -}}
+{{ end }}
+{{ if secret_settings.size > 0 }}
+**Values not exported** (names suggest secrets): {{ secret_settings | array.map "name" | array.sort | array.join ", " }}
+{{ end }}
+### Templates and content
+
+| Page template | Type | Web template | Pages using it |
+|---|---|---|---|
+{{ for t in ptemplates | array.sort "name" -}}
+{{-
+  used = 0
+  for p in roots
+    if p.c.pagetemplateid == t.id
+      used = used + 1
+    end
+  end
+-}}
+| {{ cell t.name }} | {{ template_labels["" + t.c.type] ?? "—" }} | {{ cell (name_of t.c.webtemplateid) }} | {{ used }} |
+{{ end }}
+| Web template | Used by page templates |
+|---|---|
+{{ for w in webtemplates | array.sort "name" -}}
+{{-
+  users = []
+  for t in ptemplates
+    if t.c.webtemplateid == w.id
+      users = users | array.add t.name
+    end
+  end
+-}}
+{{- users_text = users.size > 0 ? (users | array.sort | array.join ", ") : "— (included by other templates, or unused)" -}}
+| {{ cell w.name }} | {{ cell users_text }} |
+{{ end }}
+**Content snippets:** {{ snippets.size > 0 ? (snippets | array.map "name" | array.sort | array.join ", ") : "—" }}
+
+**Site markers:** {{ if markers.size > 0 }}{{ for mk in markers | array.sort "name" }}{{ mk.name }} → {{ name_of mk.c.pageid }}{{ if !for.last }}; {{ end }}{{ end }}{{ else }}—{{ end }}
+**Web files:** {{ webfiles.size }}{{ if webfiles.size > 0 }} — {{ webfiles | array.map "name" | array.sort | array.join ", " }}{{ end }}
+
+{{ if redirects.size > 0 -}}
+| Redirect | Inbound URL | Target |
+|---|---|---|
+{{ for r in redirects | array.sort "name" -}}
+| {{ cell r.name }} | {{ cell r.c.inboundurl }} | {{ cell (r.c.redirecturl ?? (name_of (r.c.webpageid ?? r.c.sitemarkerid))) }} |
+{{ end }}
+{{ end -}}
+
+### Navigation
+
+{{ for set in linksets | array.sort "name" -}}
+{{-
+  set_links = []
+  for l in links
+    if l.c.weblinksetid == set.id
+      set_links = set_links | array.add ((l.name ?? "") + ((l.c.pageid != null && l.c.pageid != "") ? " → " + (name_of l.c.pageid) : ((has_text l.c.externalurl) ? " → " + l.c.externalurl : "")))
+    end
+  end
+-}}
+- **{{ set.name }}** ({{ set_links.size }} links): {{ set_links | array.join "; " }}
+{{ end }}
+{{ end }}

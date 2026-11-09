@@ -113,7 +113,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
         public void EveryShippedSpec_RendersAgainstSyntheticData()
         {
             var specs = PathResolver.DiscoverSpecConfigs(_baseDir).ToList();
-            Assert.That(specs, Has.Count.EqualTo(7));
+            Assert.That(specs, Has.Count.EqualTo(8));
 
             foreach (var spec in specs)
             {
@@ -237,6 +237,11 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
             // EntityDictionary names its table result entityAttributes; the other specs name it entities.
             var data = JObject.Parse(Intermediate);
             data["entityAttributes"] = data["entities"]!.DeepClone();
+
+            // PowerPages has its own fixture (PowerPagesTemplateTests); here it only has to render with no sites.
+            data["ppSites"] = new JArray();
+            data["ppComponents"] = new JArray();
+            data["ppComponentNames"] = new JArray();
             File.WriteAllText(Path.Combine(runDir, "intermediate.json"), data.ToString());
             new TemplateRenderer(_ => { }).Render(job, _baseDir, runDir);
             return File.ReadAllText(Path.Combine(runDir, "output.md"));

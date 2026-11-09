@@ -185,6 +185,27 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
             Assert.That(output, Is.EqualTo("A(quickCreate), B(dialog), C(999)"));
         }
 
+        // ── JSON held in a column ─────────────────────────────────────────
+
+        [Test]
+        public void ParseJson_ObjectsArraysAndValues()
+        {
+            var intermediate = new JObject { ["r"] = new JObject { ["content"] = "{\"name\":\"x\",\"ids\":[\"a\",\"b\"],\"n\":2,\"on\":true}" } }.ToString();
+
+            var output = Render("{{ c = r.content | parse_json }}{{ c.name }} {{ c.ids | array.join \",\" }} {{ c.n + 1 }} {{ c.on }}", intermediate);
+
+            Assert.That(output, Is.EqualTo("x a,b 3 true"));
+        }
+
+        [TestCase("")]
+        [TestCase("not json")]
+        public void ParseJson_EmptyOrInvalid_ReturnsNull(string json)
+        {
+            var intermediate = new JObject { ["r"] = new JObject { ["content"] = json } }.ToString();
+
+            Assert.That(Render("{{ (r.content | parse_json) == null }}", intermediate), Is.EqualTo("true"));
+        }
+
         // ── Cloud flow triggers ───────────────────────────────────────────
 
         [TestCase("{\"type\":\"Recurrence\",\"recurrence\":{\"frequency\":\"Minute\",\"interval\":10}}", "Scheduled: every 10 Minute")]
