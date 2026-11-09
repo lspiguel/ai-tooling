@@ -1200,7 +1200,7 @@ New error codes for these tools, added to [§6.2](#62-conventions):
 | `connection` | string | ✓ | |
 | `solutionUniqueName` | string | ✓ | The WIP. Unmanaged, else `managed_solution` |
 | `items` | `WebResourceItem[]` | ✓ | 1–50 entries |
-| `publish` | boolean | | Default `true`: one `PublishXmlRequest` for every resource written |
+| `publish` | boolean | | Default `true`: one `PublishXmlRequest` for every resource written, and for every unchanged one whose content was written but never published (step 3) |
 
 ```ts
 interface WebResourceItem {
@@ -1220,6 +1220,7 @@ interface UpdateWebResourcesResult {
     versionBefore: string | null;
     versionAfter: string | null;
     sha256: string;
+    published: boolean;      // this resource was in the call's publish, and the publish succeeded
     error?: ToolError["error"];
   }>;
   published: boolean;
@@ -1233,8 +1234,8 @@ Sequence:
 
 1. **Prepare** (before the dialog). If the organization has no File root, prompt for one ([File root](#file-root)). Read every file and resolve every name. The web resource type comes from the file extension (`.htm`/`.html` 1, `.css` 2, `.js` 3, `.xml` 4, `.png` 5, `.jpg`/`.jpeg` 6, `.gif` 7, `.xsl`/`.xslt` 9, `.ico` 10, `.svg` 11, `.resx` 12). An unknown extension, or a type different from an existing resource's, is `invalid_argument`. Fail the whole call before the dialog on: a path the File root does not accept; a file over the organization's maximum upload size; an existing resource that is managed (`managed_component`), outside the WIP (`not_in_solution`), or without `expectedVersion` (`invalid_argument`), or whose `versionNumber` differs from it (`version_conflict`); a new resource whose name does not start with the WIP publisher's prefix and `_` (`invalid_argument`).
 2. **Approve.** One dialog listing each item: create or update, name, path, size, SHA-256 and versions.
-3. **Write** in request order. An item whose content matches the environment's *unpublished* content (`RetrieveUnpublishedRequest`) byte for byte is `unchanged` and is not written: every update raises `versionNumber`, identical content included (S10). Before each update the version is read again; a change since preparation fails the item with `version_conflict`. The first failure stops the run; later entries are `notAttempted`.
-4. **Publish** the resources written, when `publish` is true and at least one was written. Publishing raises `versionNumber` again (S10), so `versionAfter` is read after the publish and is the baseline for the next call.
+3. **Write** in request order. An item whose content matches the environment's *unpublished* content (`RetrieveUnpublishedRequest`) byte for byte is `unchanged` and is not written: every update raises `versionNumber`, identical content included (S10). When `publish` is true, an `unchanged` item's *published* content (`Retrieve`) is also compared: if it differs, the content was written earlier without a publish — by a call with `publish: false`, or in the maker portal — and the item is published in step 4 without being written again (decided 2026-11-09, from the live test of every web resource type). Before each update the version is read again; a change since preparation fails the item with `version_conflict`. The first failure stops the run; later entries are `notAttempted`.
+4. **Publish**, when `publish` is true, the resources written and the `unchanged` ones whose published content differs, in one targeted request; nothing when there are none. An item's `published` says whether it was in that request and the request succeeded. Publishing raises `versionNumber` again (S10), so `versionAfter` is read after the publish and is the baseline for the next call.
 5. **Read back** the WIP and report anything unexpected, as `add_solution_components` does.
 
 Measured in S10 on a near-empty trial environment: an update takes 0.3–0.5 s and a targeted publish about 3 s. Exporting and importing a one-resource WIP takes 14–21 s before its publish-all (11–31 s), and before PAC's unpack and pack.

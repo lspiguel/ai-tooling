@@ -44,8 +44,9 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
             mock.Setup(s => s.Retrieve("webresource", It.IsAny<Guid>(), It.IsAny<ColumnSet>())).Returns((string name, Guid id, ColumnSet columns) => Clone(Rows[id]));
             mock.Setup(s => s.Update(It.IsAny<Entity>())).Callback((Entity entity) =>
             {
+                // An update changes the unpublished content only; Retrieve keeps returning the published content (S10).
                 Updates.Add(entity);
-                Rows[entity.Id]["content"] = entity["content"];
+                UnpublishedContent[entity.Id] = (string)entity["content"];
                 Rows[entity.Id]["versionnumber"] = ++_version;
             });
             mock.Setup(s => s.Execute(It.IsAny<RetrieveUnpublishedRequest>())).Returns((OrganizationRequest request) =>
@@ -79,6 +80,12 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
                 Publishes.Add(publish);
                 foreach (var id in System.Xml.Linq.XDocument.Parse(publish.ParameterXml).Descendants("webresource").Select(e => Guid.Parse(e.Value)))
                 {
+                    if (UnpublishedContent.TryGetValue(id, out var pending))
+                    {
+                        Rows[id]["content"] = pending;
+                        UnpublishedContent.Remove(id);
+                    }
+
                     Rows[id]["versionnumber"] = ++_version;
                 }
 
@@ -90,7 +97,13 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
 
         public HashSet<Guid> InWip { get; } = new HashSet<Guid>();
 
+        /// <summary>Content written but not yet published, by resource; <c>Rows[id]["content"]</c> is the published content.</summary>
         public Dictionary<Guid, string> UnpublishedContent { get; } = new Dictionary<Guid, string>();
+
+        /// <summary>The content users get: what <c>Retrieve</c> returns until the next publish (S10).</summary>
+        /// <param name="id">The web resource.</param>
+        /// <returns>The published content, decoded.</returns>
+        public string PublishedText(Guid id) => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String((string)Rows[id]["content"]));
 
         public List<Entity> Updates { get; } = new List<Entity>();
 
@@ -114,6 +127,22 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
             return copy;
         }
 
+        private static Entity Project(Entity row, ColumnSet columns)
+        {
+            if (columns.AllColumns)
+            {
+                return Clone(row);
+            }
+
+            var copy = new Entity(row.LogicalName, row.Id);
+            foreach (var column in columns.Columns.Where(row.Contains))
+            {
+                copy[column] = row[column];
+            }
+
+            return copy;
+        }
+
         private void AddRow(Guid id, string name, string content, bool managed) => Rows[id] = new Entity("webresource", id)
         {
             ["name"] = name,
@@ -133,7 +162,11 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
                 case "solution":
                     var solution = new Entity("solution", WipId) { ["uniquename"] = Wip, ["ismanaged"] = false, ["publisherid"] = new EntityReference("publisher", PublisherId) };
                     var managedSolution = new Entity("solution", Guid.NewGuid()) { ["uniquename"] = "ManagedOne", ["ismanaged"] = true, ["publisherid"] = new EntityReference("publisher", PublisherId) };
-                    return new EntityCollection(new[] { solution, managedSolution }.Where(s => Equal("uniquename") is not string name || (string)s["uniquename"] == name).ToList());
+                    // Only the columns asked for, as Dataverse returns them: a tool reading a column it did not request must fail here too.
+                    return new EntityCollection(new[] { solution, managedSolution }
+                        .Where(s => Equal("uniquename") is not string name || (string)s["uniquename"] == name)
+                        .Select(s => Project(s, query.ColumnSet))
+                        .ToList());
                 case "organization":
                     return new EntityCollection(new List<Entity> { new Entity("organization", Guid.NewGuid()) { ["maxuploadfilesize"] = 5000 } });
                 case "solutioncomponent":

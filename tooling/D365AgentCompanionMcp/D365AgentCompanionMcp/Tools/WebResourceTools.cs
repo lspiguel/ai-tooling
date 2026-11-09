@@ -60,7 +60,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         public static ToolDefinition UpdateWebResourcesTool() => ToolDefinition.Simple(
             UpdateWebResources,
             ToolTier.Write,
-            "Creates or updates web resources in development from local files, then publishes just those. Files are passed by path, never by content: a path relative to the File root (get_connection_info.settings.fileRoot) or an absolute path inside it. An existing resource must already be in the named unmanaged WIP and needs expectedVersion — the versionNumber from get_component_state — which the tool re-checks just before writing; a new resource is created in the WIP, under the WIP publisher's prefix. A resource whose content already matches the environment's unpublished content is reported unchanged and not written. The first failure stops the run; later entries are notAttempted. versionAfter is read after the publish and is the baseline for the next call. Registering a script on a form or a command stays an import. Requires reason and a connection confirmed as development; approved once or under a Write grant.",
+            "Creates or updates web resources in development from local files, then publishes just those. Files are passed by path, never by content: a path relative to the File root (get_connection_info.settings.fileRoot) or an absolute path inside it. An existing resource must already be in the named unmanaged WIP and needs expectedVersion — the versionNumber from get_component_state — which the tool re-checks just before writing; a new resource is created in the WIP, under the WIP publisher's prefix. A resource whose content already matches the environment's unpublished content is reported unchanged and not written; if that content was never published, it is published with the others. Each result's published says whether that resource was published. The first failure stops the run; later entries are notAttempted. versionAfter is read after the publish and is the baseline for the next call. Registering a script on a form or a command stays an import. Requires reason and a connection confirmed as development; approved once or under a Write grant.",
             InputSchema.ForConnection()
                 .String(SolutionUniqueName, "The WIP: an unmanaged solution.", required: true, minLength: 1)
                 .ObjectArray(Items, "1–50 files.", ItemSchema(), 1, 50)
@@ -100,7 +100,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 ("status", new JObject { ["type"] = "string", ["enum"] = new JArray("created", "updated", "unchanged", "failed", "notAttempted") }),
                 ("versionBefore", Tools.OutputSchema.NullableString()),
                 ("versionAfter", Tools.OutputSchema.NullableString()),
-                ("sha256", Tools.OutputSchema.String()));
+                ("sha256", Tools.OutputSchema.String()),
+                ("published", Tools.OutputSchema.Boolean()));
             ((JObject)result["properties"]!)["error"] = new JObject { ["type"] = "object" };
 
             var unexpected = Tools.OutputSchema.Object(
@@ -287,7 +288,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             var summary = new StringBuilder()
                 .AppendLine($"Solution    : {solution.GetAttributeValue<string>("uniquename")}  (unmanaged)")
                 .AppendLine($"File root   : {root.Path}  ({root.LevelLabel})")
-                .AppendLine($"Publish     : {(publish ? "yes, just the resources written" : "no")}")
+                .AppendLine($"Publish     : {(publish ? "yes, just the resources written, and any whose content is written but not yet published" : "no")}")
                 .AppendLine("Files       :");
             foreach (var item in items)
             {
@@ -310,6 +311,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
 
             var results = new JArray();
             var written = new List<Item>();
+            var toPublish = new List<Item>();
             var stopped = false;
             foreach (var item in plan.Items)
             {
@@ -351,8 +353,19 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                         })).Entity;
                         if (string.Equals(unpublished.GetAttributeValue<string>("content"), item.Base64, StringComparison.Ordinal))
                         {
-                            // Identical content is not written: every update raises versionNumber (S10).
+                            // Identical content is not written: every update raises versionNumber (S10). But content
+                            // written earlier without a publish is still published: Retrieve returns the published
+                            // content (S10), so a difference means this content never reached users (SPEC 6.8, step 3).
                             result["status"] = "unchanged";
+                            if (plan.Publish)
+                            {
+                                var live = service.Retrieve(WebResource, item.ExistingId.Value, new ColumnSet("content"));
+                                if (!string.Equals(live.GetAttributeValue<string>("content"), item.Base64, StringComparison.Ordinal))
+                                {
+                                    toPublish.Add(item);
+                                }
+                            }
+
                             continue;
                         }
 
@@ -379,6 +392,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                     }
 
                     written.Add(item);
+                    toPublish.Add(item);
                 }
                 catch (Exception ex)
                 {
@@ -390,17 +404,22 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
 
             var published = false;
             string? publishError = null;
-            if (plan.Publish && written.Count > 0)
+            if (plan.Publish && toPublish.Count > 0)
             {
                 try
                 {
-                    service.Execute(new PublishXmlRequest { ParameterXml = PublishXml(written.Select(w => w.ExistingId!.Value)) });
+                    service.Execute(new PublishXmlRequest { ParameterXml = PublishXml(toPublish.Select(w => w.ExistingId!.Value)) });
                     published = true;
                 }
                 catch (Exception ex)
                 {
                     publishError = ToolException.FromDataverse(ex).Message;
                 }
+            }
+
+            foreach (var item in plan.Items.Where(i => i.Result != null))
+            {
+                item.Result!["published"] = published && toPublish.Contains(item);
             }
 
             // Publishing raises the version again, so versionAfter is read last (S10).

@@ -95,6 +95,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
             var id = Guid.Parse((string)created["id"]!);
             Assert.That(_data.Publishes.Single().ParameterXml, Does.Contain(id.ToString("D")).And.Not.Contain(WebResourceData.ExistingId.ToString("D")));
             Assert.That((bool)result.Payload["published"]!, Is.True);
+            Assert.That((bool)created["published"]!, Is.True);
             Assert.That((string?)created["versionAfter"], Is.EqualTo(_data.VersionOf(id)), "versionAfter is read after the publish");
             Assert.That(result.Payload["unexpectedCount"]!.Value<int>(), Is.Zero);
             AssertSchema(result);
@@ -147,7 +148,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
         public async Task IdenticalContent_IsUnchanged_NotWritten_AndNothingIsPublished()
         {
             var version = _data.VersionOf(WebResourceData.ExistingId);
-            _data.UnpublishedContent[WebResourceData.ExistingId] = Convert.ToBase64String(Encoding.UTF8.GetBytes("// new content"));
+            _data.Rows[WebResourceData.ExistingId]["content"] = Convert.ToBase64String(Encoding.UTF8.GetBytes("// new content"));
 
             var result = await Call(Item("Webresources/scripts/account.form.js", WebResourceData.ExistingName, expectedVersion: version));
 
@@ -155,9 +156,57 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
             var item = result.Payload["results"]![0]!;
             Assert.That((string?)item["status"], Is.EqualTo("unchanged"));
             Assert.That((string?)item["versionAfter"], Is.EqualTo(version), "no write, so the version did not rise");
+            Assert.That((bool)item["published"]!, Is.False);
             Assert.That(_data.Updates, Is.Empty);
             Assert.That(_data.Publishes, Is.Empty);
             Assert.That((bool)result.Payload["published"]!, Is.False);
+        }
+
+        [Test]
+        public async Task ContentWrittenButNeverPublished_IsUnchanged_NotWrittenAgain_ButPublished()
+        {
+            // The live gap: an earlier call with publish false (or the maker portal) left the new content unpublished.
+            var version = _data.VersionOf(WebResourceData.ExistingId);
+            _data.UnpublishedContent[WebResourceData.ExistingId] = Convert.ToBase64String(Encoding.UTF8.GetBytes("// new content"));
+
+            var result = await Call(Item("Webresources/scripts/account.form.js", WebResourceData.ExistingName, expectedVersion: version));
+
+            Assert.That(result.IsError, Is.False, result.Payload.ToString());
+            var item = result.Payload["results"]![0]!;
+            Assert.That((string?)item["status"], Is.EqualTo("unchanged"));
+            Assert.That(_data.Updates, Is.Empty, "identical to the unpublished content, so not written again");
+            Assert.That(_data.Publishes.Single().ParameterXml, Does.Contain(WebResourceData.ExistingId.ToString("D")));
+            Assert.That((bool)item["published"]!, Is.True);
+            Assert.That((bool)result.Payload["published"]!, Is.True);
+            Assert.That(_data.PublishedText(WebResourceData.ExistingId), Is.EqualTo("// new content"));
+            Assert.That((string?)item["versionAfter"], Is.EqualTo(_data.VersionOf(WebResourceData.ExistingId)).And.Not.EqualTo(version), "the publish raised the version");
+        }
+
+        [Test]
+        public async Task ContentWrittenButNeverPublished_WithPublishFalse_StaysUnpublished()
+        {
+            _data.UnpublishedContent[WebResourceData.ExistingId] = Convert.ToBase64String(Encoding.UTF8.GetBytes("// new content"));
+
+            var result = await CallWith(
+                new JObject { ["publish"] = false },
+                Item("Webresources/scripts/account.form.js", WebResourceData.ExistingName, expectedVersion: _data.VersionOf(WebResourceData.ExistingId)));
+
+            Assert.That(result.IsError, Is.False, result.Payload.ToString());
+            Assert.That((string?)result.Payload["results"]![0]!["status"], Is.EqualTo("unchanged"));
+            Assert.That((bool)result.Payload["results"]![0]!["published"]!, Is.False);
+            Assert.That(_data.Publishes, Is.Empty);
+            Assert.That(_data.PublishedText(WebResourceData.ExistingId), Is.EqualTo("// old"));
+        }
+
+        [Test]
+        public async Task AnUpdate_IsWhatUsersGet_AfterThePublish()
+        {
+            var result = await Call(Item("Webresources/scripts/account.form.js", WebResourceData.ExistingName, expectedVersion: _data.VersionOf(WebResourceData.ExistingId)));
+
+            Assert.That(result.IsError, Is.False, result.Payload.ToString());
+            Assert.That((string?)result.Payload["results"]![0]!["status"], Is.EqualTo("updated"));
+            Assert.That((bool)result.Payload["results"]![0]!["published"]!, Is.True);
+            Assert.That(_data.PublishedText(WebResourceData.ExistingId), Is.EqualTo("// new content"));
         }
 
         [Test]

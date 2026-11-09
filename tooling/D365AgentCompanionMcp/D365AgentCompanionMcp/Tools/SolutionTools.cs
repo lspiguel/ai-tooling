@@ -144,7 +144,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         /// <returns>The solution row; <c>not_found</c> when there is none.</returns>
         internal static Entity FindSolution(IOrganizationService service, string uniqueName)
         {
-            var query = new QueryExpression("solution") { ColumnSet = new ColumnSet("uniquename", "ismanaged"), TopCount = 1 };
+            // publisherid: update_web_resources checks a new resource's name against the WIP publisher's prefix.
+            var query = new QueryExpression("solution") { ColumnSet = new ColumnSet("uniquename", "ismanaged", "publisherid"), TopCount = 1 };
             query.Criteria.AddCondition("uniquename", ConditionOperator.Equal, uniqueName);
             return service.RetrieveMultiple(query).Entities.FirstOrDefault() ?? throw MetadataHelpers.NotFound("solution", uniqueName);
         }
