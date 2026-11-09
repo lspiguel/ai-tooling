@@ -22,6 +22,18 @@
       "resultKey": "entities"
     },
     {
+      "id": "relationships-one-to-many",
+      "type": "webapi",
+      "path": "RelationshipDefinitions/Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata?$select=SchemaName,ReferencedEntity,ReferencingEntity,ReferencingAttribute&$filter=IsCustomRelationship eq true and IsManaged eq false",
+      "resultKey": "oneToMany"
+    },
+    {
+      "id": "relationships-many-to-many",
+      "type": "webapi",
+      "path": "RelationshipDefinitions/Microsoft.Dynamics.CRM.ManyToManyRelationshipMetadata?$select=SchemaName,Entity1LogicalName,Entity2LogicalName,IntersectEntityName&$filter=IsCustomRelationship eq true and IsManaged eq false",
+      "resultKey": "manyToMany"
+    },
+    {
       "id": "project-tables",
       "type": "fetchxml",
       "source": "project-tables.fetch.xml",

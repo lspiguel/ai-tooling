@@ -52,6 +52,20 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
     { ""MetadataId"": ""11111111-0000-0000-0000-000000000007"", ""LogicalName"": ""appointment"", ""DisplayName"": { ""UserLocalizedLabel"": { ""Label"": ""Appointment"" } }, ""IsCustomEntity"": false, ""IsManaged"": true, ""IsIntersect"": false, ""TableType"": ""Standard"", ""Attributes"": [] },
     { ""MetadataId"": ""11111111-0000-0000-0000-000000000006"", ""LogicalName"": ""con_account_contact"", ""DisplayName"": null, ""IsCustomEntity"": true, ""IsManaged"": false, ""IsIntersect"": true, ""TableType"": ""Standard"", ""Attributes"": [] }
   ],
+  ""oneToMany"": [
+    { ""SchemaName"": ""con_project_account"", ""ReferencedEntity"": ""account"", ""ReferencedAttribute"": ""accountid"", ""ReferencingEntity"": ""con_project"", ""ReferencingAttribute"": ""con_accountid"", ""ReferencingEntityNavigationPropertyName"": ""con_accountid"", ""ReferencedEntityNavigationPropertyName"": ""con_project_account"", ""IsHierarchical"": false, ""CascadeConfiguration"": { ""Assign"": ""NoCascade"", ""Delete"": ""RemoveLink"", ""Merge"": ""NoCascade"", ""Reparent"": ""NoCascade"", ""Share"": ""NoCascade"", ""Unshare"": ""NoCascade"" }, ""AssociatedMenuConfiguration"": { ""Behavior"": ""UseCollectionName"", ""Group"": ""Details"", ""Order"": 10000 } },
+    { ""SchemaName"": ""con_project_parent"", ""ReferencedEntity"": ""con_project"", ""ReferencedAttribute"": ""con_projectid"", ""ReferencingEntity"": ""con_project"", ""ReferencingAttribute"": ""con_parentid"", ""ReferencingEntityNavigationPropertyName"": ""con_parentid"", ""ReferencedEntityNavigationPropertyName"": ""con_project_children"", ""IsHierarchical"": true, ""CascadeConfiguration"": { ""Assign"": ""Cascade"", ""Delete"": ""Cascade"", ""Merge"": ""NoCascade"", ""Reparent"": ""Cascade"", ""Share"": ""Cascade"", ""Unshare"": ""Cascade"" }, ""AssociatedMenuConfiguration"": { ""Behavior"": ""DoNotDisplay"", ""Group"": ""Details"" } },
+    { ""SchemaName"": ""con_project_customer_account"", ""ReferencedEntity"": ""account"", ""ReferencedAttribute"": ""accountid"", ""ReferencingEntity"": ""con_project"", ""ReferencingAttribute"": ""con_customerid"", ""ReferencingEntityNavigationPropertyName"": ""con_customerid_account"", ""ReferencedEntityNavigationPropertyName"": ""con_project_customer_account"", ""IsHierarchical"": false, ""CascadeConfiguration"": { ""Assign"": ""NoCascade"", ""Delete"": ""Restrict"", ""Merge"": ""NoCascade"", ""Reparent"": ""NoCascade"", ""Share"": ""NoCascade"", ""Unshare"": ""NoCascade"" }, ""AssociatedMenuConfiguration"": { ""Behavior"": ""UseCollectionName"", ""Group"": ""Details"", ""Order"": 10000 } },
+    { ""SchemaName"": ""con_project_customer_contact"", ""ReferencedEntity"": ""contact"", ""ReferencedAttribute"": ""contactid"", ""ReferencingEntity"": ""con_project"", ""ReferencingAttribute"": ""con_customerid"", ""ReferencingEntityNavigationPropertyName"": ""con_customerid_contact"", ""ReferencedEntityNavigationPropertyName"": ""con_project_customer_contact"", ""IsHierarchical"": false, ""CascadeConfiguration"": { ""Assign"": ""NoCascade"", ""Delete"": ""Restrict"", ""Merge"": ""NoCascade"", ""Reparent"": ""NoCascade"", ""Share"": ""NoCascade"", ""Unshare"": ""NoCascade"" }, ""AssociatedMenuConfiguration"": { ""Behavior"": ""UseCollectionName"", ""Group"": ""Details"", ""Order"": 10000 } }
+  ],
+  ""manyToMany"": [
+    { ""SchemaName"": ""con_account_contact"", ""Entity1LogicalName"": ""account"", ""Entity2LogicalName"": ""contact"", ""IntersectEntityName"": ""con_account_contact"", ""Entity1NavigationPropertyName"": ""con_account_contact_account"", ""Entity2NavigationPropertyName"": ""con_account_contact_contact"", ""Entity1AssociatedMenuConfiguration"": { ""Behavior"": ""UseLabel"", ""Group"": ""Details"", ""Label"": { ""UserLocalizedLabel"": { ""Label"": ""Linked contacts"" } } }, ""Entity2AssociatedMenuConfiguration"": { ""Behavior"": ""UseCollectionName"", ""Group"": ""Details"", ""Order"": 10000 } }
+  ],
+  ""tables"": [
+    { ""LogicalName"": ""con_project"", ""DisplayName"": { ""UserLocalizedLabel"": { ""Label"": ""Project"" } } },
+    { ""LogicalName"": ""account"", ""DisplayName"": { ""UserLocalizedLabel"": { ""Label"": ""Account"" } } },
+    { ""LogicalName"": ""contact"", ""DisplayName"": { ""UserLocalizedLabel"": { ""Label"": ""Contact"" } } }
+  ],
   ""projectTables"": [ { ""objectid"": """ + ContactId + @""" }, { ""objectid"": ""11111111-0000-0000-0000-000000000007"" } ],
   ""forms"": [
     { ""name"": ""Project Main"", ""type"": 2, ""objecttypecode"": ""con_project"", ""isdefault"": true, ""ismanaged"": false },
@@ -113,7 +127,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
         public void EveryShippedSpec_RendersAgainstSyntheticData()
         {
             var specs = PathResolver.DiscoverSpecConfigs(_baseDir).ToList();
-            Assert.That(specs, Has.Count.EqualTo(8));
+            Assert.That(specs, Has.Count.EqualTo(9));
 
             foreach (var spec in specs)
             {
@@ -216,6 +230,37 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
 
             Assert.That(output.IndexOf("| 2 | Second |", StringComparison.Ordinal), Is.LessThan(output.IndexOf("| 1 | First |", StringComparison.Ordinal)));
             Assert.That(output, Does.Not.Contain("msdyn_shipped"), "managed option sets are filtered in the template; the endpoint does not support $filter");
+        }
+
+        [Test]
+        public void SolutionsReference_ListsEachTablesRelationships()
+        {
+            var output = RenderSpec("SolutionsReference");
+
+            Assert.That(output, Does.Contain("**Relationships:** lookups `con_accountid` → account, `con_customerid` → account, `con_customerid` → contact, `con_parentid` → con_project; referenced by con_project.`con_parentid`\n"));
+            Assert.That(output, Does.Contain("**Relationships:** referenced by con_project.`con_accountid`, con_project.`con_customerid`; N:N with contact (`con_account_contact`)\n"));
+            Assert.That(output, Does.Contain("**Relationships:** referenced by con_project.`con_customerid`; N:N with account (`con_account_contact`)\n"));
+        }
+
+        [Test]
+        public void Relationships_OneToManyWithBehaviorCascadeNavigationAndMenu()
+        {
+            var output = RenderSpec("Relationships");
+
+            Assert.That(output, Does.Contain("| 4 | 1 | 3 | 1 |"), "counts: 1:N, N:N, primary tables, tables with lookups");
+            Assert.That(output, Does.Contain("### `account` (Account)"));
+            Assert.That(output, Does.Contain("| `con_project` (Project) | `con_accountid` | `con_project_account` | Referential | Delete: Remove link; Assign, Share, Unshare, Reparent, Merge: None | `con_accountid` / `con_project_account` | Collection name (Details) |"));
+            Assert.That(output, Does.Contain("| `con_project` (Project) | `con_parentid` | `con_project_parent` | Parental (hierarchical) | Delete, Assign, Share, Unshare, Reparent: Cascade all; Merge: None | `con_parentid` / `con_project_children` | Hidden |"));
+            Assert.That(output, Does.Contain("| `con_project` (Project) | `con_customerid` | `con_project_customer_contact` | Referential, restrict delete | Delete: Restrict; Assign, Share, Unshare, Reparent, Merge: None |"));
+        }
+
+        [Test]
+        public void Relationships_ManyToManyAndLookupIndex()
+        {
+            var output = RenderSpec("Relationships");
+
+            Assert.That(output, Does.Contain("| `con_account_contact` | `account` (Account) | `contact` (Contact) | `con_account_contact` | `con_account_contact_account` / `con_account_contact_contact` | Linked contacts (Details) / Collection name (Details) |"));
+            Assert.That(output, Does.Contain("- `con_project` (Project): `con_accountid` → `account` · `con_customerid` → `account`, `contact` · `con_parentid` → `con_project`"));
         }
 
         [Test]

@@ -34,6 +34,21 @@ environment: {{ _meta.environment.url }}
     end
   end
 
+  # The project's relationships (custom, unmanaged), indexed by each table they involve.
+  lookups_by_table = {}
+  referenced_by_table = {}
+  for r in oneToMany
+    lookups_by_table[r.ReferencingEntity] = (lookups_by_table[r.ReferencingEntity] ?? []) | array.add ("`" + r.ReferencingAttribute + "` → " + r.ReferencedEntity)
+    referenced_by_table[r.ReferencedEntity] = (referenced_by_table[r.ReferencedEntity] ?? []) | array.add (r.ReferencingEntity + ".`" + r.ReferencingAttribute + "`")
+  end
+  many_by_table = {}
+  for r in manyToMany
+    many_by_table[r.Entity1LogicalName] = (many_by_table[r.Entity1LogicalName] ?? []) | array.add (r.Entity2LogicalName + " (`" + r.SchemaName + "`)")
+    if r.Entity2LogicalName != r.Entity1LogicalName
+      many_by_table[r.Entity2LogicalName] = (many_by_table[r.Entity2LogicalName] ?? []) | array.add (r.Entity1LogicalName + " (`" + r.SchemaName + "`)")
+    end
+  end
+
   form_type_labels = {}
   form_type_labels["2"] = "main"
   form_type_labels["6"] = "quick view"
@@ -157,6 +172,23 @@ func render_views(table)
   ret $parts | array.join ", "
 end
 
+func render_relationships(table)
+  $parts = []
+  $lookups = lookups_by_table[table.LogicalName]
+  if $lookups != null
+    $parts = $parts | array.add ("lookups " + ($lookups | array.sort | array.join ", "))
+  end
+  $referenced = referenced_by_table[table.LogicalName]
+  if $referenced != null
+    $parts = $parts | array.add ("referenced by " + ($referenced | array.sort | array.join ", "))
+  end
+  $many = many_by_table[table.LogicalName]
+  if $many != null
+    $parts = $parts | array.add ("N:N with " + ($many | array.sort | array.join ", "))
+  end
+  ret $parts.size > 0 ? ($parts | array.join "; ") : "—"
+end
+
 func render_table(table, heading_suffix)
   $out = "\n### " + table.LogicalName + " — \"" + (table.DisplayName | display_label table.LogicalName) + "\"" + heading_suffix + "\n\n"
   $desc = table.Description | display_label ""
@@ -166,6 +198,7 @@ func render_table(table, heading_suffix)
   $out = $out + render_columns(table) + "\n"
   $out = $out + "**Forms:** " + render_forms(table) + "\n"
   $out = $out + "**Views:** " + render_views(table) + "\n"
+  $out = $out + "**Relationships:** " + render_relationships(table) + "\n"
   ret $out
 end
 -}}

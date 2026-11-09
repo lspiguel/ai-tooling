@@ -54,10 +54,11 @@ These specs are deployed on first-time setup:
 |---|---|
 | `EntityDictionary` | The tables the project created or customized, with every column except lookup and choice name companions and currency base columns |
 | `SecurityModel` | The project's security roles and their privilege depths |
-| `SolutionsReference` | The complete customization reference — the project's solutions, custom tables, customized managed tables, virtual tables, option sets, plug-ins and steps, custom APIs, classic workflows, cloud flows, business rules, business process flows, security roles, app modules and environment variables |
+| `SolutionsReference` | The complete customization reference — the project's solutions, custom tables, customized managed tables, virtual tables (with each table's relationships), option sets, plug-ins and steps, custom APIs, classic workflows, cloud flows, business rules, business process flows, security roles, app modules and environment variables |
 | `FormsAndViews` | The forms and views the project created or customized |
 | `Optionsets` | Unmanaged global option sets |
 | `PowerAutomateFlows` | The project's cloud flows with their definitions |
+| `Relationships` | The project's relationships: one-to-many by primary table with lookup column, behavior (parental, referential…) and cascade settings, Web API navigation properties and related menu; many-to-many with intersect table; and an index of lookups by table |
 | `PowerPages` | Power Pages sites on the enhanced data model: the page map (URLs, templates, the forms and lists each page hosts, access rules), web roles and what each can do, table permissions, basic forms, lists, multistep forms and their steps, cloud flows, Web API exposure, site settings, templates and navigation |
 | `SolutionInventory` | Visible solutions with publisher, version, managed state and install date |
 
@@ -72,10 +73,11 @@ The sample specs describe what the project built or customized, not everything i
 | Form, view, app | It is unmanaged, or a component of a project solution |
 | Option set, plug-in step, workflow, cloud flow, custom API, environment variable | It is unmanaged. Plug-in steps are those of unmanaged plug-in assemblies, with their state |
 | Security role | It is unmanaged, in the root business unit and not based on a Microsoft role template |
+| Relationship | It is custom and unmanaged — created by a maker, not the system relationships every table gets (owner, created by, notes, activities) |
 
 A *project solution* is any visible, unmanaged solution other than `Default` and `Active`. Cloud flows named `CXP_…` are left out: Customer Insights – Journeys generates them for its journeys. Against a downstream environment, where the project's solutions are managed, most sections come out empty.
 
-A standard column the project changed without creating it — a new label or required level on a shipped column — is not listed in `SolutionsReference`.
+A standard column the project changed without creating it — a new label or required level on a shipped column — is not listed in `SolutionsReference`. Likewise, a shipped relationship whose cascade or menu settings the project changed is not listed in `Relationships`.
 
 `PowerPages` covers every active site on the enhanced data model, and only active components. Sites on the standard data model (`adx_` tables) are not covered. Page HTML, web template source and custom JavaScript are not exported, only whether a page or form has custom code and how long it is; page copy is read only to find the forms and lists a page embeds with Liquid. A reference to an inactive component is shown with its name and *(inactive)*. The values of site settings whose names contain *secret*, *password*, *key*, *token*, *credential*, *connectionstring* or *certificate* are never read from Dataverse; only their names are listed.
 
@@ -102,6 +104,7 @@ Context-Exporter/
 │   │   ├── optionsets.sbn
 │   │   ├── power-automate-flows.sbn
 │   │   ├── power-pages.sbn
+│   │   ├── relationships.sbn
 │   │   ├── security-model.sbn
 │   │   ├── solution-inventory.sbn
 │   │   └── solutions-reference.sbn
@@ -110,6 +113,7 @@ Context-Exporter/
 │   ├── Optionsets.context-exporter-config.json
 │   ├── PowerAutomateFlows.context-exporter-config.json
 │   ├── PowerPages.context-exporter-config.json
+│   ├── Relationships.context-exporter-config.json
 │   ├── SecurityModel.context-exporter-config.json
 │   ├── SolutionInventory.context-exporter-config.json
 │   ├── SolutionsReference.context-exporter-config.json
