@@ -45,6 +45,15 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
         public List<PersistedFileRoot> FileRoots { get; set; } = new List<PersistedFileRoot>();
 
         /// <summary>
+        /// Gets or sets a value indicating whether the person turned on <b>Write call log to disk</b> (SPEC 6a.2). Off by
+        /// default; only the person changes it, in the Active Approvals window, and no tool reports or changes it.
+        /// </summary>
+        public bool CallLogToDisk { get; set; }
+
+        /// <summary>Gets or sets the folder the call log files are written to, or <c>null</c> when none was chosen (SPEC 6a.2).</summary>
+        public string? CallLogFolder { get; set; }
+
+        /// <summary>
         /// Gets or sets the plugin version the setup wizard was last completed for (SPEC §8.7), or <c>null</c> before
         /// the first run. Nothing else about setup is kept.
         /// </summary>

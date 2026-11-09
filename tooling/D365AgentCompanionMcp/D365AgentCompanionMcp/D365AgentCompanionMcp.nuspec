@@ -27,6 +27,7 @@ nuget.exe pack tooling\D365AgentCompanionMcp\D365AgentCompanionMcp\D365AgentComp
       - add_solution_components, remove_solution_component and get_required_components accept registered plug-in assemblies, steps, custom APIs and their request parameters and response properties.
       - The Record queries switch is gone: a query that touches records is approved on its own. The settings file is upgraded on first load; the always dev-environment confirmation is withdrawn.
       - The agent-companion skills cover direct web resource updates, the PCF push path and the plug-in components.
+      - Optional call log on disk: a Write call log to disk checkbox in Active Approvals writes every call and its outcome, in full, to one JSON file per connection and day in a folder you choose. A folder inside a Git working tree is refused. Off by default, and never reported to the agent.
     </releaseNotes>
     <copyright>Copyright 2026- Luciano Spiguel</copyright>
     <tags>XrmToolBox MCP AI Agent D365 Dataverse Solutions ALM</tags>

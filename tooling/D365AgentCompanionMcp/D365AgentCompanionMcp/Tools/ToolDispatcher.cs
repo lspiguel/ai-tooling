@@ -59,7 +59,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         public async Task<ToolResult> CallAsync(McpToolCall call, CancellationToken cancellation)
         {
             var tool = this.byName[call.Name];
-            var state = new CallState(call, tool, this.host.RunningToken, cancellation);
+            var state = new CallState(call, tool, this.host.RunningToken, cancellation) { LogFolder = this.host.DiskLog.ActiveFolder };
             if (tool.Tier != ToolTier.Host && call.Arguments?[InputSchema.Connection]?.Type == JTokenType.String)
             {
                 state.Binding = this.host.Registry.Find((string)call.Arguments[InputSchema.Connection]!);
@@ -488,6 +488,32 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             {
                 this.host.LogHostCall(entry);
             }
+
+            this.WriteToDisk(state, result, entry, duration);
+        }
+
+        /// <summary>
+        /// Queues the call for the call log on disk when the person has it on (SPEC 6a.2). Nothing here can fail the
+        /// call or change its result: the write runs in the background, and a failure is a warning in the plugin window.
+        /// </summary>
+        private void WriteToDisk(CallState state, ToolResult result, CallLogEntry entry, TimeSpan duration)
+        {
+            if (this.host.DiskLog.ActiveFolder == null && state.LogFolder == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var binding = state.Binding;
+                var sharedName = binding != null && this.host.Registry.Bound().Any(b => !ReferenceEquals(b, binding) && string.Equals(b.ConnectionName, binding.ConnectionName, StringComparison.OrdinalIgnoreCase));
+                var record = DiskLogRecord.Create(binding, sharedName, state.Call, state.Tool.Tier.ToString(), entry, result, duration);
+                this.host.DiskLog.Write(record, state.LogFolder);
+            }
+            catch (Exception ex)
+            {
+                this.host.DiskLog.ReportFailure(ex);
+            }
         }
 
         /// <summary>What the dispatcher knows about one call as it runs.</summary>
@@ -516,6 +542,9 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             public CallInspection Inspection { get; set; } = CallInspection.None;
 
             public PreparedCall? Prepared { get; set; }
+
+            /// <summary>Gets or sets the call log folder that was active when the call was received, or <c>null</c>.</summary>
+            public string? LogFolder { get; set; }
         }
     }
 }

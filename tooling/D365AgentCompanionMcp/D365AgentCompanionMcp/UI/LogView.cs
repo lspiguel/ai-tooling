@@ -41,6 +41,16 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
             this.TopIndex = Math.Max(0, this.Items.Count - 1);
         }
 
+        /// <summary>Appends a plugin warning that belongs to no call, such as a call log on disk that could not be written (SPEC 6a.2).</summary>
+        /// <param name="text">The warning, made line-safe here.</param>
+        public void AppendNotice(string text)
+        {
+            var line = CallLogFormatter.Sanitize(text);
+            this.Items.Add(new Line(line, null));
+            this.HorizontalExtent = Math.Max(this.HorizontalExtent, TextRenderer.MeasureText(line, this.Font).Width + 8);
+            this.TopIndex = Math.Max(0, this.Items.Count - 1);
+        }
+
         /// <summary>Removes every line.</summary>
         public void ClearLines()
         {
@@ -50,7 +60,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
 
         private void OnDoubleClickLine(object? sender, EventArgs e)
         {
-            if (this.SelectedItem is Line line)
+            if (this.SelectedItem is Line { Entry: not null } line)
             {
                 using (var detail = new CallDetailForm(line.Entry))
                 {
@@ -61,7 +71,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
 
         private sealed class Line
         {
-            public Line(string text, CallLogEntry entry)
+            public Line(string text, CallLogEntry? entry)
             {
                 this.Text = text;
                 this.Entry = entry;
@@ -69,7 +79,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
 
             public string Text { get; }
 
-            public CallLogEntry Entry { get; }
+            /// <summary>Gets the call the line belongs to, or <c>null</c> for a notice.</summary>
+            public CallLogEntry? Entry { get; }
 
             public override string ToString() => this.Text;
         }

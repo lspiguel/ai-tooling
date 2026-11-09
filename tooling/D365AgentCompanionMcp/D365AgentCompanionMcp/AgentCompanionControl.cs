@@ -425,7 +425,14 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
             this.host.StateChanged += this.OnHostChanged;
             this.host.HostCallLogged += this.OnHostCallLogged;
             this.host.NoticeRaised += this.OnHostNotice;
+            this.host.DiskLog.Warned += this.OnDiskLogWarned;
             this.host.Attach(this);
+
+            // A saved call log that could not be turned on at startup is reported in the log panel (SPEC 6a.2).
+            if (this.host.DiskLog.StartupWarning is string warning)
+            {
+                this.OnDiskLogWarned(this, "⚠ " + warning);
+            }
         }
 
         private void DetachFromHost()
@@ -439,6 +446,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
             this.host.StateChanged -= this.OnHostChanged;
             this.host.HostCallLogged -= this.OnHostCallLogged;
             this.host.NoticeRaised -= this.OnHostNotice;
+            this.host.DiskLog.Warned -= this.OnDiskLogWarned;
             if (this.binding != null)
             {
                 this.binding.ActivityChanged -= this.OnActivityChanged;
@@ -453,6 +461,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
         private void OnHostCallLogged(object? sender, CallLogEntry entry) => this.hostLog.Add(entry);
 
         private void OnHostNotice(object? sender, string notice) => this.RunOnUi(this.RefreshPanel);
+
+        private void OnDiskLogWarned(object? sender, string warning) => this.RunOnUi(() => this.hostLogView.AppendNotice(warning));
 
         private void OnActivityChanged(object? sender, EventArgs e) => this.RunOnUi(this.RefreshCounts);
 

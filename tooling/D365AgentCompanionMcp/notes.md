@@ -15,7 +15,7 @@
 | [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | **In progress** (2026-10-31) — five companion skills and their scripts built; script self-tests pass (35 + 11). Live exit checks: I31 verified; scenarios 1–4 pass; scenario 5 desk-checked; scenario 6 partial — the imported flow did not fire (E13). Findings E1–E13. See [Phase 4 — execution](#phase-4--execution) | See spec |
 | [5 — Release](SPEC.md#phase-5--release) | **Done** (2026-11-03) — published in the XrmToolBox Tool Library. Still to follow the release: the column-3 guide changes. See [Phase 5 — execution](#phase-5--execution) | See spec |
 | [6 — Planned enhancements](SPEC.md#phase-6--planned-enhancements) | **Built; live exit checks pending** (2026-11-05) — scoped approvals and the Active Approvals window, `update_web_resources`, plug-in components in the selectors, the skill changes and the docs, as version 1.2026.11.2. Built and unit-tested (383 tests); nothing of it has run in XrmToolBox or against a sandbox yet. See [Phase 6 — execution](#phase-6--execution) | See spec |
-| [6a — Refinements to 1.2026.11.2](#phase-6a--refinements) | **In progress** (2026-11-08) — follow-up tasks on the unreleased 1.2026.11.2 build, ahead of its release. 1 of 3 tasks done: the Tool Library icons; the disk call log is specified, and spikes S7, S8 and S12 moved here. Same version; no bump. See [Phase 6a — refinements](#phase-6a--refinements) | See [spec](SPEC.md#phase-6a--refinements) |
+| [6a — Refinements to 1.2026.11.2](#phase-6a--refinements) | **In progress** (2026-11-08) — follow-up tasks on the unreleased 1.2026.11.2 build, ahead of its release. 2 of 3 tasks built: the Tool Library icons, and the disk call log (2026-11-09; unit-tested, 416 tests, live check pending); spikes S7, S8 and S12 moved here. Same version; no bump. See [Phase 6a — refinements](#phase-6a--refinements) | See [spec](SPEC.md#phase-6a--refinements) |
 | [7 — Plug-in authoring](SPEC.md#phase-7--plug-in-authoring) | **Not started** (2026-11-03) — split from Phase 6 after field use (U10): registration through a WIP, `pac plugin push`, step mirroring and switching, custom API rebinding. Spike S9 done; S12 moved to [Phase 6a](#phase-6a--refinements) (2026-11-08) and gates this phase. Deferred at the person's choice | See spec |
 
 Status values: *Not started* · *In progress* · *Blocked* (say on what) · *Done*.
@@ -120,7 +120,7 @@ Started 2026-11-08. Follow-up work on the Phase 6 build before 1.2026.11.2 is re
 | # | Task | Status |
 |---|---|---|
 | 6a.1 | [Tool Library icon resolution](#6a1--tool-library-icon-resolution) | **Done** (2026-11-08); needs a build, and the 150px file pushed to `main`, to be seen in the Tool Library |
-| 6a.2 | Automatic call log on disk — one JSON file per connection and day, full arguments and results ([SPEC](SPEC.md#6a2--automatic-call-log-on-disk)) | Specified (2026-11-08); not built. Never reported to the agent in any tool response. One global checkbox in Active Approvals asks for the folder when ticked and is saved with the plugin settings. Decided: host calls go to `AgentCompanion-host-yyyyMMdd.json`; two connections with one name get an 8-character connection ID in the file name |
+| 6a.2 | [Automatic call log on disk](#6a2--automatic-call-log-on-disk) — one JSON file per connection and day, full arguments and results ([SPEC](SPEC.md#6a2--automatic-call-log-on-disk)) | **Built** (2026-11-09); unit-tested (416 tests, 0 warnings), not yet run in XrmToolBox. Specified 2026-11-08. Never reported to the agent in any tool response. One global checkbox in Active Approvals asks for the folder when ticked and is saved with the plugin settings. Decided: host calls go to `AgentCompanion-host-yyyyMMdd.json`; two connections with one name get an 8-character connection ID in the file name |
 | 6a.3 | Pending spikes S7, S8 and S12, moved from Phase 0 and Phase 7 ([SPEC](SPEC.md#6a3--pending-spikes)) | Moved (2026-11-08); none run. S12 gates Phase 7 |
 
 ### 6a.1 — Tool Library icon resolution
@@ -144,6 +144,40 @@ The XrmToolBox convention is 80×80 for Big and 32×32 for Small. The plugin emb
 - The source PNGs (16, 32, 64, 80, 128, 150 and 256px) stay in the project folder. Only the 32px and 80px files are embedded, so the other files are for packaging and reference.
 
 **Still to check.** Not built or run in this session. After a build, the tool tile and the tool list in XrmToolBox should show the sharper icons. The Tool Library shows the 150px icon only once `d365-agent-companion-150px.png` is on `main`, because the `iconUrl` is a raw.githubusercontent link.
+
+### 6a.2 — Automatic call log on disk
+
+Built on 2026-11-09 from [SPEC 6a.2](SPEC.md#6a2--automatic-call-log-on-disk). Same version, 1.2026.11.2. Unit tests went from 383 to 416, with 0 build warnings in Release.
+
+**What is built.**
+
+| Area | Where |
+|---|---|
+| Settings | `Hosting/HostSettings`: `CallLogToDisk` (default off) and `CallLogFolder` (default not set). Both have defaults, so `SchemaVersion` stays 1 and there is no upgrade mapping |
+| The setting and the writer | `Logging/DiskCallLog`, owned by `CompanionHost` as `DiskLog`: the startup check, `TurnOn` (refuses a missing folder or one inside a Git working tree), `TurnOff` (keeps the folder for the next prompt), the background write queue, file-name resolution, warn-once |
+| The file | `Logging/CallLogFile`: file name, header, entry, the `\n]}\n` trailer, bidi and separator escaping, `Check` (trailer, parse, schema, connection) |
+| The entry | `Logging/DiskLogRecord`: built from the panel's `CallLogEntry`, the call and the `ToolResult` |
+| Hook | `Tools/ToolDispatcher.Log` → `WriteToDisk`, after the panel entry. The active folder is captured when the call is received, so a call running when the log is turned off is still written |
+| Active Approvals | `UI/ActiveApprovalsForm`: the *Call log* row under the token — checkbox, folder or *Off — last folder*, and warnings. Not touched by any Reset |
+| Folder prompt | `UI/CallLogFolderForm`: the rules, the client-data warning, and an inline refusal |
+| Log panel | `UI/LogView.AppendNotice`; each tab's host log shows the startup warning on attach and every warning the writer raises |
+| Tests | `LoggingTests/CallLogFileTests` (6), `LoggingTests/DiskCallLogTests` (22), five call-log tests in `UITests/ActiveApprovalsFormTests`, and a `TempFolder` fake |
+
+**Implementation choices.**
+
+| # | Choice | Why |
+|---|---|---|
+| I60 | Writes are queued on one background task chain and run one at a time | A write must never delay the reply to the agent, and entries must stay in the order calls ended |
+| I61 | A file is fully parsed only the first time this process uses it; later writes check only the trailer | Parsing on every write grows with the file. The trailer check catches truncation and most hand edits; a file changed in the middle with its trailer intact is not caught until XrmToolBox restarts |
+| I62 | A plain-named file that belongs to another connection ID is never appended to; this connection takes its `[id8]` name | The spec's same-name rule looks only at connections bound now. A connection with the same name bound later the same day, after the first tab closed, would otherwise append to the other connection's file |
+| I63 | `result` is `null` on every error, and the error's details are in `outcome.errorDetails` | A failed call has no `structuredContent`. The details (for example from `version_conflict`) are in the call detail, so the file keeps them to stay a superset |
+| I64 | `approval` is `null` where the panel shows `—` | JSON readers should not have to know the dash. `outcomeLine` keeps it |
+| I65 | Warnings go to the host log of every tab, as notice lines that open no detail | The setting is host-wide, so its warnings are too. The host log is the one panel every tab shows |
+| I66 | The checkbox is ticked only after `TurnOn` accepts the folder; the prompt also checks inline and stays open on a refusal | The box never shows ticked for a folder that was refused |
+
+**Observation, not changed.** Arguments are parsed with Newtonsoft's defaults, which turn an ISO-date-shaped string into a date. Such a value is written back in Newtonsoft's ISO form, which can differ in offset or precision from what the agent sent. This already applies to the panel and the call detail, and to what tools receive. No current tool takes a bare date string.
+
+**Still to check — the live check in the spec.** Not run in XrmToolBox. In particular: the folder prompt's layout, the warning line under the checkbox, a startup warning in the host log after the saved folder is renamed, and the files written during an ordinary session in two tabs.
 
 ---
 

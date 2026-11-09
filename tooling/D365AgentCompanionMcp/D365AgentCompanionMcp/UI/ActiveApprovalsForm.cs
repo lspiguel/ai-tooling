@@ -15,7 +15,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
     using Lspiguel.Xrm.D365AgentCompanionMcp.Hosting;
 
     /// <summary>
-    /// The Active Approvals window (SPEC §8.8): the bearer token, then every grant and File root across all
+    /// The Active Approvals window (SPEC §8.8): the bearer token, the <b>Write call log to disk</b> setting (SPEC 6a.2), then every grant and File root across all
     /// environments and tenants as one tree. One window for all tabs. Resets and clears ask for confirmation inside the
     /// window, in place of the rows they would affect.
     /// </summary>
@@ -27,7 +27,11 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
         private readonly string originLabel;
         private readonly FlowLayoutPanel body = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Dock = DockStyle.Fill };
         private readonly FlowLayoutPanel footerHost = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 44, Padding = new Padding(8) };
+        private readonly CheckBox diskLog = new CheckBox { Text = "Write call log to disk", AutoSize = true, Padding = new Padding(0, 4, 0, 0) };
+        private readonly Label diskLogFolder = UiBuilder.Text();
+        private readonly Label diskLogWarning = UiBuilder.Text();
         private string? confirming;
+        private bool syncingDiskLog;
 
         /// <summary>Initializes a new instance of the <see cref="ActiveApprovalsForm"/> class.</summary>
         /// <param name="host">The host.</param>
@@ -36,6 +40,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
         {
             this.host = host;
             this.originLabel = originLabel;
+            this.ChooseLogFolder = start => CallLogFolderForm.Ask(this, start);
             this.Text = "Active Approvals — every environment and tenant";
             this.StartPosition = FormStartPosition.CenterParent;
             this.ClientSize = new Size(900, 640);
@@ -45,16 +50,33 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
             var token = UiBuilder.Row(UiBuilder.Caption("Token"), new TokenControl(host), UiBuilder.Text("One token for every client — regenerating affects all."));
             token.Dock = DockStyle.Top;
 
+            // A setting, not a grant: no reset touches it (SPEC 6a.2).
+            this.diskLogWarning.ForeColor = UiBuilder.WarningColor;
+            this.diskLogWarning.MaximumSize = new Size(860, 0);
+            this.diskLog.CheckedChanged += (s, e) => this.OnDiskLogToggled();
+            var callLog = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, Dock = DockStyle.Top };
+            callLog.Controls.Add(UiBuilder.Row(UiBuilder.Caption("Call log"), this.diskLog, this.diskLogFolder));
+            callLog.Controls.Add(this.diskLogWarning);
+
             this.Controls.Add(this.body);
             this.Controls.Add(this.footerHost);
+            this.Controls.Add(callLog);
             this.Controls.Add(token);
             this.body.SizeChanged += (s, e) => this.FitWidth();
 
             this.host.Approvals.Changed += this.OnChanged;
             this.host.FileRoots.Changed += this.OnChanged;
             this.host.Registry.Changed += this.OnChanged;
+            this.host.DiskLog.Changed += this.OnDiskLogChanged;
+            this.SyncDiskLog();
             this.Render();
         }
+
+        /// <summary>
+        /// Gets or sets the folder prompt shown when the call log checkbox is ticked: given the previous folder, it returns
+        /// the folder chosen, or <c>null</c> on Cancel. Replaced in tests.
+        /// </summary>
+        internal Func<string?, string?> ChooseLogFolder { get; set; }
 
         /// <summary>Opens the window, or brings the open one to the front: there is one window for all tabs.</summary>
         /// <param name="host">The host.</param>
@@ -86,6 +108,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
                 this.host.Approvals.Changed -= this.OnChanged;
                 this.host.FileRoots.Changed -= this.OnChanged;
                 this.host.Registry.Changed -= this.OnChanged;
+                this.host.DiskLog.Changed -= this.OnDiskLogChanged;
             }
 
             base.Dispose(disposing);
@@ -112,6 +135,76 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
             {
                 this.Render();
             }
+        }
+
+        private void OnDiskLogChanged(object? sender, EventArgs e)
+        {
+            if (this.IsDisposed)
+            {
+                return;
+            }
+
+            // Warnings come from the background writer: marshal to the UI thread once the window exists.
+            if (this.IsHandleCreated && this.InvokeRequired)
+            {
+                this.BeginInvoke(new Action(this.SyncDiskLog));
+            }
+            else
+            {
+                this.SyncDiskLog();
+            }
+        }
+
+        /// <summary>
+        /// Ticking from off asks for the folder; the box ends up ticked only when the folder passes the Git check.
+        /// Unticking turns the log off at once. To use another folder, untick and tick again (SPEC 6a.2).
+        /// </summary>
+        private void OnDiskLogToggled()
+        {
+            if (this.syncingDiskLog)
+            {
+                return;
+            }
+
+            if (!this.diskLog.Checked)
+            {
+                this.host.DiskLog.TurnOff();
+                this.SyncDiskLog();
+                return;
+            }
+
+            if (this.host.DiskLog.IsOn)
+            {
+                return;
+            }
+
+            var chosen = this.ChooseLogFolder(this.host.DiskLog.SavedFolder);
+            var refusal = chosen == null ? "no folder was chosen." : this.host.DiskLog.TurnOn(chosen);
+            this.SyncDiskLog();
+            if (refusal != null)
+            {
+                this.diskLogWarning.Text = "Not turned on: " + refusal;
+            }
+        }
+
+        private void SyncDiskLog()
+        {
+            var log = this.host.DiskLog;
+            this.syncingDiskLog = true;
+            try
+            {
+                this.diskLog.Checked = log.IsOn;
+            }
+            finally
+            {
+                this.syncingDiskLog = false;
+            }
+
+            var saved = log.SavedFolder;
+            this.diskLogFolder.Text = log.IsOn
+                ? $"Folder  {log.ActiveFolder}"
+                : saved == null ? "Off" : $"Off — last folder  {saved}";
+            this.diskLogWarning.Text = log.LastWarning ?? string.Empty;
         }
 
         private void FitWidth()

@@ -51,6 +51,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
             this.Tokens = new TokenStore(settings, protector);
             this.Approvals = new ApprovalStore(settings, clock);
             this.FileRoots = new FileRootStore(settings);
+            this.DiskLog = new DiskCallLog(settings);
             this.Registry = new ConnectionRegistry();
             this.Cursors = new CursorStore(clock);
             this.Dispatcher = new ToolDispatcher(this, (tools ?? ToolCatalog.Create)(this), clock);
@@ -87,6 +88,9 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
 
         /// <summary>Gets the File roots (SPEC §6.8).</summary>
         public FileRootStore FileRoots { get; }
+
+        /// <summary>Gets <b>Write call log to disk</b> (SPEC 6a.2): a setting of the person's, never reported to the agent.</summary>
+        public DiskCallLog DiskLog { get; }
 
         /// <summary>Gets the connection registry.</summary>
         public ConnectionRegistry Registry { get; }

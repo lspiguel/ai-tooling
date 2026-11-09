@@ -79,7 +79,7 @@ The same loop serves every moment above: a small set of WIP solutions per user s
 | R10 | **One transport group per WIP solution; one transport home per component** — placement follows the project's segmentation map ([§9.5](#95-transport-solutions-and-segmented-wip-solutions)) | A component in the wrong transport solution is costly to move once deployed (X4) |
 | R11 | **WIP solutions are never deployed downstream** — to test, UAT, production or any other environment that receives managed solutions; only transport solutions are. Promotion to a build environment (strategy A, [§9.7](#97-close-out-strategies)) is not a downstream deployment: it is how a WIP's components reach their transport solution, and the normal end of a WIP under A | A deployed WIP becomes a managed layer that ties its components' lifetime to the WIP (D1) |
 | R12 | **Write and Publisher calls must state a reason.** `reason` is required and must not be blank. A call without one fails before any dialog. The reason is still unverified agent text (R8) | The person approving a change sees the agent's stated intent next to the arguments, and a mismatch between them is grounds to deny |
-| R13 | **Every call is logged in the plugin window as a call line and an outcome line**, including denied, rejected and host calls ([§8.6](#86-call-log-format)). The log reaches disk only when the person uses **Save as…** | Gives each environment a reviewable record of what the agent asked for and what it got |
+| R13 | **Every call is logged in the plugin window as a call line and an outcome line**, including denied, rejected and host calls ([§8.6](#86-call-log-format)). The log reaches disk only when the person uses **Save as…**, unless the person turns on **Write call log to disk** ([6a.2](#6a2--automatic-call-log-on-disk)) | Gives each environment a reviewable record of what the agent asked for and what it got |
 | R14 | **A transport solution is never the edit vehicle.** Local edits reach development only through a WIP holding just the components being changed. An unpacked transport solution is never edited locally and imported into development. The one import of a transport solution into development is the unmanaged alignment import from the build environment under strategy A, which carries no local edits (A8) | An unmanaged import replaces every whole document in the solution with the imported copy ([§9.4](#94-why-the-overwrite-check-matters)). As an edit vehicle, that discards every change made in development since the copy was taken, across a whole transport solution |
 | R15 | **Delivery facts are derived or asked, never assumed.** The close-out strategy, which transport solutions exist, where each is extracted from, whether there is a build environment, and how pipelines run all come from the project, its environments or the person. Before shaping, and again before close-out, the agent states the steps it will take and the person confirms them ([§9.8](#98-delivery-context)) | A wrong assumption about the transport source or about who runs which pipeline puts work where it never ships, or ships it unreviewed |
 | R16 | **No managed solution of the project is ever imported into development.** A managed build of a transport solution, from any downstream environment or pipeline artifact, is never imported into a development environment — by the agent, by a script, or as a step the agent proposes. When a skill finds a managed copy of a project solution in development, it stops and tells the person | The managed layer locks the project's own components in development under a managed solution. Removing it means uninstalling that solution, which deletes its components — for tables and columns, with their data |
@@ -1579,7 +1579,7 @@ Per tenant and Global carry a warning. Per tenant is disabled, with the reason s
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-Double-clicking a call line opens its detail. The detail is held in memory only and is never saved. A saved log ([§8.6](#86-call-log-format)) holds the lines as shown in the panel, with parameters and return values truncated. It never holds full arguments or result payloads, and it is written only to a file the person chooses, outside any repository (R7).
+Double-clicking a call line opens its detail. The detail is held in memory only and is never saved, unless the person turns on **Write call log to disk** ([6a.2](#6a2--automatic-call-log-on-disk)), which writes it in full. A saved log ([§8.6](#86-call-log-format)) holds the lines as shown in the panel, with parameters and return values truncated. It never holds full arguments or result payloads, and it is written only to a file the person chooses, outside any repository (R7).
 
 ### 8.5 Connection already active dialog
 
@@ -1643,7 +1643,7 @@ After an `add_solution_components` outcome line, one `⚠ unexpected <type> <nam
 
 - Both lines of a pair are written together when the call ends, so another call's lines never come between them. Until then, the call shows in the approval dialog and in the **Pending approvals** and **Running** counts.
 - Lines do not wrap. The log uses a monospaced font and scrolls both ways. It is kept in memory for the life of the tab, and **Clear** empties it.
-- **Save as…** opens a standard Windows save dialog. The default name is `AgentCompanion-[ConnectionName]-yyyyMMdd-HHmmss.txt`. The plugin writes a UTF-8 text file holding a header line (connection name, organization friendly name and save time), then this tab's call log, then the host log under a `Host log` heading. Lines are written exactly as shown, truncation included. If the chosen folder is inside a Git working tree, meaning it or a parent folder contains `.git`, the plugin warns and asks the person to confirm (R7). The log is written to disk only through **Save as…**.
+- **Save as…** opens a standard Windows save dialog. The default name is `AgentCompanion-[ConnectionName]-yyyyMMdd-HHmmss.txt`. The plugin writes a UTF-8 text file holding a header line (connection name, organization friendly name and save time), then this tab's call log, then the host log under a `Host log` heading. Lines are written exactly as shown, truncation included. If the chosen folder is inside a Git working tree, meaning it or a parent folder contains `.git`, the plugin warns and asks the person to confirm (R7). The log is written to disk only through **Save as…**, unless the person turns on **Write call log to disk** ([6a.2](#6a2--automatic-call-log-on-disk)).
 
 ### 8.7 First-run setup wizard
 
@@ -1695,6 +1695,7 @@ The window opens from an **Active Approvals** button on the main panel of any ta
 ┌─ Active Approvals — every environment and tenant ─────────────────────────┐
 │ Token      : ●●●●●●●●●●●●●●●●  [Copy] [Regenerate]                        │
 │              One token for every client — regenerating affects all        │
+│ Call log   : [x] Write call log to disk   Folder  D:\AgentLogs            │
 ├─ Global ──────────────────────────────────────────────────────── [Reset] ─┤
 │ None                                                                      │
 ├─ Tenant 00000000… ────────────────────────────────────────────── [Reset] ─┤
@@ -1723,6 +1724,7 @@ The window opens from an **Active Approvals** button on the main panel of any ta
 ```
 
 - **Token.** It is shown masked, with **Copy** and **Regenerate** (H4, D8), and has moved here from the main panel.
+- **Call log.** The **Write call log to disk** checkbox and its folder ([6a.2](#6a2--automatic-call-log-on-disk)). When it is off, the line shows *Off*, with the last folder if there was one. A warning about the log — a saved folder that could not be used at startup, a failed write, a file left untouched — shows under it. It is a setting, not a grant: no **Reset** touches it.
 - **One tree, in a fixed order.** Grants are grouped by where they apply, not by scope:
   1. **Global** grants come first.
   2. Each **tenant** follows: its File root, its *Per tenant* grants, then each of its environments. Under an environment come its own File root, if it has one, its *Per environment* grants, then its *Session only* grants. All the entries of one tenant come before the next tenant.
@@ -2386,7 +2388,7 @@ S10 ran through a throwaway SDK console with its own sign-in, not through the pl
 | # | Task | Status |
 |---|---|---|
 | 6a.1 | **Tool Library icon resolution.** The embedded icons were half the size XrmToolBox expects, so they looked blurry next to other tools | **Done** (2026-11-08) |
-| 6a.2 | **Automatic call log on disk.** An opt-in setting that writes every call and its outcome, in full, to a JSON file per connection and day | Specified; not built |
+| 6a.2 | **Automatic call log on disk.** An opt-in setting that writes every call and its outcome, in full, to a JSON file per connection and day | **Built** (2026-11-09); unit-tested, live check pending |
 | 6a.3 | **Pending spikes.** S7, S8 and S12 move here from Phase 0 and Phase 7 | Moved; none run |
 
 #### 6a.1 — Tool Library icon resolution
@@ -2403,7 +2405,10 @@ XrmToolBox reads a tool's icons from the `BigImageBase64` and `SmallImageBase64`
 
 #### 6a.2 — Automatic call log on disk
 
-Today a call log reaches disk only through **Save as…**, as the truncated text shown in the panel ([§8.6](#86-call-log-format), R13). 6a.2 adds an opt-in setting that writes each call to disk as it happens, with full details, so a session can be reviewed or handed over without remembering to save.
+> [!NOTE]
+> **Built (2026-11-09), still version 1.2026.11.2.** Unit-tested; the check below has not run in XrmToolBox yet. Details the build settled are under *Settled when built*; progress is in [notes.md](notes.md#6a2--automatic-call-log-on-disk).
+
+Before 6a.2, a call log reached disk only through **Save as…**, as the truncated text shown in the panel ([§8.6](#86-call-log-format), R13). 6a.2 adds an opt-in setting that writes each call to disk as it happens, with full details, so a session can be reviewed or handed over without remembering to save.
 
 | Setting | Level | Default | Behaviour |
 |---|---|---|---|
@@ -2440,6 +2445,7 @@ Because the setting is global, it is not changed from a connection's tab, and Re
         "status": "ok",
         "errorCode": null,
         "errorMessage": null,
+        "errorDetails": null,
         "approval": "once",
         "durationMs": 800,
         "outcomeLine": "  → ok  once  0.8 s  solutionId=00000000-0…",
@@ -2465,7 +2471,17 @@ The file ends with `]}` and a newline, and the plugin appends by overwriting tha
 
 **Client data (R7).** The files hold full arguments and results, so they can hold client data, including record values from record reads. The folder is therefore checked more strictly than **Save as…**: the plugin **refuses** a log folder that is, or is inside, a Git working tree (it or a parent folder contains `.git`), rather than asking for confirmation, because nobody is there to confirm each write. The check runs when the folder is chosen, at startup, and again each time a file is opened. The folder prompt says plainly that the files can contain client data and are not encrypted.
 
-**Reword when built.** R13 and §8.4 say that a log reaches disk only through **Save as…** and that a call's detail is never saved; both become "unless the person turns on **Write call log to disk**". R7's wording stands. §8.8 gains the checkbox and the folder line.
+**Reworded when built (2026-11-09).** R13, §8.4 and §8.6 now say that a log reaches disk only through **Save as…** and that a call's detail is never saved, "unless the person turns on **Write call log to disk**". R7's wording stands. §8.8 has the checkbox and the folder line.
+
+**Settled when built (2026-11-09).**
+
+- *A failed call.* A call that failed has no `structuredContent`, so `result` is `null` for every error, and the error is in `outcome`: `errorCode`, `errorMessage` and `errorDetails` (the `ToolError` details, or `null`). The file stays a superset of the call detail.
+- *A call that never ran.* `approval` is `null` where the panel shows `—`; `outcomeLine` keeps the `—`.
+- *Size.* `responseBytes` is the UTF-8 size of the text content block returned to the agent. `pages` is 1 for a result and 0 for an error; a continuation page is its own entry, as in the panel.
+- *`unexpected`.* The panel's `⚠ unexpected <type> <name>` lines for the call, as shown; the components themselves are in `result.unexpected`.
+- *A file already written by another connection of the same name.* A plain-named file whose `connection.connectionId` is another connection's is never appended to, even when that connection is no longer bound; the connection writes to its `[id8]` file instead. The host file is checked the same way.
+- *When a write happens.* The entry is queued when the call ends and written on a background task, one at a time, so the reply to the agent never waits for the disk. A call received while the log was on is written even if the log is turned off before it ends.
+- *Warn once.* After a failed write, further failures are not reported until a write succeeds. A file left untouched is reported once per file.
 
 **Decided (2026-11-08).**
 

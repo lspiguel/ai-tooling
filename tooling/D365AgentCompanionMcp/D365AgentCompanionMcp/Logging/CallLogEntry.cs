@@ -10,7 +10,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Logging
 
     /// <summary>
     /// One call in a log: its line pair, any warning lines, and the detail shown on double-click (SPEC §8.4).
-    /// The detail is held in memory only and never saved.
+    /// The detail is held in memory; it reaches disk only when the person turns on <b>Write call log to disk</b> (SPEC 6a.2).
     /// </summary>
     internal sealed class CallLogEntry
     {

@@ -192,3 +192,26 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.Fakes
         }
     }
 }
+
+namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.Fakes
+{
+    /// <summary>A new folder under the temp path, outside every Git working tree, deleted on dispose.</summary>
+    internal sealed class TempFolder : IDisposable
+    {
+        public TempFolder()
+        {
+            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "AgentCompanionTests_" + Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(Path);
+        }
+
+        public string Path { get; }
+
+        public void Dispose()
+        {
+            if (System.IO.Directory.Exists(Path))
+            {
+                System.IO.Directory.Delete(Path, recursive: true);
+            }
+        }
+    }
+}

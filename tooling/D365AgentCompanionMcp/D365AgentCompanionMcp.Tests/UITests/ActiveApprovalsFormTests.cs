@@ -167,6 +167,97 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.UITests
             Assert.That(Texts(form).Any(t => t.Contains("Stale")), Is.True, string.Join(" | ", Texts(form)));
         }
 
+        // ---- Write call log to disk (SPEC 6a.2) ----
+
+        [Test]
+        public void TickingTheCallLog_AsksForTheFolder_StartingAtThePreviousOne_AndCancelLeavesItOff()
+        {
+            using var folder = new TempFolder();
+            _host.DiskLog.TurnOn(folder.Path);
+            _host.DiskLog.TurnOff();
+            using var form = new ActiveApprovalsForm(_host, "tab 1");
+            var asked = new List<string?>();
+            form.ChooseLogFolder = start =>
+            {
+                asked.Add(start);
+                return null;
+            };
+
+            CallLogBox(form).Checked = true;
+
+            Assert.That(asked, Is.EqualTo(new[] { System.IO.Path.GetFullPath(folder.Path) }));
+            Assert.That(CallLogBox(form).Checked, Is.False);
+            Assert.That(_host.DiskLog.IsOn, Is.False);
+            Assert.That(Texts(form).Any(t => t.Contains("no folder was chosen")), Is.True, string.Join(" | ", Texts(form)));
+        }
+
+        [Test]
+        public void AFolderInsideAGitWorkingTree_IsRefused_WithTheReasonShown()
+        {
+            using var folder = new TempFolder();
+            System.IO.Directory.CreateDirectory(System.IO.Path.Combine(folder.Path, ".git"));
+            using var form = new ActiveApprovalsForm(_host, "tab 1");
+            form.ChooseLogFolder = start => folder.Path;
+
+            CallLogBox(form).Checked = true;
+
+            Assert.That(CallLogBox(form).Checked, Is.False);
+            Assert.That(_host.DiskLog.IsOn, Is.False);
+            Assert.That(Texts(form).Any(t => t.Contains("Git working tree")), Is.True, string.Join(" | ", Texts(form)));
+        }
+
+        [Test]
+        public void AFolderThatPasses_TurnsTheLogOn_ShowsTheFolder_AndUntickingTurnsItOff_AndTickingAgainAsksAgain()
+        {
+            using var folder = new TempFolder();
+            using var form = new ActiveApprovalsForm(_host, "tab 1");
+            var asked = 0;
+            form.ChooseLogFolder = start =>
+            {
+                asked++;
+                return folder.Path;
+            };
+
+            CallLogBox(form).Checked = true;
+            Assert.That(_host.DiskLog.IsOn, Is.True);
+            Assert.That(CallLogBox(form).Checked, Is.True);
+            Assert.That(Texts(form).Any(t => t.Contains(System.IO.Path.GetFullPath(folder.Path))), Is.True, string.Join(" | ", Texts(form)));
+
+            CallLogBox(form).Checked = false;
+            Assert.That(_host.DiskLog.IsOn, Is.False);
+
+            CallLogBox(form).Checked = true;
+            Assert.That(asked, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void ResetAllApprovals_LeavesTheCallLogOn()
+        {
+            using var folder = new TempFolder();
+            _host.DiskLog.TurnOn(folder.Path);
+            Allow(ApprovalKind.ReadApproval, ApprovalScope.Always, "Anywhere", Guid.Empty);
+            using var form = new ActiveApprovalsForm(_host, "tab 1");
+
+            Click(form, "Reset all approvals");
+            Click(form, "Reset all");
+
+            Assert.That(_host.Approvals.List(), Is.Empty);
+            Assert.That(_host.DiskLog.IsOn, Is.True);
+            Assert.That(CallLogBox(form).Checked, Is.True);
+        }
+
+        [Test]
+        public void AStartupWarning_ShowsInTheWindow()
+        {
+            using var folder = new TempFolder();
+            var store = new FakeSettingsStore { Saved = new HostSettings { SchemaVersion = 1, CallLogToDisk = true, CallLogFolder = System.IO.Path.Combine(folder.Path, "gone") } };
+            var host = TestHost.Create(store: store);
+            using var form = new ActiveApprovalsForm(host, "tab 1");
+
+            Assert.That(CallLogBox(form).Checked, Is.False);
+            Assert.That(Texts(form).Any(t => t.Contains("off for this session")), Is.True, string.Join(" | ", Texts(form)));
+        }
+
         // ---- the approval dialog ----
 
         [Test]
@@ -329,6 +420,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.UITests
         private static List<string> Texts(Control root) => Walk<Label>(root).Select(l => l.Text).Where(t => t.Length > 0).ToList();
 
         private static List<string> Buttons(Control root) => Walk<Button>(root).Select(b => b.Text).ToList();
+
+        private static CheckBox CallLogBox(Control root) => Walk<CheckBox>(root).Single(c => c.Text == "Write call log to disk");
 
         private static void Click(Control root, string caption, int index = 0)
         {
