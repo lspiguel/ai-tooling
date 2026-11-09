@@ -6,7 +6,7 @@ nuget.exe pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExport
 <package>
   <metadata>
     <id>Lspiguel.Xrm.D365ContextExporter</id>
-    <version>1.2026.7.2</version>
+    <version>1.2026.11.1</version>
     <title>D365 CE Context Exporter for XrmToolBox</title>
     <authors>Luciano Spiguel</authors>
     <owners>Luciano Spiguel</owners>
@@ -18,31 +18,57 @@ nuget.exe pack tooling\D365ContextExporter\D365ContextExporter\D365ContextExport
       XrmToolBox plugin that executes FetchXML and Web API queries against a Dataverse environment, serialises results to an intermediate JSON file, and uses an internal scripting post-processor to produce Markdown grounding files for non-agentic AI assistants.
     </description>
     <releaseNotes>
-      IMPORTANT: Tool Library could not update or uninstall this tool, failing with
-      "An error occured while copying files: The process cannot access the file
-      '...\Plugins\D365ContextExporter\System.Text.Json.dll' because it is being
-      used by another process."
+      1.2026.11.1
 
-      FIX - one-time manual cleanup when upgrading from an older version.
-      Because the old files are locked and XrmToolBox never removes them, this
-      upgrade may fail with the same error one last time. To fix:
-      1. Close ALL XrmToolBox windows (check Task Manager for leftover
-         XrmToolBox.exe processes).
-      2. Open File Explorer and go to %AppData%\MscrmTools\XrmToolBox\Plugins
-      3. Delete the D365ContextExporter folder (it contains the old
-         System.Text.Json.dll and System.Text.Encodings.Web.dll).
-      4. If the upgrade previously failed halfway, also delete
-         D365ContextExporter.dll and D365ContextExporter.pdb from the Plugins
-         folder itself.
-      5. Start XrmToolBox and install/update the tool from the Tool Library.
+      NEW
+      - Run All Specs: runs every spec in the list one after another, after a
+        confirmation (a full run can take several minutes). A spec that fails is
+        logged and the others still run; Cancel stops the batch. The result panel
+        then opens the output folder.
+      - PowerPages spec: Power Pages sites on the enhanced data model - the page
+        map with URLs and the forms and lists each page shows, web roles and what
+        each can do, table permissions, page access rules, basic forms, lists,
+        multistep forms with their steps in flow order, cloud flows, Web API
+        exposure, site settings, templates and navigation. Values of site
+        settings that look like secrets are never read.
+      - Relationships spec: the project's relationships with their behavior and
+        cascade settings, Web API navigation properties and related menus, plus
+        an index of lookups by table. SolutionsReference now lists each table's
+        relationships.
+      - Higher-resolution icons.
 
-      CAUSE: previous versions shipped System.Text.Json.dll and
-      System.Text.Encodings.Web.dll as loose files in a Plugins subfolder.
-      XrmToolBox locks every DLL found in Plugins subfolders shortly after
-      start-up (even if the tool is never opened), so any later attempt by the
-      Tool Library to overwrite or delete those files fails. This version ships
-      no loose dependency DLLs at all, so updates and uninstalls work normally
-      from now on.
+      CHANGED
+      - The sample specs now describe what the project built or customized:
+        unmanaged components, managed tables with project columns, forms or
+        views, and components of project solutions. Run them against a
+        development environment. On a large environment SolutionsReference now
+        takes seconds instead of minutes, and its output is a fraction of the
+        size.
+      - SecurityModel shows each role as a table-by-action privilege matrix.
+      - Cloud flows show their trigger; disabled plug-in steps and draft
+        processes are marked as such.
+      - New template function parse_json, for JSON text held in a column.
+
+      FIXED
+      - Forms and views were cut off at 5,000 records.
+      - Empty publisher column; wrong form and view type labels; virtual tables
+        not detected; multi-select, file and image columns shown as "-";
+        application-required columns not marked as required; every security role
+        listed under one "Root" heading.
+      - Template parse errors now report line and column counted from 1.
+      - Upgrading the reference configuration no longer discards your edits:
+        a shipped file you edited is backed up first.
+
+      UPGRADING
+      - When the tool offers to update the reference configuration, choose Yes
+        to get the new and updated specs. Any shipped query, template or spec
+        you edited is backed up to config\backup\(previous version)\ before it is
+        replaced. LEGAL.md and files of your own are never touched.
+      - Coming from 1.2026.7.1 or earlier: if the Tool Library update fails with
+        "The process cannot access the file ...System.Text.Json.dll", close every
+        XrmToolBox window, delete the folder
+        %AppData%\MscrmTools\XrmToolBox\Plugins\D365ContextExporter, start
+        XrmToolBox and install the tool again from the Tool Library.
     </releaseNotes>
     <copyright>Copyright 2026- Luciano Spiguel</copyright>
     <tags>XrmToolBox Documentation AI Markdown D365 Dataverse Grounding</tags>

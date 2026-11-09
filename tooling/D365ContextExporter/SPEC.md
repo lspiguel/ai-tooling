@@ -1,10 +1,10 @@
 # D365 CE Context Exporter — specification
 
-> **Status:** Released · **Version:** 1.2026.7.2 · **Date:** 2026-11-09 · **Plugin:** `D365ContextExporter` · **Package:** `Lspiguel.Xrm.D365ContextExporter`
+> **Status:** Released · **Version:** 1.2026.11.1 · **Date:** 2026-11-09 · **Plugin:** `D365ContextExporter` · **Package:** `Lspiguel.Xrm.D365ContextExporter`
 
 An XrmToolBox plugin that runs the queries named in a spec file against a connected Dynamics 365 CE (Dataverse) environment, writes the results to an intermediate JSON file, and renders them through a Scriban template into one Markdown file. That file is uploaded as grounding context to a general-purpose AI assistant that cannot reach the environment itself.
 
-This document describes the plugin as built. It was derived from the code at 1.2026.7.2, the original plan and the six phase plans; how the plugin got here, the designs it left behind, and the open items found while writing this spec are in [notes.md](notes.md). User documentation is the [README](README.md).
+This document describes the plugin as built. It was derived from the code at 1.2026.7.2, the original plan and the six phase plans, and kept up to date through 1.2026.11.1; how the plugin got here, the designs it left behind, and the open items found while writing this spec are in [notes.md](notes.md). User documentation is the [README](README.md).
 
 ---
 
@@ -478,7 +478,7 @@ The rules were checked against a development environment on 2026-11-09 through t
 
 - Id `Lspiguel.Xrm.D365ContextExporter`, tags `XrmToolBox Documentation AI Markdown D365 Dataverse Grounding`, MIT licence, dependency on `XrmToolBox` ≥ 1.2025.10.74.
 - Contents: `LICENSE` and `readme.md` (the tooling README) at the root; `D365ContextExporter.dll` and `.pdb` in `lib\net472\Plugins`. Nothing in a `Plugins` subfolder (R4).
-- Release notes in the nuspec carry the one-time manual clean-up for people upgrading from a version that shipped `System.Text.Json.dll` in a subfolder.
+- Release notes in the nuspec describe the release for Tool Library users — new, changed, fixed, upgrading — and keep, under *Upgrading*, the one-time clean-up for people coming from a version that shipped `System.Text.Json.dll` in a subfolder (1.2026.7.1 or earlier).
 - Version: `1.YYYY.M.N`, set by hand in the csproj and nuspec (R10); CI does not stamp it.
 
 ### 13.3 CI
@@ -528,7 +528,7 @@ Not covered by unit tests: the shipped queries against a real environment, the p
 
 Fixes decided for open items in [notes.md](notes.md#open-items). F1–F4 change documentation, the schema and tests, not how a run behaves; F5 changes the upgrade ([§5.3](#53-upgrade)) and R8. A fix that changes an embedded file — the welcome HTML, `SampleConfig\` — reaches users with the next version (R10), and a `SampleConfig\` change reaches a base directory only if the person accepts the upgrade.
 
-**Status:** F1–F5 are built and the sections above describe them; they are not yet released. Writing the F4 tests also found that parse errors reported zero-based lines and columns; [§9.1](#91-engine) now counts from one.
+**Status:** F1–F5 are built, the sections above describe them, and they were released in 1.2026.11.1. Writing the F4 tests also found that parse errors reported zero-based lines and columns; [§9.1](#91-engine) now counts from one.
 
 | # | Open item | Fix |
 |---|---|---|
@@ -544,12 +544,12 @@ Open issues labelled [D365 Context Exporter](https://github.com/lspiguel/ai-tool
 
 | Issue | Opened | Request | Bearing on this spec |
 |---|---|---|---|
-| [#21](https://github.com/lspiguel/ai-tooling/issues/21) Sample configurations for relationships | 2026-06-21 | A relationship list per table in `SolutionsReference`, and a new spec for all relationships with extended information | **Built, unreleased:** the `Relationships` spec and a **Relationships** line per table in `SolutionsReference` ([§12.1](#121-specs)), configuration only (R7). Both read the Web API's `RelationshipDefinitions`, not the `metadata` runner, whose `relationships` target has no cascade, navigation or menu detail and cannot be filtered to the project's relationships |
-| [#22](https://github.com/lspiguel/ai-tooling/issues/22) Specs for Power Pages | 2026-06-21 | Page list, permissions, site settings | **Built, unreleased:** the `PowerPages` spec ([§12.1](#121-specs)), for sites on the enhanced data model. Needed one new function, `parse_json`, because the enhanced model keeps each component's settings as JSON in `powerpagecomponent.content`. Sites on the standard data model (`adx_` tables) are not covered |
+| [#21](https://github.com/lspiguel/ai-tooling/issues/21) Sample configurations for relationships | 2026-06-21 | A relationship list per table in `SolutionsReference`, and a new spec for all relationships with extended information | **Released in 1.2026.11.1.** The `Relationships` spec and a **Relationships** line per table in `SolutionsReference` ([§12.1](#121-specs)), configuration only (R7). Both read the Web API's `RelationshipDefinitions`, not the `metadata` runner, whose `relationships` target has no cascade, navigation or menu detail and cannot be filtered to the project's relationships |
+| [#22](https://github.com/lspiguel/ai-tooling/issues/22) Specs for Power Pages | 2026-06-21 | Page list, permissions, site settings | **Released in 1.2026.11.1.** The `PowerPages` spec ([§12.1](#121-specs)), for sites on the enhanced data model. Needed one new function, `parse_json`, because the enhanced model keeps each component's settings as JSON in `powerpagecomponent.content`. Sites on the standard data model (`adx_` tables) are not covered |
 | [#23](https://github.com/lspiguel/ai-tooling/issues/23) Choose a solution to export entities, forms, views and option sets from | 2026-06-26 | Limit an export to the components of chosen solutions; today's output covers the whole environment and is large | Maintainer's reply (2026-07-22): filter the solutions query, then filter entities by solution in the `solutions-reference.sbn` entities loop. The hard part is keeping standard tables that are customized (such as account) while dropping others. Configuration only unless a solution picker is wanted in the UI ([§11](#11-user-experience)) |
 | [#31](https://github.com/lspiguel/ai-tooling/issues/31) Output to PDF or other formats | 2026-07-29 | Microsoft 365 Copilot Notebooks accept only Office and PDF files | Changes [§10](#10-output-and-legal-notice) and the out-of-scope line on non-Markdown output ([§3](#3-scope)). Any converter must be source-embedded or framework-provided, with no loose DLLs (R4) — the issue says so too |
-| [#33](https://github.com/lspiguel/ai-tooling/issues/33) "Run all" specs button | 2026-08-07 | Run every spec in the base directory after a confirmation that warns it can take a long time; the result panel then offers only to open the output folder | **Built, unreleased:** **Run All Specs** ([§11.2](#112-flow)). A failed spec is logged and the others still run; **Cancel** stops the batch. Run folders gained a `-n` suffix for runs that start in the same second, so each spec keeps its own (R9) |
-| [#39](https://github.com/lspiguel/ai-tooling/issues/39) Higher-resolution icons in the Tool Library | 2026-11-02 | The Tool Library shows 64×64 px bitmaps that look poor | **Built, unreleased:** the plugin embeds a 32 px small and an 80 px big icon (16 and 32 px before), and the package icon is 150 px (128 px before), in `D365ContextExporterPlugin.cs`, the nuspec `iconUrl` and the csproj `PackageIcon` ([§13.2](#132-package)). The `iconUrl` points to `main`, so the Tool Library shows the new icon once this is merged. Done the same way for the Agent Companion MCP |
+| [#33](https://github.com/lspiguel/ai-tooling/issues/33) "Run all" specs button | 2026-08-07 | Run every spec in the base directory after a confirmation that warns it can take a long time; the result panel then offers only to open the output folder | **Released in 1.2026.11.1.** **Run All Specs** ([§11.2](#112-flow)). A failed spec is logged and the others still run; **Cancel** stops the batch. Run folders gained a `-n` suffix for runs that start in the same second, so each spec keeps its own (R9) |
+| [#39](https://github.com/lspiguel/ai-tooling/issues/39) Higher-resolution icons in the Tool Library | 2026-11-02 | The Tool Library shows 64×64 px bitmaps that look poor | **Released in 1.2026.11.1.** The plugin embeds a 32 px small and an 80 px big icon (16 and 32 px before), and the package icon is 150 px (128 px before), in `D365ContextExporterPlugin.cs`, the nuspec `iconUrl` and the csproj `PackageIcon` ([§13.2](#132-package)). The `iconUrl` points to `main`, so the Tool Library shows the new icon once this is merged. Done the same way for the Agent Companion MCP |
 
 ### 15.3 Ideas
 
