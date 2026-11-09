@@ -36,6 +36,10 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
         private const string MultiForm = "50000000-0000-0000-0000-000000000043";
         private const string StepA = "50000000-0000-0000-0000-000000000044";
         private const string StepB = "50000000-0000-0000-0000-000000000045";
+        private const string StepCheck = "50000000-0000-0000-0000-000000000047";
+        private const string StepDone = "50000000-0000-0000-0000-000000000048";
+        private const string RoleOld = "50000000-0000-0000-0000-000000000013";
+        private const string ClaimPage = "50000000-0000-0000-0000-000000000026";
         private const string PageTemplate = "50000000-0000-0000-0000-000000000051";
         private const string WebTemplate = "50000000-0000-0000-0000-000000000052";
         private const string LinkSet = "50000000-0000-0000-0000-000000000061";
@@ -73,18 +77,27 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
         }
 
         [Test]
+        public void PageMap_LiquidEmbedsInCopyAreHosts()
+        {
+            Assert.That(_output, Does.Contain("| `/cases/claim` | Claim Page | — | Published | Yes | Multistep form: Claim; Basic form: Missing Form (no active basic form with this name); List: Case List |"));
+            Assert.That(_output, Does.Contain("On pages: Claim Page · Authentication required: Yes"));
+        }
+
+        [Test]
         public void WebRoles_AndWhatTheyCanDo()
         {
             Assert.That(_output, Does.Contain("| Authenticated Users | Authenticated users | 1 | 0 | 0 |"));
-            Assert.That(_output, Does.Contain("| Partner | — (assigned to contacts) | 0 | 1 | 1 |"));
+            Assert.That(_output, Does.Contain("| Partner | — (assigned to contacts) | 2 | 1 | 1 |"));
             Assert.That(_output, Does.Contain("- **Authenticated Users** — `incident` Contact: Read, Write"));
-            Assert.That(_output, Does.Contain("- **Partner** — no table permissions"));
+            Assert.That(_output, Does.Contain("- **Partner** — `incident` Global: Read\n"), "two permissions with the same access are listed once");
+            Assert.That(_output, Does.Contain("No active web role is assigned automatically to anonymous users."));
+            Assert.That(_output, Does.Not.Contain("assigned automatically to authenticated users"));
         }
 
         [Test]
         public void TablePermissions_ScopeRelationshipAndParent()
         {
-            Assert.That(_output, Does.Contain("| Cases - Contact | `incident` | Contact | Read, Write | Authenticated Users | contact_as_customer |"));
+            Assert.That(_output, Does.Contain("| Cases - Contact | `incident` | Contact | Read, Write | Authenticated Users, Old Role (inactive) | contact_as_customer |"));
             Assert.That(_output, Does.Contain("| Notes | `annotation` | Parent | Read | (through parent) | Parent: Cases - Contact via Incident_Annotation |"));
         }
 
@@ -92,9 +105,25 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
         public void FormsListsAndMultistepForms()
         {
             Assert.That(_output, Does.Contain("| New Case | `incident` | Portal Case | Insert | Enforced | New Case | Yes (2 lines) |"));
-            Assert.That(_output, Does.Contain("| Case List | `incident` | New Case | — | Yes | **Not enforced** | Cases | — |"));
-            Assert.That(_output, Does.Contain("| 1 | Start | Load form | `con_claim` | Claim Start | Insert | — |"));
-            Assert.That(_output, Does.Contain("| 2 | Details | Load tab | — | — | — | — |"));
+            Assert.That(_output, Does.Contain("| Case List | `incident` | New Case | — | Yes | **Not enforced** | Cases, Claim Page | — |"));
+        }
+
+        [Test]
+        public void MultistepForm_StepsInFlowOrderWithNext()
+        {
+            Assert.That(_output, Does.Contain("| 1 | Start | Load form | `con_claim` | Claim Start | Insert | → 2 | — |"));
+            Assert.That(_output, Does.Contain("| 2 | Check | Condition | — | — | — | If `x == 1` → 3, else → 4 | — |"));
+            Assert.That(_output, Does.Contain("| 3 | Details | Load tab | — | — | — | End | — |"));
+            Assert.That(_output, Does.Contain("| 4 | Done | Redirect | — | — | — | Redirect to Home with `?id=` con_claimid | — |"));
+            Assert.That(_output, Does.Contain("| 5 | Orphan | Load tab | — | — | — | End | — |"));
+            Assert.That(_output, Does.Contain("Step 5 is not reached from the start step"));
+        }
+
+        [Test]
+        public void PageAccessRules_ByPageWithRuleName()
+        {
+            Assert.That(_output, Does.Contain("| (no page) | Grant Nothing | Grant change | All content | — |"));
+            Assert.That(_output, Does.Contain("| Cases | Restrict Cases | Restrict read | All content | Partner |"));
         }
 
         [Test]
@@ -145,14 +174,22 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
                 Component(Cases, "Cases", 2, new JObject { ["isroot"] = true, ["partialurl"] = "cases", ["parentpageid"] = Home, ["publishingstateid"] = Published, ["entitylist"] = List, ["hiddenfromsitemap"] = false }),
                 Component(CasesContent, "Cases", 2, new JObject { ["isroot"] = false, ["rootwebpageid"] = Cases, ["customjavascript"] = "console.log(1);" }, "English"),
                 Component(NewCase, "New Case", 2, new JObject { ["isroot"] = true, ["partialurl"] = "new", ["parentpageid"] = Cases, ["publishingstateid"] = Published, ["entityform"] = BasicForm, ["hiddenfromsitemap"] = true }),
+                Component(ClaimPage, "Claim Page", 2, new JObject { ["isroot"] = true, ["partialurl"] = "claim", ["parentpageid"] = Cases, ["publishingstateid"] = Published, ["hiddenfromsitemap"] = false }),
+                Component("50000000-0000-0000-0000-000000000027", "Claim Page", 2, new JObject { ["isroot"] = false, ["rootwebpageid"] = ClaimPage, ["copy"] = "<div>{% webform name: 'Claim' %}</div>{% entityform name: 'Missing Form' %}{% include 'entity_list' key: 'Case List' %}" }, "English"),
+                Component("50000000-0000-0000-0000-000000000028", "Grant Nothing", 10, new JObject { ["right"] = 1, ["scope"] = 1 }),
                 Component("50000000-0000-0000-0000-000000000025", "Restrict Cases", 10, new JObject { ["right"] = 2, ["scope"] = 1, ["webpageid"] = Cases, ["adx_webpageaccesscontrolrule_webrole"] = new JArray(RolePartner) }),
-                Component(PermCases, "Cases - Contact", 18, new JObject { ["entitylogicalname"] = "incident", ["scope"] = 756150001, ["read"] = true, ["write"] = true, ["contactrelationship"] = "contact_as_customer", ["adx_entitypermission_webrole"] = new JArray(RoleAuthenticated) }),
+                Component(PermCases, "Cases - Contact", 18, new JObject { ["entitylogicalname"] = "incident", ["scope"] = 756150001, ["read"] = true, ["write"] = true, ["contactrelationship"] = "contact_as_customer", ["adx_entitypermission_webrole"] = new JArray(RoleAuthenticated, RoleOld) }),
+                Component("50000000-0000-0000-0000-000000000033", "Partner Cases A", 18, new JObject { ["entitylogicalname"] = "incident", ["scope"] = 756150000, ["read"] = true, ["adx_entitypermission_webrole"] = new JArray(RolePartner) }),
+                Component("50000000-0000-0000-0000-000000000034", "Partner Cases B", 18, new JObject { ["entitylogicalname"] = "incident", ["scope"] = 756150000, ["read"] = true, ["adx_entitypermission_webrole"] = new JArray(RolePartner) }),
                 Component(PermNotes, "Notes", 18, new JObject { ["entitylogicalname"] = "annotation", ["scope"] = 756150003, ["read"] = true, ["parententitypermission"] = PermCases, ["parentrelationship"] = "Incident_Annotation", ["adx_entitypermission_webrole"] = new JArray() }),
                 Component(BasicForm, "New Case", 15, new JObject { ["entityname"] = "incident", ["formname"] = "Portal Case", ["mode"] = 100000000, ["entitypermissionsenabled"] = true, ["registerstartupscript"] = "$(function () {\n});" }),
                 Component(List, "Case List", 17, new JObject { ["entityname"] = "incident", ["webpagefordetailsview"] = NewCase, ["searchenabled"] = true, ["entitypermissionsenabled"] = false }),
                 Component(MultiForm, "Claim", 19, new JObject { ["startstep"] = StepA, ["authenticationrequired"] = true }),
+                Component("50000000-0000-0000-0000-000000000049", "Orphan", 20, new JObject { ["type"] = 100000002, ["webform"] = MultiForm }),
+                Component(StepDone, "Done", 20, new JObject { ["type"] = 100000003, ["webform"] = MultiForm, ["redirectwebpage"] = Home, ["redirecturlquerystringattribute"] = "con_claimid", ["redirecturlquerystringattributeparamname"] = "id" }),
                 Component(StepB, "Details", 20, new JObject { ["type"] = 100000002, ["webform"] = MultiForm }),
-                Component(StepA, "Start", 20, new JObject { ["type"] = 100000001, ["targetentitylogicalname"] = "con_claim", ["formname"] = "Claim Start", ["mode"] = 100000000, ["webform"] = MultiForm, ["nextstep"] = StepB }),
+                Component(StepCheck, "Check", 20, new JObject { ["type"] = 100000000, ["webform"] = MultiForm, ["condition"] = "x == 1", ["nextstep"] = StepB, ["conditiondefaultnextstep"] = StepDone }),
+                Component(StepA, "Start", 20, new JObject { ["type"] = 100000001, ["targetentitylogicalname"] = "con_claim", ["formname"] = "Claim Start", ["mode"] = 100000000, ["webform"] = MultiForm, ["nextstep"] = StepCheck }),
                 Component("50000000-0000-0000-0000-000000000046", "Get Claims", 33, new JObject { ["processid"] = "50000000-0000-0000-0000-000000000099", ["adx_CloudFlowConsumer_adx_webrole"] = new JArray(RolePartner) }),
                 Component("50000000-0000-0000-0000-000000000071", "Webapi/incident/enabled", 9, new JObject { ["value"] = "true" }),
                 Component("50000000-0000-0000-0000-000000000072", "Webapi/incident/fields", 9, new JObject { ["value"] = "title,description" }),
@@ -168,6 +205,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
                 Component(WebTemplate, "Layout 1 Column", 8, null),
                 Component("50000000-0000-0000-0000-000000000091", "logo.png", 3, null),
                 Component("50000000-0000-0000-0000-000000000092", "Authentication/OpenIdConnect/Azure/ClientSecret", 9, null),
+                Inactive(Component(RoleOld, "Old Role", 11, null)),
             },
         };
 
@@ -185,6 +223,12 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
                 row["powerpagesitelanguageid"] = new JObject { ["id"] = "50000000-0000-0000-0000-0000000000aa", ["logicalName"] = "powerpagesitelanguage", ["name"] = language };
             if (content != null)
                 row["content"] = content.ToString(Formatting.None);
+            return row;
+        }
+
+        private static JObject Inactive(JObject row)
+        {
+            row["statecode"] = 1;
             return row;
         }
 

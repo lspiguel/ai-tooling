@@ -4,23 +4,27 @@
     <attribute name="name" />
     <attribute name="powerpagecomponenttype" />
     <attribute name="powerpagesiteid" />
-    <filter type="and">
-      <condition attribute="statecode" operator="eq" value="0" />
-      <filter type="or">
-        <condition attribute="powerpagecomponenttype" operator="in">
-          <value>3</value>
-          <value>8</value>
-        </condition>
-        <filter type="and">
-          <condition attribute="powerpagecomponenttype" operator="eq" value="9" />
-          <filter type="or">
-            <condition attribute="name" operator="like" value="%secret%" />
-            <condition attribute="name" operator="like" value="%password%" />
-            <condition attribute="name" operator="like" value="%key%" />
-            <condition attribute="name" operator="like" value="%token%" />
-            <condition attribute="name" operator="like" value="%credential%" />
-            <condition attribute="name" operator="like" value="%connectionstring%" />
-            <condition attribute="name" operator="like" value="%certificate%" />
+    <attribute name="statecode" />
+    <filter type="or">
+      <condition attribute="statecode" operator="eq" value="1" />
+      <filter type="and">
+        <condition attribute="statecode" operator="eq" value="0" />
+        <filter type="or">
+          <condition attribute="powerpagecomponenttype" operator="in">
+            <value>3</value>
+            <value>8</value>
+          </condition>
+          <filter type="and">
+            <condition attribute="powerpagecomponenttype" operator="eq" value="9" />
+            <filter type="or">
+              <condition attribute="name" operator="like" value="%secret%" />
+              <condition attribute="name" operator="like" value="%password%" />
+              <condition attribute="name" operator="like" value="%key%" />
+              <condition attribute="name" operator="like" value="%token%" />
+              <condition attribute="name" operator="like" value="%credential%" />
+              <condition attribute="name" operator="like" value="%connectionstring%" />
+              <condition attribute="name" operator="like" value="%certificate%" />
+            </filter>
           </filter>
         </filter>
       </filter>

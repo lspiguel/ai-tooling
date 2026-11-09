@@ -41,7 +41,7 @@ The plugin connects to your Dataverse environment, runs a set of FetchXML and We
 3. **Pick a base directory** — click the folder picker and choose (or create) an empty folder. On first use the plugin will offer to deploy the reference configuration there.
 4. **Run first-time setup** — accept the prompt to deploy sample specs, FetchXML queries, and Scriban templates to the folder.
 5. **Select a spec** — choose one of the available specs from the dropdown (sample specs are provided out of the box).
-6. **Click Run** — the plugin executes all queries, renders the template, and places the output in `output\<SpecName>.context.md`.
+6. **Click Run Export** — the plugin executes all queries, renders the template, and places the output in `output\<SpecName>.context.md`. **Run All Specs** runs every spec in the list one after another, after a confirmation, since that can take a long time; a spec that fails is logged and the others still run, and the result panel then points to the `output` folder.
 7. **Upload** — attach or paste the `.context.md` file into your AI assistant conversation as grounding context.
 
 <!-- TODO: screenshot — spec picker and Run button -->
@@ -77,7 +77,7 @@ A *project solution* is any visible, unmanaged solution other than `Default` and
 
 A standard column the project changed without creating it — a new label or required level on a shipped column — is not listed in `SolutionsReference`.
 
-`PowerPages` covers every active site on the enhanced data model, and only active components. Sites on the standard data model (`adx_` tables) are not covered. Page HTML, web template source and custom JavaScript are not exported, only whether a page or form has custom code and how long it is. The values of site settings whose names contain *secret*, *password*, *key*, *token*, *credential*, *connectionstring* or *certificate* are never read from Dataverse; only their names are listed.
+`PowerPages` covers every active site on the enhanced data model, and only active components. Sites on the standard data model (`adx_` tables) are not covered. Page HTML, web template source and custom JavaScript are not exported, only whether a page or form has custom code and how long it is; page copy is read only to find the forms and lists a page embeds with Liquid. A reference to an inactive component is shown with its name and *(inactive)*. The values of site settings whose names contain *secret*, *password*, *key*, *token*, *credential*, *connectionstring* or *certificate* are never read from Dataverse; only their names are listed.
 
 ## Folder structure
 

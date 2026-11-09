@@ -110,10 +110,10 @@ Root namespace `Lspiguel.Xrm.D365ContextExporter`; assembly `D365ContextExporter
 | Folder / file | Responsibility |
 |---|---|
 | `D365ContextExporterPlugin.cs` | MEF export (`IXrmToolBoxPlugin`): name, description, base64 icons, colours; returns the control. No assembly-resolve handler (R4) |
-| `ContextExporterPluginControl.cs` | The `PluginControlBase`. Composes the UI controls, owns the cancellation source, starts runs through `WorkAsync`, triggers first-run setup and the upgrade check |
+| `ContextExporterPluginControl.cs` | The `PluginControlBase`. Composes the UI controls, owns the cancellation source, starts runs and batch runs through `WorkAsync`, triggers first-run setup and the upgrade check |
 | `Models/` | `ExportJob` (the spec, with `Load(path)`), `QueryDefinition`, `OutputSettings` (deny list), `PythonSettings` (ignored; kept so older configs deserialize) |
 | `Queries/` | `FetchXmlQueryRunner`, `WebApiQueryRunner`, `MetadataQueryRunner` ([§7](#7-query-execution)) |
-| `Orchestration/` | `ExportJobRunner` (one run end to end), `IntermediateJsonBuilder` ([§8](#8-intermediate-json)), `TemplateRenderer` ([§9](#9-rendering)) |
+| `Orchestration/` | `ExportJobRunner` (one run end to end), `ExportBatchRunner` and `ExportBatchResult` (every spec in turn, [§11.2](#112-flow)), `IntermediateJsonBuilder` ([§8](#8-intermediate-json)), `TemplateRenderer` ([§9](#9-rendering)) |
 | `Helpers/` | `ConfigValidator`, `EntityJsonSerializer`, `FirstRunHelper` (deploy and upgrade), `PathResolver`, `TemplateFilters` |
 | `UI/` | `BaseDirectoryPickerControl`, `SpecPickerControl`, `ExportProgressControl`, `OutputPreviewControl`, `WelcomeForm` |
 | `SampleConfig/` | The reference configuration, every file an embedded resource ([§12](#12-reference-configuration)) |
@@ -135,7 +135,7 @@ All runtime files live under one folder the person chooses. The plugin creates `
 │   ├── context-exporter.schema.json           JSON schema, referenced as "./context-exporter.schema.json"
 │   ├── queries/*.fetch.xml                    shared FetchXML files
 │   └── transformations/*.sbn                  shared Scriban templates
-├── runs/<yyyyMMdd-HHmmss>/                    one folder per run (UTC timestamp), never deleted
+├── runs/<yyyyMMdd-HHmmss>[-n]/                one folder per run (UTC timestamp; -2, -3… for a later run in the same second), never deleted
 │   ├── output.<queryId>.fetch.json            raw result of each query
 │   ├── intermediate.json                      all results plus _meta
 │   └── output.md                              rendered template, no legal notice
@@ -382,7 +382,7 @@ The shipped `LEGAL.md` is a GitHub-style `[!WARNING]` blockquote stating that th
 
 ### 11.1 Main panel
 
-Top to bottom: base directory (read-only path and **Browse…**), spec drop-down with a refresh button, **Run Export**, progress (status label, spinner, **Cancel**) above a read-only log, and the output panel. The output panel is hidden until a run succeeds.
+Top to bottom: base directory (read-only path and **Browse…**), spec drop-down with a refresh button, **Run Export** and **Run All Specs**, progress (status label, spinner, **Cancel**) above a read-only log, and the output panel. The output panel is hidden until a run succeeds.
 
 ### 11.2 Flow
 
@@ -392,14 +392,17 @@ Top to bottom: base directory (read-only path and **Browse…**), spec drop-down
 | Load | Restores the saved base directory if it still exists, loads its specs, runs first-run setup and the upgrade check ([§5](#5-base-directory)) |
 | **Browse…** | Folder dialog (no new-folder button). On OK: saves the setting, reloads specs, logs the change, runs first-run setup and the upgrade check |
 | Connection changed | Logs the URL and reloads the spec list (clearing the selection) |
+| Spec list loaded | **Run All Specs** is enabled when the list has at least one spec |
 | Spec selected | Loads the file; **Run Export** is enabled when a spec loaded. A load error shows a message box and clears the selection |
 | **Run Export** | With no connection, XrmToolBox's connect prompt runs first, then the export. Validates ([§6.3](#63-validation)); clears the log; disables **Run**; hides the output panel; runs through `WorkAsync` |
+| **Run All Specs** | Asks for confirmation first: lists every spec in the drop-down and warns that the batch can take a long time — several minutes per spec on a large environment — that a failed spec does not stop the others, and where the context files go. **No** is the default. With no connection, XrmToolBox's connect prompt runs next. Clears the log, disables both run buttons, hides the output panel and runs the specs one after another, in drop-down order, through one `WorkAsync`. Each spec is loaded, validated and run exactly as **Run Export** would, into its own run folder and output file (R9). A spec that fails to load, validate or run is logged and the batch moves on; **Cancel** stops the batch, and the specs already finished keep their output. The progress label reads `Spec i / n (<spec>) · Query x / y` |
+| Batch ends | Re-enables both run buttons. The log ends with a `[Batch] Finished` line naming the specs that failed. When at least one spec succeeded, the output panel shows the path of the `output\` folder and only **Open Folder**, with "`n` specs exported" (or "`n` of `m` specs exported; `k` failed (see the log)") and the upload line |
 | Run ends | Re-enables **Run**. On success the output panel shows the path of `output\<spec>.context.md`, **Open**, **Reveal** (Explorer, selected), **Copy path**, and the line "Upload `<file>` to claude.ai, ChatGPT, or your AI assistant as a grounding file." On error the base exception's message is logged |
 | Plugin hidden | Saves the base directory setting |
 
 ### 11.3 Log
 
-Every step writes one line with a bracketed source: `[Setup]`, `[Validation]`, `[Export]`, `[fetchxml]`, `[webapi]`, `[metadata]`, `[Render]`, `[Legal]`. Lines are marshalled to the UI thread.
+Every step writes one line with a bracketed source: `[Setup]`, `[Validation]`, `[Batch]`, `[Export]`, `[fetchxml]`, `[webapi]`, `[metadata]`, `[Render]`, `[Legal]`. Lines are marshalled to the UI thread.
 
 ---
 
@@ -415,7 +418,7 @@ Every file under `SampleConfig\` is an embedded resource. `FirstRunHelper` holds
 | `FormsAndViews` | `forms-and-views.sbn` | Web API `EntityDefinitions` names (`entities`); FetchXML `project-forms` (`forms`), `project-views` (`views`) |
 | `Optionsets` | `optionsets.sbn` | Web API `GlobalOptionSetDefinitions` (`globalOptionSets`), filtered to unmanaged in the template |
 | `PowerAutomateFlows` | `power-automate-flows.sbn` | FetchXML `cloud-flows` (`flows`), including the flow definitions |
-| `PowerPages` | `power-pages.sbn` | FetchXML `power-pages-sites` (`ppSites`), `power-pages-components` (`ppComponents`, with `content`), `power-pages-component-names` (`ppComponentNames`, names only) |
+| `PowerPages` | `power-pages.sbn` | FetchXML `power-pages-sites` (`ppSites`), `power-pages-components` (`ppComponents`, with `content`), `power-pages-component-names` (`ppComponentNames`, names only: web templates, web files, sensitive site settings and inactive components) |
 | `SecurityModel` | `security-model.sbn` | FetchXML `security-roles` (`securityRoles`) — the project's roles, with a table × action matrix of privilege depths and the other privileges listed |
 | `SolutionInventory` | `solution-inventory.sbn` | FetchXML `solutions-detail` (`solutions`) — visible solutions with publisher |
 | `SolutionsReference` | `solutions-reference.sbn` | Web API `EntityDefinitions` with unmanaged custom columns (`entities`) and `GlobalOptionSetDefinitions`; FetchXML `solutions-detail`, `project-tables`, `project-forms`, `project-views`, `plugin-assemblies`, `sdk-steps`, `custom-apis`, `custom-api-responses`, `workflows` (with the flow definitions, for the trigger), `business-process-flows`, `bpf-stages`, `app-modules`, `env-vars`, `security-role-names` |
@@ -437,7 +440,7 @@ The reference configuration describes what the project built or customized, not 
 | Global option set | Unmanaged | Templates — `GlobalOptionSetDefinitions` rejects `$filter` (HTTP 405), so all global option sets are fetched |
 | Workflow, cloud flow, custom API, environment variable | Unmanaged. Cloud flows named `CXP_` (generated by Customer Insights – Journeys) excluded | Queries |
 | Plug-in step | Registered on an unmanaged plug-in assembly; state included | `sdk-steps` |
-| Power Pages site and component | Active sites on the enhanced data model, and their active components. Web templates, web files and site settings whose names contain *secret*, *password*, *key*, *token*, *credential*, *connectionstring* or *certificate* are read by name only, so their content is never fetched | `power-pages-*` queries |
+| Power Pages site and component | Active sites on the enhanced data model, and their active components; inactive components by name only, so that a reference to one is shown as inactive. Web templates, web files and site settings whose names contain *secret*, *password*, *key*, *token*, *credential*, *connectionstring* or *certificate* are read by name only, so their content is never fetched | `power-pages-*` queries |
 | Security role | Unmanaged, root business unit (`parentroleid` null), not based on a role template (`roletemplateid` null) | `security-roles`; `security-role-names` (names only, for `SolutionsReference`) |
 | Solution | Visible, other than `Default` and `Active`. `SolutionsReference` lists the unmanaged ones | `solutions-detail`; template |
 
@@ -504,9 +507,10 @@ NUnit 4 with Moq and Moq.Contrib.HttpClient, `net48`, mirroring the source folde
 | `ModelsTests/ExportJobTests` | Loading and defaults |
 | `OrchestrationTests/IntermediateJsonBuilderTests` | `_meta`, raw file naming, result keys |
 | `OrchestrationTests/TemplateRendererTests` | `_spec` and `_meta`, nested objects and arrays, `include` from `transformations\`, parse errors with line and column, an undefined variable failing, a missing template, UTF-8 without BOM |
-| `OrchestrationTests/PowerPagesTemplateTests` | The PowerPages spec against one synthetic enhanced-data-model site: URL paths from the parent chain, hosted forms and lists, access rules, custom-code flags, roles and what each can do, table permission scope and parent, multistep step order, Web API exposure, a sensitive setting masked and a name-only one listed, templates and navigation |
+| `OrchestrationTests/PowerPagesTemplateTests` | The PowerPages spec against one synthetic enhanced-data-model site: URL paths from the parent chain, hosted forms and lists, access rules, custom-code flags, roles and what each can do, table permission scope and parent, multistep step order, Web API exposure, a sensitive setting masked and a name-only one listed, templates and navigation; forms and lists embedded with Liquid in page copy, a reference to an inactive component, multistep steps in flow order through a condition and a redirect, access rules by page, duplicate role grants listed once |
 | `OrchestrationTests/ShippedTemplatesTests` | Every shipped spec rendered through its shipped template, deployed from the embedded configuration, against one synthetic intermediate: the customization scope of [§12.2](#122-customization-scope) (which tables, forms and views appear), column types from `AttributeTypeName`, form and view type labels, step and process state, cloud flow triggers from the definition, the one-line list of solution-only tables, BPF stages listed once, the publisher column, option order, the security role privilege matrix |
-| `OrchestrationTests/ExportJobRunnerTests` | Through an internal constructor that takes the three query runners: a failed query stopping the render while the remaining queries run, cancellation between queries, progress, the copy to `output\`, the legal notice in the delivered file only, a spec with no queries, validation before the run folder is created |
+| `OrchestrationTests/ExportJobRunnerTests` | Through an internal constructor that takes the three query runners: a failed query stopping the render while the remaining queries run, cancellation between queries, progress, the copy to `output\`, the legal notice in the delivered file only, a spec with no queries, validation before the run folder is created, a run folder per run when runs start in the same second |
+| `OrchestrationTests/ExportBatchRunnerTests` | With a stand-in for the single-spec run: every spec in order with progress, a failing or unreadable spec not stopping the others, the summary line, cancellation between specs and inside one |
 | `QueriesTests/*QueryRunnerTests` | Paging, `maxRecords`, empty results, missing files, HTTP errors, metadata targets |
 | `QueriesTests/*RealDataTests` | Realistic response shapes, synthetic (R2) |
 
@@ -542,7 +546,7 @@ Open issues labelled [D365 Context Exporter](https://github.com/lspiguel/ai-tool
 | [#22](https://github.com/lspiguel/ai-tooling/issues/22) Specs for Power Pages | 2026-06-21 | Page list, permissions, site settings | **Built, unreleased:** the `PowerPages` spec ([§12.1](#121-specs)), for sites on the enhanced data model. Needed one new function, `parse_json`, because the enhanced model keeps each component's settings as JSON in `powerpagecomponent.content`. Sites on the standard data model (`adx_` tables) are not covered |
 | [#23](https://github.com/lspiguel/ai-tooling/issues/23) Choose a solution to export entities, forms, views and option sets from | 2026-06-26 | Limit an export to the components of chosen solutions; today's output covers the whole environment and is large | Maintainer's reply (2026-07-22): filter the solutions query, then filter entities by solution in the `solutions-reference.sbn` entities loop. The hard part is keeping standard tables that are customized (such as account) while dropping others. Configuration only unless a solution picker is wanted in the UI ([§11](#11-user-experience)) |
 | [#31](https://github.com/lspiguel/ai-tooling/issues/31) Output to PDF or other formats | 2026-07-29 | Microsoft 365 Copilot Notebooks accept only Office and PDF files | Changes [§10](#10-output-and-legal-notice) and the out-of-scope line on non-Markdown output ([§3](#3-scope)). Any converter must be source-embedded or framework-provided, with no loose DLLs (R4) — the issue says so too |
-| [#33](https://github.com/lspiguel/ai-tooling/issues/33) "Run all" specs button | 2026-08-07 | Run every spec in the base directory after a confirmation that warns it can take a long time; the result panel then offers only to open the output folder | Changes [§11](#11-user-experience). Each spec would still get its own run folder and output file (R9); how one spec's failure affects the rest needs deciding |
+| [#33](https://github.com/lspiguel/ai-tooling/issues/33) "Run all" specs button | 2026-08-07 | Run every spec in the base directory after a confirmation that warns it can take a long time; the result panel then offers only to open the output folder | **Built, unreleased:** **Run All Specs** ([§11.2](#112-flow)). A failed spec is logged and the others still run; **Cancel** stops the batch. Run folders gained a `-n` suffix for runs that start in the same second, so each spec keeps its own (R9) |
 | [#39](https://github.com/lspiguel/ai-tooling/issues/39) Higher-resolution icons in the Tool Library | 2026-11-02 | The Tool Library shows 64×64 px bitmaps that look poor | Packaging ([§13.2](#132-package)) and the plugin's base64 icons ([§4](#4-architecture)). Shared with the Agent Companion MCP |
 
 ### 15.3 Ideas

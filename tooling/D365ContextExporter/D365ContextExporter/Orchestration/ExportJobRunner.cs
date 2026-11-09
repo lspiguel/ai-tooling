@@ -94,8 +94,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
 
             this.log($"[Export] Starting spec '{job.Spec}' ({job.Queries.Count} queries).");
 
-            var runDir = Path.Combine(baseDir, "runs", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss"));
-            Directory.CreateDirectory(runDir);
+            var runDir = CreateRunDirectory(baseDir, DateTime.UtcNow);
             this.log($"[Export] Run directory: {runDir}");
 
             var results = new Dictionary<string, object>();
@@ -160,6 +159,26 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
             }
 
             this.log($"[Export] Run complete. Outputs in: {runDir}");
+            return runDir;
+        }
+
+        /// <summary>
+        /// Creates <c>runs\&lt;yyyyMMdd-HHmmss&gt;</c> under <paramref name="baseDir"/>, adding <c>-2</c>, <c>-3</c>… when a run
+        /// in the same second already has that folder — specs run back to back can start within one second, and runs are never shared (R9).
+        /// </summary>
+        /// <param name="baseDir">The base directory.</param>
+        /// <param name="utcNow">The run's start time, in UTC.</param>
+        /// <returns>The path of the new, empty run directory.</returns>
+        internal static string CreateRunDirectory(string baseDir, DateTime utcNow)
+        {
+            var stamp = utcNow.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
+            var runDir = Path.Combine(baseDir, "runs", stamp);
+            for (var n = 2; Directory.Exists(runDir); n++)
+            {
+                runDir = Path.Combine(baseDir, "runs", $"{stamp}-{n}");
+            }
+
+            Directory.CreateDirectory(runDir);
             return runDir;
         }
 

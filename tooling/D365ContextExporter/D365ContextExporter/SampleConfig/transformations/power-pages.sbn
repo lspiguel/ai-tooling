@@ -78,16 +78,22 @@ environment: {{ _meta.environment.url }}
     comps = comps | array.add item
   end
 
-  # Web templates, web files and sensitive site settings: names only.
+  # Names only: web templates, web files and sensitive site settings; and inactive components,
+  # so that a reference to one reads "<name> (inactive)".
   name_only = []
+  inactive_names = {}
   for r in ppComponentNames
     item = {}
     item.id = r.powerpagecomponentid ?? r._id
     item.name = r.name ?? ""
     item.type = r.powerpagecomponenttype
     item.site = r.powerpagesiteid != null ? r.powerpagesiteid.id : ""
-    names[item.id] = item.name
-    name_only = name_only | array.add item
+    if r.statecode == 1
+      inactive_names[item.id] = item.name
+    else
+      names[item.id] = item.name
+      name_only = name_only | array.add item
+    end
   end
 
   func cell(text)
@@ -101,7 +107,46 @@ environment: {{ _meta.environment.url }}
     if id == null || id == ""
       ret "—"
     end
-    ret names[id] ?? "(not found)"
+    if names[id] != null
+      ret names[id]
+    end
+    ret inactive_names[id] != null ? (inactive_names[id] + " (inactive)") : "(not found)"
+  end
+
+  func code_name(value)
+    ret (has_text value) ? ("`" + value + "`") : "—"
+  end
+
+  # Forms and lists a page embeds with Liquid in its copy: {% entityform name: '…' %},
+  # {% webform name: '…' %}, {% entitylist name: '…' %} and {% include 'entity_list' key: '…' %},
+  # by name or id. Returns {label, ids}; ids is empty when no active component matches.
+  func liquid_hosts(text)
+    $out = []
+    if !(has_text text)
+      ret $out
+    end
+    $found = []
+    $tag_pattern = "\\{%-?\\s*(entityform|webform|entitylist)\\s+(?:name|id|key)\\s*:\\s*['\"]([^'\"]+)['\"]"
+    $include_pattern = "\\{%-?\\s*include\\s+['\"]entity_list['\"]\\s+(?:name|id|key)\\s*:\\s*['\"]([^'\"]+)['\"]"
+    for $m in (regex.matches text $tag_pattern "i")
+      $found = $found | array.add [($m[1] | string.downcase), $m[2]]
+    end
+    for $m in (regex.matches text $include_pattern "i")
+      $found = $found | array.add ["entitylist", $m[1]]
+    end
+    for $f in $found
+      $kind = $f[0]
+      $ref = $f[1]
+      $by_name = $kind == "entityform" ? bform_ids : ($kind == "webform" ? mform_ids : list_ids)
+      $label = $kind == "entityform" ? "Basic form" : ($kind == "webform" ? "Multistep form" : "List")
+      $ids = $by_name[$ref] ?? []
+      if $ids.size == 0 && names[$ref] != null
+        $ids = [$ref]
+      end
+      $shown = $ids.size > 0 ? (name_of $ids[0]) : ($ref + " (no active " + ($label | string.downcase) + " with this name)")
+      $out = $out | array.add {label: ($label + ": " + $shown), ids: $ids}
+    end
+    ret $out
   end
 
   func names_of(ids)
@@ -257,11 +302,30 @@ _No active Power Pages sites on the enhanced data model._
     end
   end
 
-  # Which pages host each form, list and multistep form (set on the root or a content page).
+  # Active forms, multistep forms and lists by name, for Liquid references.
+  bform_ids = {}
+  for x in bforms
+    bform_ids[x.name] = (bform_ids[x.name] ?? []) | array.add x.id
+  end
+  mform_ids = {}
+  for x in mforms
+    mform_ids[x.name] = (mform_ids[x.name] ?? []) | array.add x.id
+  end
+  list_ids = {}
+  for x in lists
+    list_ids[x.name] = (list_ids[x.name] ?? []) | array.add x.id
+  end
+
+  # Which pages host each form, list and multistep form: set on the root or a content page,
+  # or embedded with Liquid in a content page's copy.
   hosted_by = {}
   for p in roots
     for v in [p] | array.concat (content_by_root[p.id] ?? [])
-      for target in [v.c.entityform, v.c.entitylist, v.c.webform]
+      targets = [v.c.entityform, v.c.entitylist, v.c.webform]
+      for h in (liquid_hosts v.c.copy)
+        targets = targets | array.concat h.ids
+      end
+      for target in targets
         if target != null && target != ""
           current = hosted_by[target] ?? []
           if !(current | array.contains p.name)
@@ -270,6 +334,17 @@ _No active Power Pages sites on the enhanced data model._
         end
       end
     end
+  end
+
+  perms_by_id = {}
+  for x in perms
+    perms_by_id[x.id] = x
+  end
+  auto_anonymous = false
+  auto_authenticated = false
+  for role in roles
+    if role.c.anonymoususersrole; auto_anonymous = true; end
+    if role.c.authenticatedusersrole; auto_authenticated = true; end
   end
 
   rules_by_page = {}
@@ -297,7 +372,7 @@ _No active Power Pages sites on the enhanced data model._
 
 ### Page map
 
-One row per page, ordered by URL. **Hosts** is the basic form, list or multistep form shown on the page; **Access** lists its page access control rules. **Custom code** marks pages with their own JavaScript or CSS.
+One row per page, ordered by URL. **Hosts** is the basic form, list or multistep form shown on the page, whether set on the page or embedded with Liquid in its copy; **Access** lists its page access control rules. **Custom code** marks pages with their own JavaScript or CSS.
 
 | URL | Page | Template | State | In sitemap | Hosts | Access | Custom code | Languages |
 |---|---|---|---|---|---|---|---|---|
@@ -317,6 +392,9 @@ One row per page, ordered by URL. **Hosts** is the basic form, list or multistep
     end
     if v.c.webform != null && v.c.webform != ""
       hosts = hosts | array.add ("Multistep form: " + (name_of v.c.webform))
+    end
+    for h in (liquid_hosts v.c.copy)
+      hosts = hosts | array.add h.label
     end
     if (has_text v.c.customjavascript) && !(code | array.contains "JS")
       code = code | array.add "JS"
@@ -352,21 +430,41 @@ One row per page, ordered by URL. **Hosts** is the basic form, list or multistep
   for x in flows; if (x.c.adx_CloudFlowConsumer_adx_webrole ?? []) | array.contains role.id; n_flows = n_flows + 1; end; end
 -}}
 | {{ cell role.name }} | {{ auto.size > 0 ? (auto | array.join ", ") : "— (assigned to contacts)" }} | {{ n_perms }} | {{ n_rules }} | {{ n_flows }} |
+{{ end -}}
+{{ if !auto_anonymous }}
+No active web role is assigned automatically to anonymous users.
+{{ end -}}
+{{ if !auto_authenticated }}
+No active web role is assigned automatically to authenticated users: a signed-in contact has only the roles assigned to them.
 {{ end }}
 #### What each role can do
 
-Tables a member of the role can reach through table permissions granted to the role directly (child permissions with **Parent** access type apply through their parent).
+Tables a member of the role can reach through table permissions granted to the role directly, by table, with each access type once. **Parent** access applies to records related to those the parent permission reaches, named after "via"; child permissions granted only through their parent are in the table below.
 
 {{ for role in roles | array.sort "name" -}}
 {{-
-  grants = []
+  by_table = {}
   for x in perms
     if (x.c.adx_entitypermission_webrole ?? []) | array.contains role.id
-      grants = grants | array.add ("`" + (x.c.entitylogicalname ?? "?") + "` " + (scope_labels["" + x.c.scope] ?? ("" + x.c.scope)) + ": " + (privileges x.c))
+      t = x.c.entitylogicalname ?? "?"
+      g = scope_labels["" + x.c.scope] ?? ("" + x.c.scope)
+      if x.c.scope == 756150003
+        parent = perms_by_id[x.c.parententitypermission]
+        g = g + " via `" + (parent != null ? (parent.c.entitylogicalname ?? "?") : "?") + "`"
+      end
+      g = g + ": " + (privileges x.c)
+      current = by_table[t] ?? []
+      if !(current | array.contains g)
+        by_table[t] = current | array.add g
+      end
     end
   end
+  grants = []
+  for t in (object.keys by_table | array.sort)
+    grants = grants | array.add ("`" + t + "` " + (by_table[t] | array.sort | array.join "; "))
+  end
 -}}
-- **{{ role.name }}** — {{ grants.size > 0 ? (grants | array.sort | array.join "; ") : "no table permissions" }}
+- **{{ role.name }}** — {{ grants.size > 0 ? (grants | array.join " · ") : "no table permissions" }}
 {{ end }}
 ### Table permissions
 
@@ -382,38 +480,51 @@ Tables a member of the role can reach through table permissions granted to the r
   else if c.scope == 756150002
     rel = c.accountrelationship ?? "—"
   else if c.scope == 756150003
-    rel = "Parent: " + (name_of c.parententitypermission) + " via " + (c.parentrelationship ?? "?")
+    rel = "Parent: " + (name_of c.parententitypermission) + " via " + (c.parentrelationship ?? "(relationship not set)")
   end
   perm_roles = c.adx_entitypermission_webrole ?? []
 -}}
 {{- roles_text = perm_roles.size > 0 ? (names_of perm_roles) : (c.scope == 756150003 ? "(through parent)" : "—") -}}
-| {{ cell x.name }} | `{{ c.entitylogicalname }}` | {{ scope }} | {{ privileges c }} | {{ cell roles_text }} | {{ cell rel }} |
+| {{ cell x.name }} | {{ code_name c.entitylogicalname }} | {{ scope }} | {{ privileges c }} | {{ cell roles_text }} | {{ cell rel }} |
 {{ end }}
 ### Page access control rules
 
-| Page | Right | Scope | Web roles |
-|---|---|---|---|
-{{ for r in rules | array.sort "name" -}}
-| {{ cell (name_of r.c.webpageid) }} | {{ r.c.right == 2 ? "Restrict read" : "Grant change" }} | {{ r.c.scope == 2 ? "Exclude direct child web files" : "All content" }} | {{ cell (names_of r.c.adx_webpageaccesscontrolrule_webrole) }} |
+Ordered by page. A rule on an inactive page, or with no web role, has no effect.
+
+| Page | Rule | Right | Scope | Web roles |
+|---|---|---|---|---|
+{{
+  rule_rows = []
+  for r in rules
+    row = {}
+    row.page = (has_text r.c.webpageid) ? (name_of r.c.webpageid) : "(no page)"
+    row.sort = row.page + " | " + r.name
+    row.r = r
+    rule_rows = rule_rows | array.add row
+  end
+-}}
+{{ for row in rule_rows | array.sort "sort" -}}
+| {{ cell row.page }} | {{ cell row.r.name }} | {{ row.r.c.right == 2 ? "Restrict read" : "Grant change" }} | {{ row.r.c.scope == 2 ? "Exclude direct child web files" : "All content" }} | {{ cell (names_of row.r.c.adx_webpageaccesscontrolrule_webrole) }} |
 {{ end }}
 ### Basic forms
 
 | Basic form | Table | Dataverse form | Mode | Table permissions | On pages | Custom JavaScript |
 |---|---|---|---|---|---|---|
 {{ for f in bforms | array.sort "name" -}}
-| {{ cell f.name }} | `{{ f.c.entityname }}` | {{ cell f.c.formname }}{{ if has_text f.c.tabname }} (tab {{ cell f.c.tabname }}){{ end }} | {{ mode_labels["" + f.c.mode] ?? "—" }} | {{ f.c.entitypermissionsenabled ? "Enforced" : "**Not enforced**" }} | {{ cell ((hosted_by[f.id] ?? []) | array.sort | array.join ", ") }} | {{ code_size f.c.registerstartupscript }} |
+| {{ cell f.name }} | {{ code_name f.c.entityname }} | {{ cell f.c.formname }}{{ if has_text f.c.tabname }} (tab {{ cell f.c.tabname }}){{ end }} | {{ mode_labels["" + f.c.mode] ?? "—" }} | {{ f.c.entitypermissionsenabled ? "Enforced" : "**Not enforced**" }} | {{ cell ((hosted_by[f.id] ?? []) | array.sort | array.join ", ") }} | {{ code_size f.c.registerstartupscript }} |
 {{ end }}
 ### Lists
 
 | List | Table | Details page | Create page | Search | Table permissions | On pages | Custom JavaScript |
 |---|---|---|---|---|---|---|---|
 {{ for l in lists | array.sort "name" -}}
-| {{ cell l.name }} | `{{ l.c.entityname }}` | {{ cell (name_of l.c.webpagefordetailsview) }} | {{ cell (name_of l.c.webpageforcreate) }} | {{ l.c.searchenabled ? "Yes" : "No" }} | {{ l.c.entitypermissionsenabled ? "Enforced" : "**Not enforced**" }} | {{ cell ((hosted_by[l.id] ?? []) | array.sort | array.join ", ") }} | {{ code_size l.c.registerstartupscript }} |
+| {{ cell l.name }} | {{ code_name l.c.entityname }} | {{ cell (name_of l.c.webpagefordetailsview) }} | {{ cell (name_of l.c.webpageforcreate) }} | {{ l.c.searchenabled ? "Yes" : "No" }} | {{ l.c.entitypermissionsenabled ? "Enforced" : "**Not enforced**" }} | {{ cell ((hosted_by[l.id] ?? []) | array.sort | array.join ", ") }} | {{ code_size l.c.registerstartupscript }} |
 {{ end }}
 ### Multistep forms
 {{ for m in mforms | array.sort "name" }}
 {{-
-  # Steps in order: from the start step along Next Step; steps reached only through conditions follow.
+  # Steps in flow order, depth first from the start step: a step's next step follows it, and a
+  # condition's "else" branch follows its "then" branch. Steps the start step never reaches come last.
   steps_by_id = {}
   for s in steps
     if s.c.webform == m.id
@@ -422,34 +533,64 @@ Tables a member of the role can reach through table permissions granted to the r
   end
   ordered = []
   seen = {}
-  cur = m.c.startstep
+  stack = [m.c.startstep]
   guard = 0
-  while cur != null && cur != "" && seen[cur] == null && guard < 100
-    seen[cur] = true
-    if steps_by_id[cur] != null
-      ordered = ordered | array.add steps_by_id[cur]
-      cur = steps_by_id[cur].c.nextstep
-    else
-      cur = null
-    end
+  while stack.size > 0 && guard < 500
     guard = guard + 1
+    cur = stack | array.last
+    stack = array.remove_at stack (stack.size - 1)
+    if cur == null || cur == "" || seen[cur] != null || steps_by_id[cur] == null
+      continue
+    end
+    seen[cur] = true
+    s = steps_by_id[cur]
+    ordered = ordered | array.add s
+    if s.c.type == 100000000 && (has_text s.c.conditiondefaultnextstep)
+      stack = stack | array.add s.c.conditiondefaultnextstep
+    end
+    if has_text s.c.nextstep
+      stack = stack | array.add s.c.nextstep
+    end
   end
+  reached = ordered.size
   for s in steps
     if s.c.webform == m.id && seen[s.id] == null
       ordered = ordered | array.add s
     end
   end
+  step_no = {}
+  for s in ordered
+    step_no[s.id] = for.index + 1
+  end
   m_pages = hosted_by[m.id] ?? []
--}}
-
+}}
 #### {{ m.name }}
 
-On pages: {{ m_pages.size > 0 ? (m_pages | array.sort | array.join ", ") : "—" }} · Authentication required: {{ m.c.authenticationrequired ? "Yes" : "No" }} · Edit existing record: {{ m.c.editexistingrecordpermitted ? "Yes" : "No" }} · Multiple records per user: {{ m.c.multiplerecordsperuserpermitted ? "Yes" : "No" }}
+On pages: {{ m_pages.size > 0 ? (m_pages | array.sort | array.join ", ") : "—" }} · Authentication required: {{ m.c.authenticationrequired ? "Yes" : "No" }} · Edit existing record: {{ m.c.editexistingrecordpermitted ? "Yes" : "No" }} · Multiple records per user: {{ m.c.multiplerecordsperuserpermitted ? "Yes" : "No" }}{{ if reached + 1 == ordered.size }} · Step {{ ordered.size }} is not reached from the start step{{ else if reached < ordered.size }} · Steps {{ reached + 1 }}–{{ ordered.size }} are not reached from the start step{{ end }}
 
-| # | Step | Type | Table | Form | Mode | Custom JavaScript |
-|---|---|---|---|---|---|---|
+| # | Step | Type | Table | Form | Mode | Next | Custom JavaScript |
+|---|---|---|---|---|---|---|---|
 {{ for s in ordered -}}
-| {{ for.index + 1 }} | {{ cell s.name }} | {{ step_labels["" + s.c.type] ?? "—" }} | {{ s.c.targetentitylogicalname != null ? "`" + s.c.targetentitylogicalname + "`" : "—" }} | {{ cell (s.c.formname ?? "—") }}{{ if has_text s.c.tabname }} (tab {{ cell s.c.tabname }}){{ end }} | {{ mode_labels["" + s.c.mode] ?? "—" }} | {{ code_size s.c.registerstartupscript }} |
+{{-
+  next_id = s.c.nextstep
+  next_text = (has_text next_id) ? ("→ " + (step_no[next_id] ?? (name_of next_id))) : "End"
+  if s.c.type == 100000000
+    else_id = s.c.conditiondefaultnextstep
+    next_text = "If `" + (s.c.condition ?? "?") + "` " + next_text + ", else " + ((has_text else_id) ? ("→ " + (step_no[else_id] ?? (name_of else_id))) : "end")
+  else if s.c.type == 100000003
+    if has_text s.c.redirecturl
+      next_text = "Redirect to " + s.c.redirecturl
+    else if has_text s.c.redirectwebpage
+      next_text = "Redirect to " + (name_of s.c.redirectwebpage)
+    else
+      next_text = "Redirect (no target set)"
+    end
+    if (has_text s.c.redirecturlquerystringattribute) && (has_text s.c.redirecturlquerystringattributeparamname)
+      next_text = next_text + " with `?" + s.c.redirecturlquerystringattributeparamname + "=` " + s.c.redirecturlquerystringattribute
+    end
+  end
+-}}
+| {{ for.index + 1 }} | {{ cell s.name }} | {{ step_labels["" + s.c.type] ?? "—" }} | {{ code_name s.c.targetentitylogicalname }} | {{ cell (s.c.formname ?? "—") }}{{ if has_text s.c.tabname }} (tab {{ cell s.c.tabname }}){{ end }} | {{ mode_labels["" + s.c.mode] ?? "—" }} | {{ cell next_text }} | {{ code_size s.c.registerstartupscript }} |
 {{ end -}}
 {{ end }}
 ### Cloud flows

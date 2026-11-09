@@ -169,6 +169,32 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.OrchestrationTests
             Assert.That(Directory.Exists(Path.Combine(_baseDir, "runs")), Is.False);
         }
 
+        [Test]
+        public void CreateRunDirectory_SameSecond_AddsSuffix()
+        {
+            var at = new DateTime(2026, 11, 9, 14, 3, 7, DateTimeKind.Utc);
+
+            var first = ExportJobRunner.CreateRunDirectory(_baseDir, at);
+            var second = ExportJobRunner.CreateRunDirectory(_baseDir, at);
+            var third = ExportJobRunner.CreateRunDirectory(_baseDir, at);
+
+            Assert.That(Path.GetFileName(first), Is.EqualTo("20261109-140307"));
+            Assert.That(Path.GetFileName(second), Is.EqualTo("20261109-140307-2"));
+            Assert.That(Path.GetFileName(third), Is.EqualTo("20261109-140307-3"));
+            Assert.That(Directory.Exists(third), Is.True);
+        }
+
+        [Test]
+        public void Run_TwiceBackToBack_KeepsBothRunFolders()
+        {
+            var firstRun = CreateRunner().Run(Job(), _baseDir, CancellationToken.None);
+            var secondRun = CreateRunner().Run(Job(), _baseDir, CancellationToken.None);
+
+            Assert.That(secondRun, Is.Not.EqualTo(firstRun));
+            Assert.That(File.Exists(Path.Combine(firstRun, "output.md")), Is.True);
+            Assert.That(File.Exists(Path.Combine(secondRun, "output.md")), Is.True);
+        }
+
         private string DeliveredPath => Path.Combine(_baseDir, "output", $"{SpecName}.context.md");
 
         private ExportJob Job() => new ExportJob
