@@ -2210,8 +2210,8 @@ Short, throwaway investigations against a development environment. Each produces
 | S4 | Do the target agent clients (Claude Code, VS Code agent mode) connect to a local HTTP MCP server with a bearer header, read `structuredContent`, and how do they surface errors and long waits during approval? | Client configuration snippets and timeout behaviour documented |
 | S5 | Which of the Read tools does the Microsoft Dataverse MCP server already provide, and could it replace any of them? Requires a dated, sourced check. | Overlap table; decision recorded |
 | S6 | How does XrmToolBox host several tabs of one plugin? Is a static singleton shared across tabs (one assembly load per process)? Which hooks report a connection being set and changed, how does a plugin close its own tab, and how does it re-open the connection dialog? Is the connection ID stable across restarts, and can a dialog be owned by the main window? | Two tabs bound to different connections share one host; a duplicate is detected and both dialog actions work; closing tabs in any order leaves the registry correct |
-| S7 | *Cold storage — no build environment.* Does the promotion pipeline's component copy preserve each component's root component behaviour, and does it ever add required components or subcomponents? | `list_solution_components` on the build environment before and after promoting a WIP holding a metadata-only table, a column, a form and a web resource matches what was intended |
-| S8 | *Deferred with strategy C.* With Dataverse Git integration, does environment binding commit WIP solutions as solutions in their own right, and can an unbound WIP hold objects of solutions bound under solution binding? | Documented behaviour, and the recommended binding for projects that use WIP solutions |
+| S7 | *Cold storage — no build environment.* Does the promotion pipeline's component copy preserve each component's root component behaviour, and does it ever add required components or subcomponents? | `list_solution_components` on the build environment before and after promoting a WIP holding a metadata-only table, a column, a form and a web resource matches what was intended *(Moved to [Phase 6a](#6a3--pending-spikes), 2026-11-08.)* |
+| S8 | *Deferred with strategy C.* With Dataverse Git integration, does environment binding commit WIP solutions as solutions in their own right, and can an unbound WIP hold objects of solutions bound under solution binding? | Documented behaviour, and the recommended binding for projects that use WIP solutions *(Moved to [Phase 6a](#6a3--pending-spikes), 2026-11-08.)* |
 
 ### Phase 1 — Host, connections, approvals and log
 
@@ -2378,10 +2378,118 @@ S10 ran through a throwaway SDK console with its own sign-in, not through the pl
 
 **Exit:** with grants of every scope in place for two environments in one tenant and one in another, each grant is listed under its tenant and environment in the order of [§8.8](#88-active-approvals-window-phase-6), revoking one or resetting a tenant or an environment takes effect on the next call, and the main panel no longer shows the token. A Write call approved *Per environment* runs the next Write to that environment without a dialog but with its log line pair; Write and dev-environment confirmation offer nothing broader; a publisher creation still prompts every time. A Read granted *Per tenant* covers a second environment of that tenant bound afterwards, but not the environment in the other tenant. A record query prompts on its own even with a Read grant, and a `RecordRead` grant does not cover other reads. A v1 settings file loads: its Read grants are kept and gain environment and tenant IDs on the next binding, an *always* dev-environment confirmation is dropped, and the token is unchanged. A grant whose environment ID no longer matches is shown *Stale* and not applied. For the direct-update tools: on the sandbox, a web resource edit is written, published and visible in the app without an import, and a stale `expectedVersion` is refused. With no File root set, the first call prompts for one and its level, and Cancel fails it with `denied_by_user`. A tenant File root serves a second environment of that tenant without a prompt, and an environment File root takes precedence over it. A relative path and an absolute path inside the root are both accepted. A `..` escape, an absolute path outside the root and a path through a junction are refused before the dialog. The File root is shown, changed and cleared in Active Approvals, and a change applies from the next call. For plug-in components: an assembly, two of its steps — one with an image — and a custom API with a request parameter and a response property, all registered beforehand, are added to a WIP by name, unique name or ID in one call. The read-back shows what the platform added with each, recorded in [notes](notes.md); nothing unexpected is left unreported. An export of the WIP carries the steps with their image and the custom API with its parameter and property. This also answers part of spike S12.
 
+### Phase 6a — Refinements
+
+> [!NOTE]
+> **Phase 6a (opened 2026-11-08) collects follow-up work on 1.2026.11.2 before its release.** The version does not change: 1.2026.11.2 is unreleased, so the two-file rule is not triggered. Tasks are added here as they come up. Progress and findings are in [notes.md](notes.md#phase-6a--refinements).
+
+| # | Task | Status |
+|---|---|---|
+| 6a.1 | **Tool Library icon resolution.** The embedded icons were half the size XrmToolBox expects, so they looked blurry next to other tools | **Done** (2026-11-08) |
+| 6a.2 | **Automatic call log on disk.** An opt-in setting that writes every call and its outcome, in full, to a JSON file per connection and day | Specified; not built |
+| 6a.3 | **Pending spikes.** S7, S8 and S12 move here from Phase 0 and Phase 7 | Moved; none run |
+
+#### 6a.1 — Tool Library icon resolution
+
+XrmToolBox reads a tool's icons from the `BigImageBase64` and `SmallImageBase64` metadata on the plugin class, and the Tool Library list uses the package's `iconUrl`. The plugin embedded a 32×32 Big and a 16×16 Small icon; XrmToolBox expects 80×80 and 32×32, which is what FetchXML Builder embeds, so it stretched the plugin's icons.
+
+| Source | Before | Now |
+|---|---|---|
+| `BigImageBase64` | 32×32 | 80×80 (`d365-agent-companion-80px.png`) |
+| `SmallImageBase64` | 16×16 | 32×32 (`d365-agent-companion-32px.png`) |
+| `.nuspec` `iconUrl` | `…-128px.png` | `…-150px.png` |
+
+**Check:** after a build, the tool tile and tool list in XrmToolBox show the sharper icons. The Tool Library shows the 150px icon once `d365-agent-companion-150px.png` is on `main`.
+
+#### 6a.2 — Automatic call log on disk
+
+Today a call log reaches disk only through **Save as…**, as the truncated text shown in the panel ([§8.6](#86-call-log-format), R13). 6a.2 adds an opt-in setting that writes each call to disk as it happens, with full details, so a session can be reviewed or handed over without remembering to save.
+
+| Setting | Level | Default | Behaviour |
+|---|---|---|---|
+| **Write call log to disk** | Host (all connections and tabs) | Off | A checkbox in the Active Approvals window ([§8.8](#88-active-approvals-window-phase-6)). While it is on, every call to every connection, and every host call, is written to its log file when the call ends |
+| **Log folder** | Host | Not set | The folder the files are written to. It is asked for each time the checkbox goes from off to on, and the window shows the folder next to the checkbox |
+
+**Turning it on.** Ticking the checkbox from off opens a folder prompt, which explains the rules below and starts at the previous folder if there was one. The checkbox ends up ticked only when the person chooses a folder that passes the Git working tree check ([Client data](#6a2--automatic-call-log-on-disk)). **Cancel**, or a refused folder, leaves it off, with the reason shown. **Unticking** turns the log off at once; a call that is already running is still written when it ends. To use another folder, untick and tick again.
+
+**Saved settings.** Both values are saved with the rest of the plugin settings, so the log is on again, writing to the same folder, the next time XrmToolBox opens and for every connection bound afterwards, until the person unticks it. If the saved folder is missing or no longer passes the Git check at startup, the log stays off for that session and a warning shows in the Active Approvals window and in the log panel; the saved values are kept. **The agent is never told.** `get_connection_info` and every other tool response leave out whether the log is on, its folder and the names of its files, and no tool can read or change the setting. It is the person's record of what the agent did, and only the person sets it, in the Active Approvals window. A warning about the log (a missing folder, a failed write) shows only in the plugin window and the log panel, never in a tool response, and a call's timing and result are the same with the log on or off. Both values have defaults, so the settings file needs no upgrade mapping and `SchemaVersion` stays 1.
+
+Because the setting is global, it is not changed from a connection's tab, and Reset all approvals does not touch it: like a File root, it is a setting, not a grant.
+
+**File.** One file per connection and day, named `AgentCompanion-[ConnectionName]-yyyyMMdd.json`, in the log folder. The date is the local date the host received the call, so a call received after midnight starts a new file. Characters that are invalid in a file name are replaced with `_`. The first call of a day creates the file; later calls, including after XrmToolBox restarts, append to it. Nothing is deleted or rotated by the plugin.
+
+**Valid JSON at all times.** The file is a single JSON document, never a stream of separate lines, and it is complete and parseable after every write:
+
+```json
+{
+  "schemaVersion": 1,
+  "connection": {
+    "connectionId": "…", "connectionName": "…",
+    "organization": { "id": "…", "uniqueName": "…", "friendlyName": "…", "environmentId": "…", "tenantId": "…" }
+  },
+  "date": "2026-11-08",
+  "entries": [
+    {
+      "receivedAt": "2026-11-08T14:03:05.123+01:00",
+      "tool": "create_solution",
+      "tier": "write",
+      "reason": "Base solution for story 1234.",
+      "callLine": "2026-11-08 14:03:05  create_solution  reason \"…\"  connection=00000000-0…",
+      "arguments": { "…": "verbatim, as the agent sent them, without reason" },
+      "outcome": {
+        "status": "ok",
+        "errorCode": null,
+        "errorMessage": null,
+        "approval": "once",
+        "durationMs": 800,
+        "outcomeLine": "  → ok  once  0.8 s  solutionId=00000000-0…",
+        "pages": 1,
+        "responseBytes": 2048
+      },
+      "result": { "…": "the full structuredContent, untruncated" },
+      "unexpected": []
+    }
+  ]
+}
+```
+
+The file ends with `]}` and a newline, and the plugin appends by overwriting that trailer with `,` and the new entry followed by the trailer again. Each entry is written in one write and flushed. Rules:
+
+- **A call and its outcome are one entry**, written together when the call ends, as the two lines are in the panel ([§8.6](#86-call-log-format)). Entries are in the order calls ended. A continuation page is its own entry, with `approval: "page"`.
+- **`callLine` and `outcomeLine`** hold the lines as the panel shows them, truncated and sanitised. **`arguments` and `result` hold the full detail**, with nothing truncated, so the file is a superset of the panel and of the call detail ([§8.4](#84-log-entry-detail)).
+- **Every call is written**, including denied, rejected, timed-out and host calls. When a call never ran, `result` is `null`.
+- **Escaping.** JSON escapes control characters, so agent text cannot break the structure. The plugin also escapes Unicode bidirectional-formatting characters as `\uXXXX`, so a file opened in a viewer cannot be made to read differently from what it holds (R8).
+- **Never written:** the bearer token, protected settings values, and anything the plugin holds that the agent did not send or receive.
+- **A file that is not in this shape** (a trailer that is not `]}`, a parse failure on opening) is never modified. The plugin starts `AgentCompanion-[ConnectionName]-yyyyMMdd-2.json` (then `-3`, and so on) and shows a warning in the log panel.
+- **A failed write never fails or delays a call.** The panel warns once, the checkbox stays ticked, and the next call tries again.
+
+**Client data (R7).** The files hold full arguments and results, so they can hold client data, including record values from record reads. The folder is therefore checked more strictly than **Save as…**: the plugin **refuses** a log folder that is, or is inside, a Git working tree (it or a parent folder contains `.git`), rather than asking for confirmation, because nobody is there to confirm each write. The check runs when the folder is chosen, at startup, and again each time a file is opened. The folder prompt says plainly that the files can contain client data and are not encrypted.
+
+**Reword when built.** R13 and §8.4 say that a log reaches disk only through **Save as…** and that a call's detail is never saved; both become "unless the person turns on **Write call log to disk**". R7's wording stands. §8.8 gains the checkbox and the folder line.
+
+**Decided (2026-11-08).**
+
+- *Host calls.* Calls that name no connection or an unknown one (`list_connections` and rejected calls) have no connection file. They are written to `AgentCompanion-host-yyyyMMdd.json`, in the same shape, with `connection` set to `null`, while the checkbox is ticked.
+- *Two connections with one name.* They would share a file, so the first 8 characters of the connection ID are added to the file name (`AgentCompanion-[ConnectionName]-[id8]-yyyyMMdd.json`) for both of them while two bound connections have the same name. A name that is unique when the first call of the day is written keeps the plain name for that day's file.
+
+**Check:** with the checkbox ticked, a Read call and a denied Write call each produce an entry, and the file parses with a standard JSON parser after each. The file name has the connection name and the date, with no time. After XrmToolBox restarts on the same day, new calls append to the same file. A call after midnight creates the next day's file. Ticking the checkbox from off asks for the folder; Cancel leaves it off, and a folder inside a Git working tree is refused. Once on, two connections in different tabs each get their own file, and a call naming no connection goes to the host file. Closing and reopening XrmToolBox keeps the checkbox ticked and the folder, and logging resumes for a connection bound afterwards. With the folder made read-only, a call still completes and the panel warns once. A truncated or hand-edited file is left untouched and a `-2` file starts. Two connections with one name get the `[id8]` in their file names. After unticking, nothing more is written, and ticking again asks for the folder again. `get_connection_info` and the other tool responses are identical with the checkbox ticked and unticked, including when a log write fails.
+
+#### 6a.3 — Pending spikes
+
+Spikes that have not been run move into this phase, so that open questions are in one place. They are unchanged except for where they are tracked. The original rows in Phase 0 and Phase 7 point here.
+
+| ID | Question | Status | Feeds |
+|---|---|---|---|
+| S7 | *Cold storage — no build environment.* Does the promotion pipeline's component copy preserve each component's root component behaviour, and does it ever add required components or subcomponents? **Exit:** `list_solution_components` on the build environment before and after promoting a WIP holding a metadata-only table, a column, a form and a web resource matches what was intended | Not run; needs a build environment with the promotion pipeline. Until it runs, A1's R1 check after every promotion stays mandatory | §9.7 close-out strategy A |
+| S8 | *Deferred with strategy C.* With Dataverse Git integration, does environment binding commit WIP solutions as solutions in their own right, and can an unbound WIP hold objects of solutions bound under solution binding? **Exit:** documented behaviour, and the recommended binding for projects that use WIP solutions | Not run; waits for strategy C | §9.7, C2 |
+| S12 | Registration round trip, starting from the field findings in [Phase 7](#phase-7--plug-in-authoring). Does `pac plugin push` ever register new plug-in types, and if not, which route does — a WIP import with new `PluginType` entries in `.dll.data.xml`, or only the Plugin Registration Tool? What must a WIP hold for its export to carry steps, images and custom APIs — each step added as 92, the assembly with its subcomponents, or something else? Does importing a WIP with a new step file and its `RootComponent` create the step, with which import flags, and what makes the packager or the import skip it silently — a missing `Customizations.xml` anchor node, an unregistered plug-in type? The same for a custom API with request parameters and response properties. Through the plugin and the person's PAC profile only, on a data-free environment | Not run | §9.10, G1–G5, the skill changes. **Phase 7 starts from its result** |
+
+Each spike, when run, gets a written finding in [notes](notes.md) and updates the sections it feeds, as in Phase 0.
+
 ### Phase 7 — Plug-in authoring
 
 > [!NOTE]
-> **Deferred (2026-11-03), at the person's choice, to prioritize other work.** Starts with spike S12. Until then plug-in registration is a person's, in the Plugin Registration Tool: the companion skills do not carry it, and `d365ce-planning` plans it as manual ([§9.10](#910-plug-in-assemblies-steps-and-custom-apis-phase-7)).
+> **Deferred (2026-11-03), at the person's choice, to prioritize other work.** Starts from the result of spike S12, now tracked in [Phase 6a](#6a3--pending-spikes). Until then plug-in registration is a person's, in the Plugin Registration Tool: the companion skills do not carry it, and `d365ce-planning` plans it as manual ([§9.10](#910-plug-in-assemblies-steps-and-custom-apis-phase-7)).
 
 Specified with Phase 6 and split off when field use showed that plug-in authoring has quirks the design does not account for. On a project, an agent added plug-ins to an existing assembly with `pac plugin push`:
 
@@ -2398,12 +2506,12 @@ Specified with Phase 6 and split off when field use showed that plug-in authorin
 | **Step mirroring and switching** | `mirror_steps`, `disable_steps`, `enable_steps` and `rebind_custom_apis` ([§6.9](#69-plug-in-step-tools-phase-7)); side-load WIP naming (`_Sideload`, [§9.5](#95-transport-solutions-and-segmented-wip-solutions)); rules M1–M7 |
 | **Skill changes** | `agent-companion-wip-edit-loop`: registration through the WIP, G1–G5, `pac plugin push`, M3 after every import. `agent-companion-wip-shaping`: what a WIP must hold for registration, plug-in assemblies in the overlap check (G3), side-load WIPs and `Get-WipName.ps1`'s `_Sideload` suffix. `agent-companion-context`: the G and M rules in its rule index, open switches in the ledger (M7). `agent-companion-wip-close-out`: M4 before close-out, mirrors and disabled originals in the leftover check. `d365ce-planning`: registration as agentic work once the path is verified (K7) |
 
-**Spikes.** S9 ran on 2026-11-03 with Phase 6's spikes; S12 comes first when Phase 7 starts. S12 uses the plugin and the person's PAC profile only, on a data-free environment.
+**Spikes.** S9 ran on 2026-11-03 with Phase 6's spikes. S12 moved to [Phase 6a](#6a3--pending-spikes) on 2026-11-08 and comes first when Phase 7 starts. S12 uses the plugin and the person's PAC profile only, on a data-free environment.
 
 | ID | Question | Result | Feeds |
 |---|---|---|---|
 | S9 | Steps: created disabled? Same `typename` in two assemblies? Images and secure configuration copied? What does an import do to step state? Custom API rebinding? | Not creatable disabled — create, then disable. Same `typename` allowed. Images, unsecure and secure configuration copied, and the mirror ran with identical inputs. An import sets every step it carries — enabled with activation, disabled without — and leaves others alone; no state in the export. Custom API rebinding effective within a second. Ran through a throwaway SDK console, not the plugin ([notes](notes.md#spikes-s9s11--2026-11-03)) | `mirror_steps`, M1–M5, `rebind_custom_apis` |
-| S12 | Registration round trip, starting from the field findings above. Does `pac plugin push` ever register new plug-in types, and if not, which route does — a WIP import with new `PluginType` entries in `.dll.data.xml`, or only the Plugin Registration Tool? What must a WIP hold for its export to carry steps, images and custom APIs — each step added as 92, the assembly with its subcomponents, or something else? Does importing a WIP with a new step file and its `RootComponent` create the step, with which import flags, and what makes the packager or the import skip it silently — a missing `Customizations.xml` anchor node, an unregistered plug-in type? The same for a custom API with request parameters and response properties | — | §9.10, G1–G5, the skill changes |
+| S12 | *Moved to [Phase 6a](#6a3--pending-spikes) (2026-11-08).* Registration round trip, starting from the field findings above | Not run | §9.10, G1–G5, the skill changes |
 
 **Exit:** on the sandbox, through the plugin and PAC only: a story adds a plug-in type and a step with an image to an existing assembly, and a new custom API, by the path S12 settles; the read-back shows each as planned (G4); an export of the WIP carries them, and importing that export where they do not exist creates them. A step is mirrored to a side-loaded assembly disabled, switched, restored and its mirror removed. An import with `--activate-plugins` of a WIP holding a switched original is caught by M3.
 

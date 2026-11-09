@@ -8,14 +8,15 @@
 
 | Phase | Status | Exit criterion |
 |---|---|---|
-| [0 — Spikes](SPEC.md#phase-0--spikes) | **Done for v1** (2026-10-30). S7 in cold storage (no build environment); S8 deferred with strategy C. Sandbox and workstation cleaned up | Every v1 spike has a written finding, and the spec is updated |
+| [0 — Spikes](SPEC.md#phase-0--spikes) | **Done for v1** (2026-10-30). S7 in cold storage (no build environment); S8 deferred with strategy C — both now tracked in [Phase 6a](#phase-6a--refinements). Sandbox and workstation cleaned up | Every v1 spike has a written finding, and the spec is updated |
 | [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | **Done** (2026-10-30) — built, unit-tested, and all twelve live exit checks passed in XrmToolBox. See [Phase 1 — execution](#phase-1--execution) | See spec |
 | [2 — Discovery](SPEC.md#phase-2--discovery) | **Done** (2026-10-31) — built, unit-tested (176 tests), and the live exit checks passed against the sandbox; four findings (L1–L4) fixed on the way. See [Phase 2 — execution](#phase-2--execution) | See spec |
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | **Done** (2026-10-31) — built, unit-tested (207 tests), and the cold-start workflow (§9.1) ran end to end on the sandbox; two findings (P1, P2) for the Phase 4 skills. See [Phase 3 — execution](#phase-3--execution) | See spec |
 | [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | **In progress** (2026-10-31) — five companion skills and their scripts built; script self-tests pass (35 + 11). Live exit checks: I31 verified; scenarios 1–4 pass; scenario 5 desk-checked; scenario 6 partial — the imported flow did not fire (E13). Findings E1–E13. See [Phase 4 — execution](#phase-4--execution) | See spec |
 | [5 — Release](SPEC.md#phase-5--release) | **Done** (2026-11-03) — published in the XrmToolBox Tool Library. Still to follow the release: the column-3 guide changes. See [Phase 5 — execution](#phase-5--execution) | See spec |
 | [6 — Planned enhancements](SPEC.md#phase-6--planned-enhancements) | **Built; live exit checks pending** (2026-11-05) — scoped approvals and the Active Approvals window, `update_web_resources`, plug-in components in the selectors, the skill changes and the docs, as version 1.2026.11.2. Built and unit-tested (383 tests); nothing of it has run in XrmToolBox or against a sandbox yet. See [Phase 6 — execution](#phase-6--execution) | See spec |
-| [7 — Plug-in authoring](SPEC.md#phase-7--plug-in-authoring) | **Not started** (2026-11-03) — split from Phase 6 after field use (U10): registration through a WIP, `pac plugin push`, step mirroring and switching, custom API rebinding. Spike S9 done; S12 first when it starts. Deferred at the person's choice | See spec |
+| [6a — Refinements to 1.2026.11.2](#phase-6a--refinements) | **In progress** (2026-11-08) — follow-up tasks on the unreleased 1.2026.11.2 build, ahead of its release. 1 of 3 tasks done: the Tool Library icons; the disk call log is specified, and spikes S7, S8 and S12 moved here. Same version; no bump. See [Phase 6a — refinements](#phase-6a--refinements) | See [spec](SPEC.md#phase-6a--refinements) |
+| [7 — Plug-in authoring](SPEC.md#phase-7--plug-in-authoring) | **Not started** (2026-11-03) — split from Phase 6 after field use (U10): registration through a WIP, `pac plugin push`, step mirroring and switching, custom API rebinding. Spike S9 done; S12 moved to [Phase 6a](#phase-6a--refinements) (2026-11-08) and gates this phase. Deferred at the person's choice | See spec |
 
 Status values: *Not started* · *In progress* · *Blocked* (say on what) · *Done*.
 
@@ -109,6 +110,40 @@ On a data-free trial environment the person provided for spikes. Its URL stays o
 
 - **Spike S12** first ([SPEC Phase 7](SPEC.md#phase-7--plug-in-authoring)), starting from U10: what registers new plug-in types, what a WIP must hold for its export to carry steps, and what makes an import create them. Through the plugin and the person's PAC profile only.
 - **Skill changes** listed in the Phase 7 table, including `Get-WipName.ps1`'s `_Sideload` suffix.
+
+---
+
+## Phase 6a — refinements
+
+Started 2026-11-08. Follow-up work on the Phase 6 build before 1.2026.11.2 is released. The version stays **1.2026.11.2** in the `.csproj` and the `.nuspec` (the two-file rule is not triggered, because nothing is released yet). Tasks are added here as they come up.
+
+| # | Task | Status |
+|---|---|---|
+| 6a.1 | [Tool Library icon resolution](#6a1--tool-library-icon-resolution) | **Done** (2026-11-08); needs a build, and the 150px file pushed to `main`, to be seen in the Tool Library |
+| 6a.2 | Automatic call log on disk — one JSON file per connection and day, full arguments and results ([SPEC](SPEC.md#6a2--automatic-call-log-on-disk)) | Specified (2026-11-08); not built. Never reported to the agent in any tool response. One global checkbox in Active Approvals asks for the folder when ticked and is saved with the plugin settings. Decided: host calls go to `AgentCompanion-host-yyyyMMdd.json`; two connections with one name get an 8-character connection ID in the file name |
+| 6a.3 | Pending spikes S7, S8 and S12, moved from Phase 0 and Phase 7 ([SPEC](SPEC.md#6a3--pending-spikes)) | Moved (2026-11-08); none run. S12 gates Phase 7 |
+
+### 6a.1 — Tool Library icon resolution
+
+**Problem.** The plugin's icons looked much lower resolution in XrmToolBox than FetchXML Builder's.
+
+**Finding.** XrmToolBox reads tool icons from the `BigImageBase64` and `SmallImageBase64` metadata on the plugin class, and the Tool Library list also uses the package's `iconUrl`. Decoded from the code of both plugins:
+
+| Source | Agent Companion (before) | FetchXML Builder | Agent Companion (now) |
+|---|---|---|---|
+| `BigImageBase64` | 32×32 | 80×80 | 80×80 |
+| `SmallImageBase64` | 16×16 | 32×32 | 32×32 |
+| nuspec `iconUrl` | 128px | 150px | 150px |
+
+The XrmToolBox convention is 80×80 for Big and 32×32 for Small. The plugin embedded half of that, so XrmToolBox stretched the images. The `iconUrl` difference (128px against 150px) was minor.
+
+**Change.**
+
+- `AgentCompanionPlugin.cs`: `BigImageBase64` now holds `d365-agent-companion-80px.png`; `SmallImageBase64` now holds `d365-agent-companion-32px.png`. Both values were produced by Base64-encoding the PNG files, and their decoded dimensions were checked.
+- `D365AgentCompanionMcp.nuspec`: `iconUrl` now points to `d365-agent-companion-150px.png`.
+- The source PNGs (16, 32, 64, 80, 128, 150 and 256px) stay in the project folder. Only the 32px and 80px files are embedded, so the other files are for packaging and reference.
+
+**Still to check.** Not built or run in this session. After a build, the tool tile and the tool list in XrmToolBox should show the sharper icons. The Tool Library shows the 150px icon only once `d365-agent-companion-150px.png` is on `main`, because the `iconUrl` is a raw.githubusercontent link.
 
 ---
 
