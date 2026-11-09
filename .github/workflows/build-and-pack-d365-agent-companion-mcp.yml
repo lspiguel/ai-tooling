@@ -8,11 +8,13 @@ on:
     paths:
       - 'tooling/D365AgentCompanionMcp/**'
       - 'skills/agent-companion-*/**'
+      - '.github/workflows/build-and-pack-d365-agent-companion-mcp.yml'
   pull_request:
     branches: [main]
     paths:
       - 'tooling/D365AgentCompanionMcp/**'
       - 'skills/agent-companion-*/**'
+      - '.github/workflows/build-and-pack-d365-agent-companion-mcp.yml'
 
 jobs:
   build:
@@ -89,22 +91,23 @@ jobs:
       - name: Setup NuGet
         uses: nuget/setup-nuget@v2
 
-      - name: Get NuGet API key via OIDC
-        id: oidc
-        shell: pwsh
-        run: |
-          $token = Invoke-RestMethod `
-            -Uri "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=nuget.org" `
-            -Headers @{ Authorization = "bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN" } |
-            Select-Object -ExpandProperty value
-          echo "::add-mask::$token"
-          echo "api-key=$token" >> $env:GITHUB_OUTPUT
+      # Trusted publishing: exchanges the GitHub OIDC token for a short-lived nuget.org API key,
+      # matched against the nuget.org policy for this repository and workflow file.
+      - name: NuGet login (OIDC)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
 
+      # -SkipDuplicate: a merge that does not bump the version leaves the published package as is.
       - name: Push to NuGet
         shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         run: |
           $pkg = (Get-ChildItem nupkg/*.nupkg | Select-Object -First 1).FullName
           nuget push $pkg `
-            -ApiKey ${{ steps.oidc.outputs.api-key }} `
+            -ApiKey $env:NUGET_API_KEY `
             -Source https://api.nuget.org/v3/index.json `
+            -SkipDuplicate `
             -NonInteractive
