@@ -572,14 +572,13 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.QueriesTests
         }
 
         [Test]
-        public void SecurityRoles_BooleanManagedProperty_FallsBackToString()
+        public void SecurityRoles_BooleanManagedProperty_SerializesItsValue()
         {
             WriteFetchXml("security-roles.fetch.xml", SecurityRolesFetchXml);
 
             var entity = new Entity("role", Guid.NewGuid());
             entity.Attributes["name"] = "Contoso Dashboards";
             entity.Attributes["ismanaged"] = false;
-            // BooleanManagedProperty has no special case in ConvertValue → falls back to ToString()
             entity.Attributes["iscustomizable"] = new BooleanManagedProperty(false);
 
             var mock = new Mock<IOrganizationService>();
@@ -587,8 +586,8 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.QueriesTests
 
             var results = RunAndSerialize(mock, Q("security-roles", "security-roles.fetch.xml", "securityRoles"));
 
-            // Matches the actual run output: "iscustomizable": "Microsoft.Xrm.Sdk.BooleanManagedProperty"
-            Assert.That(results[0]["iscustomizable"], Is.EqualTo("Microsoft.Xrm.Sdk.BooleanManagedProperty"));
+            // Before the fix this came out as the type name, "Microsoft.Xrm.Sdk.BooleanManagedProperty".
+            Assert.That(results[0]["iscustomizable"], Is.EqualTo(false));
         }
 
         [Test]

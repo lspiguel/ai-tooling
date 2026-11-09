@@ -1,0 +1,165 @@
+---
+{{ for pair in _meta.frontMatter }}
+{{ pair.key }}: {{ pair.value -}}
+{{ end }}
+exportedAt: {{ _meta.exportedAtUtc | date.to_string "%Y-%m-%dT%H:%M:%SZ" }}
+environment: {{ _meta.environment.url }}
+
+---
+
+# Relationships — {{ _meta.environment.orgName }}
+
+> Scope: the project's relationships — custom (created by a maker, not by the platform) and unmanaged. System relationships every table gets (owner, created by, notes, activities and so on) and relationships installed by managed solutions are left out, as is a managed relationship whose behavior the project changed.
+
+{{
+  table_names = {}
+  for t in tables
+    table_names[t.LogicalName] = t.DisplayName | display_label t.LogicalName
+  end
+
+  func table_ref(name)
+    $display = table_names[name]
+    if $display == null || $display == name
+      ret "`" + name + "`"
+    end
+    ret "`" + name + "` (" + $display + ")"
+  end
+
+  func cell(text)
+    if text == null
+      ret ""
+    end
+    ret ("" + text) | string.replace "|" "\\|" | string.replace "\r" "" | string.replace "\n" " "
+  end
+
+  cascade_labels = {}
+  cascade_labels["Cascade"] = "Cascade all"
+  cascade_labels["Active"] = "Cascade active"
+  cascade_labels["UserOwned"] = "Cascade user-owned"
+  cascade_labels["NoCascade"] = "None"
+  cascade_labels["RemoveLink"] = "Remove link"
+  cascade_labels["Restrict"] = "Restrict"
+
+  # The behaviors offered when a relationship is configured, from Assign, Delete, Reparent, Share and Unshare.
+  func behavior(c)
+    if c == null
+      ret "—"
+    end
+    $others = [c.Assign, c.Reparent, c.Share, c.Unshare]
+    $all_cascade = c.Delete == "Cascade"
+    $all_none = true
+    for $v in $others
+      if $v != "Cascade"; $all_cascade = false; end
+      if $v != "NoCascade"; $all_none = false; end
+    end
+    if $all_cascade
+      ret "Parental"
+    end
+    if $all_none && c.Delete == "RemoveLink"
+      ret "Referential"
+    end
+    if $all_none && c.Delete == "Restrict"
+      ret "Referential, restrict delete"
+    end
+    ret "Custom"
+  end
+
+  # Cascade settings grouped by value: "Delete: Remove link; Assign, Merge, …: None".
+  func cascade(c)
+    if c == null
+      ret "—"
+    end
+    $by_value = {}
+    $order = []
+    for $action in ["Delete", "Assign", "Share", "Unshare", "Reparent", "Merge"]
+      $v = c[$action]
+      if $v == null
+        continue
+      end
+      $label = cascade_labels[$v] ?? $v
+      if $by_value[$label] == null
+        $by_value[$label] = []
+        $order = $order | array.add $label
+      end
+      $by_value[$label] = $by_value[$label] | array.add $action
+    end
+    $parts = []
+    for $label in $order
+      $parts = $parts | array.add (($by_value[$label] | array.join ", ") + ": " + $label)
+    end
+    ret $parts | array.join "; "
+  end
+
+  # Where the related records appear on the primary table's form navigation.
+  func menu(m)
+    if m == null
+      ret "—"
+    end
+    if m.Behavior == "DoNotDisplay"
+      ret "Hidden"
+    end
+    $text = m.Behavior == "UseLabel" ? (m.Label | display_label "(label)") : "Collection name"
+    ret m.Group != null ? ($text + " (" + m.Group + ")") : $text
+  end
+
+  one_to_many = oneToMany | array.sort "SchemaName"
+  many_to_many = manyToMany | array.sort "SchemaName"
+  referenced_tables = one_to_many | pluck "ReferencedEntity" | array.sort
+  referencing_tables = one_to_many | pluck "ReferencingEntity" | array.sort
+-}}
+| One-to-many | Many-to-many | Primary tables | Tables with project lookups |
+|---|---|---|---|
+| {{ one_to_many.size }} | {{ many_to_many.size }} | {{ referenced_tables.size }} | {{ referencing_tables.size }} |
+
+**Reading the tables.** A one-to-many relationship adds a lookup column to the related (many) table that points to the primary (one) table. **Behavior** is the relationship type as configured: *Parental* cascades every action from the primary record to its related records, *Referential* removes the link when the primary record is deleted, *Referential, restrict delete* blocks the delete while related records exist, *Custom* is any other combination, detailed in **Cascade**. **Navigation** gives the Web API navigation properties: the single-valued one on the related table (set the lookup with `<name>@odata.bind`) and the collection on the primary table (`$expand=<name>`). **Related menu** is how the related records appear on the primary table's form.
+
+## One-to-many relationships
+
+Grouped by primary table.
+{{ for group in one_to_many | group_by_key "ReferencedEntity" | array.sort "key" }}
+### {{ table_ref group.key }}
+
+| Related table | Lookup column | Schema name | Behavior | Cascade | Navigation (lookup / collection) | Related menu |
+|---|---|---|---|---|---|---|
+{{ for r in group.items | array.sort "ReferencingEntity" -}}
+| {{ table_ref r.ReferencingEntity }} | `{{ r.ReferencingAttribute }}` | `{{ r.SchemaName }}` | {{ behavior r.CascadeConfiguration }}{{ if r.IsHierarchical }} (hierarchical){{ end }} | {{ cascade r.CascadeConfiguration }} | `{{ r.ReferencingEntityNavigationPropertyName ?? "—" }}` / `{{ r.ReferencedEntityNavigationPropertyName ?? "—" }}` | {{ cell (menu r.AssociatedMenuConfiguration) }} |
+{{ end -}}
+{{ end }}
+{{- if one_to_many.size == 0 }}
+_No project one-to-many relationships._
+{{ end }}
+## Many-to-many relationships
+
+Each is stored in an intersect table with one lookup to each side. **Navigation** gives the collection-valued navigation property on each table, used to associate records (`POST …/<name>/$ref`) and to `$expand`.
+
+{{ if many_to_many.size > 0 -}}
+| Schema name | Table 1 | Table 2 | Intersect table | Navigation (1 / 2) | Related menu (1 / 2) |
+|---|---|---|---|---|---|
+{{ for r in many_to_many -}}
+| `{{ r.SchemaName }}` | {{ table_ref r.Entity1LogicalName }} | {{ table_ref r.Entity2LogicalName }} | `{{ r.IntersectEntityName }}` | `{{ r.Entity1NavigationPropertyName ?? "—" }}` / `{{ r.Entity2NavigationPropertyName ?? "—" }}` | {{ cell (menu r.Entity1AssociatedMenuConfiguration) }} / {{ cell (menu r.Entity2AssociatedMenuConfiguration) }} |
+{{ end -}}
+{{ else -}}
+_No project many-to-many relationships._
+{{ end }}
+## Lookups by table
+
+The project's lookup columns on each table and the tables they point to; a lookup that points to more than one table (a customer lookup, for example) lists each.
+
+{{ for group in one_to_many | group_by_key "ReferencingEntity" | array.sort "key" -}}
+{{-
+  targets = {}
+  columns = []
+  for r in group.items
+    if targets[r.ReferencingAttribute] == null
+      targets[r.ReferencingAttribute] = []
+      columns = columns | array.add r.ReferencingAttribute
+    end
+    targets[r.ReferencingAttribute] = targets[r.ReferencingAttribute] | array.add ("`" + r.ReferencedEntity + "`")
+  end
+  parts = []
+  for col in columns | array.sort
+    parts = parts | array.add ("`" + col + "` → " + (targets[col] | array.sort | array.join ", "))
+  end
+-}}
+- {{ table_ref group.key }}: {{ parts | array.join " · " }}
+{{ end -}}

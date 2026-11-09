@@ -21,14 +21,14 @@ A **playbook plus supporting tooling** for AI-augmented delivery on Dynamics 365
 | `docs/` | `ai-tool-taxonomy.md`, `security-prompt-injection.md`, and `agents/` capability write-ups per AI product |
 | `skills/` | Reusable assistant skills: `d365ce-planning`, `d365ce-documenting`, `power-automate-flow-editing` (each a `SKILL.md` plus `references/` and, for the flow skill, `scripts/`) |
 | `scripts/` | Standalone utilities — Azure DevOps auth (`.ps1`/`.sh` pair), encode/decode, markdown/SVG conversion, HTML→PNG export |
-| `tooling/D365ContextExporter/` | XrmToolBox plugin that exports Dataverse metadata into markdown context packs |
+| `tooling/D365ContextExporter/` | XrmToolBox plugin that exports Dataverse metadata into markdown context packs, released (`SPEC.md` describes it as built; development history, decisions and open items in `notes.md`) |
 | `tooling/D365AgentCompanionMcp/` | XrmToolBox plugin, built, release in progress (`SPEC.md` is the source of truth; progress and findings in `notes.md`) — one local MCP host per XrmToolBox process, one plugin tab per connection, every call human-authorized — for discovering components and shaping segmented WIP solutions. Solution `D365AgentCompanionMcp.sln`: the plugin, its NUnit tests, and a console harness for the MCP layer. The `agent-companion-*` skills in `skills/` are embedded in the DLL for its setup wizard. Its rules are in INSTRUCTIONS.md under *Tooling conventions — Agent Companion MCP* |
 | `.github/workflows/` | CI for the Context Exporter and the Agent Companion MCP (the latter also triggered by `skills/agent-companion-*/**`); `.github/copilot-instructions.md` and `AGENTS.md` are pointers to INSTRUCTIONS.md like this file |
 | `nupkg/` | Pack output drop (git-ignored contents) |
 
 ## D365 Context Exporter
 
-`net48` WinForms XrmToolBox plugin. Solution: `tooling/D365ContextExporter/D365ContextExporter.sln`.
+`net48` WinForms XrmToolBox plugin. Solution: `tooling/D365ContextExporter/D365ContextExporter.sln`. Behaviour is specified in `tooling/D365ContextExporter/SPEC.md`; how it got there, and the open items, are in `tooling/D365ContextExporter/notes.md`.
 
 ```bash
 dotnet restore tooling/D365ContextExporter/D365ContextExporter.sln

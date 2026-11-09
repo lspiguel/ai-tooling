@@ -9,17 +9,15 @@
     $(XrmToolBoxPluginsDir)\
       D365ContextExporter.dll      (discovered by XrmToolBox)
       D365ContextExporter.pdb
-      D365ContextExporter\         (private-lib subfolder, loaded via AssemblyResolve)
-        Scriban.dll
-        System.Text.Json.dll
-        System.Text.Encodings.Web.dll
+
+  Nothing else is copied, and nothing goes in a Plugins subfolder. Scriban is compiled into the
+  plugin from source, and Newtonsoft.Json and the SDK are provided by XrmToolBox. XrmToolBox locks
+  DLLs in Plugins subfolders at start-up, which breaks Tool Library update and uninstall (SPEC.md, R4).
 -->
 <Project>
   <PropertyGroup>
     <!-- Edit this to point to your local XrmToolBox Plugins folder. -->
     <XrmToolBoxPluginsDir>C:\Users\YourName\AppData\Roaming\MscrmTools\XrmToolBox\Plugins</XrmToolBoxPluginsDir>
-    <!-- Subfolder that holds the plugin's private dependencies, isolated from other plugins. -->
-    <PluginPrivateLibDir>$(XrmToolBoxPluginsDir)\D365ContextExporter</PluginPrivateLibDir>
   </PropertyGroup>
 
   <Target Name="CopyToXrmToolBox" AfterTargets="Build"
@@ -33,18 +31,6 @@
           DestinationFolder="$(XrmToolBoxPluginsDir)"
           SkipUnchangedFiles="true" />
 
-    <!-- Private dependencies go in a named subfolder. The plugin's AssemblyResolve handler
-         loads from this subfolder, keeping these versions isolated from other plugins. -->
-    <MakeDir Directories="$(PluginPrivateLibDir)" />
-    <ItemGroup>
-      <PrivateDeps Include="$(TargetDir)Scriban.dll;
-                            $(TargetDir)System.Text.Json.dll;
-                            $(TargetDir)System.Text.Encodings.Web.dll" />
-    </ItemGroup>
-    <Copy SourceFiles="@(PrivateDeps)"
-          DestinationFolder="$(PluginPrivateLibDir)"
-          SkipUnchangedFiles="true" />
-
-    <Message Text="[PostBuild] Copied $(TargetFileName) to $(XrmToolBoxPluginsDir); deps to $(PluginPrivateLibDir)" Importance="High" />
+    <Message Text="[PostBuild] Copied $(TargetFileName) and its PDB to $(XrmToolBoxPluginsDir)" Importance="High" />
   </Target>
 </Project>

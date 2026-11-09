@@ -7,9 +7,6 @@
     "generatedBy": "D365 CE Context Exporter",
     "purpose": "AI assistant grounding context — full customization reference"
   },
-  "python": {
-    "interpreter": "auto"
-  },
   "transformation": "solutions-reference.sbn",
   "queries": [
     {
@@ -21,23 +18,38 @@
     {
       "id": "entities",
       "type": "webapi",
-      "path": "EntityDefinitions?$select=LogicalName,DisplayName,Description,IsActivity,PrimaryIdAttribute,PrimaryNameAttribute,IsCustomEntity,IsManaged,IsCustomizable&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,RequiredLevel,IsCustomAttribute)",
-      "resultKey": "entities",
-      "maxRecords": 500
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName,Description,IsActivity,IsCustomEntity,IsManaged,IsIntersect,TableType,DataProviderId&$expand=Attributes($select=LogicalName,DisplayName,AttributeType,AttributeTypeName,RequiredLevel,IsManaged;$filter=IsCustomAttribute eq true and IsManaged eq false and AttributeOf eq null)",
+      "resultKey": "entities"
     },
     {
-      "id": "system-forms",
+      "id": "relationships-one-to-many",
       "type": "webapi",
-      "path": "systemforms?$select=name,type,objecttypecode",
-      "resultKey": "forms",
-      "maxRecords": 5000
+      "path": "RelationshipDefinitions/Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata?$select=SchemaName,ReferencedEntity,ReferencingEntity,ReferencingAttribute&$filter=IsCustomRelationship eq true and IsManaged eq false",
+      "resultKey": "oneToMany"
     },
     {
-      "id": "saved-queries",
+      "id": "relationships-many-to-many",
       "type": "webapi",
-      "path": "savedqueries?$select=name,querytype,returnedtypecode",
-      "resultKey": "views",
-      "maxRecords": 5000
+      "path": "RelationshipDefinitions/Microsoft.Dynamics.CRM.ManyToManyRelationshipMetadata?$select=SchemaName,Entity1LogicalName,Entity2LogicalName,IntersectEntityName&$filter=IsCustomRelationship eq true and IsManaged eq false",
+      "resultKey": "manyToMany"
+    },
+    {
+      "id": "project-tables",
+      "type": "fetchxml",
+      "source": "project-tables.fetch.xml",
+      "resultKey": "projectTables"
+    },
+    {
+      "id": "project-forms",
+      "type": "fetchxml",
+      "source": "project-forms.fetch.xml",
+      "resultKey": "forms"
+    },
+    {
+      "id": "project-views",
+      "type": "fetchxml",
+      "source": "project-views.fetch.xml",
+      "resultKey": "views"
     },
     {
       "id": "global-optionsets",
@@ -100,9 +112,9 @@
       "resultKey": "envVars"
     },
     {
-      "id": "security-roles",
+      "id": "security-role-names",
       "type": "fetchxml",
-      "source": "security-roles.fetch.xml",
+      "source": "security-role-names.fetch.xml",
       "resultKey": "securityRoles"
     }
   ]

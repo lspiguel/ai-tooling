@@ -141,7 +141,7 @@ Three places must stay in sync. Update all of them in the same change:
 
 ## Tooling conventions — D365 Context Exporter
 
-The [D365 Context Exporter](/tooling/D365ContextExporter/README.md) is an XrmToolBox plugin (`net48`, WinForms, `Nullable` enabled, StyleCop.Analyzers enforced via [stylecop.json](/tooling/D365ContextExporter/D365ContextExporter/stylecop.json)). Tests are NUnit + Moq in [D365ContextExporter.Tests](/tooling/D365ContextExporter/D365ContextExporter.Tests/).
+The [D365 Context Exporter](/tooling/D365ContextExporter/README.md) is an XrmToolBox plugin (`net48`, WinForms, `Nullable` enabled, StyleCop.Analyzers enforced via [stylecop.json](/tooling/D365ContextExporter/D365ContextExporter/stylecop.json)). Tests are NUnit + Moq in [D365ContextExporter.Tests](/tooling/D365ContextExporter/D365ContextExporter.Tests/). It is released. The [spec](/tooling/D365ContextExporter/SPEC.md) describes it as built — its rules R1–R11 and planned fixes — and [notes.md](/tooling/D365ContextExporter/notes.md) holds the development history, decisions and open items.
 
 ```bash
 dotnet restore tooling/D365ContextExporter/D365ContextExporter.sln
@@ -151,11 +151,11 @@ dotnet test    tooling/D365ContextExporter/D365ContextExporter.Tests/D365Context
 
 ### Rules specific to this plugin
 
-- **Never call `object.from_json` / `object.to_json` in a Scriban template.** Scriban is compiled into the assembly from source with its System.Text.Json support removed; those built-ins throw at runtime. Query results are already parsed into template variables — there is nothing left to deserialise.
+- **Never call `object.from_json` / `object.to_json` in a Scriban template.** Scriban is compiled into the assembly from source with its System.Text.Json support removed; those built-ins throw at runtime. Query results are already parsed into template variables; JSON text held in a column is parsed with the plugin's `parse_json` function.
 - **Do not add package references that ship a DLL next to the plugin.** A private `System.Text.Json.dll` caused XrmToolBox to lock the file, breaking update and uninstall from the Tool Library. If a dependency is unavoidable, source-include it (`PackageScribanIncludeSource` + `IncludeAssets="Build"` is the working pattern) and say why in the PR.
 - **No early binding.** Tables change too fast in a live D365 CE environment for generated early-bound classes to be worth the regeneration cost. Use late-bound access throughout.
 - **Version bumps touch two files.** `AssemblyVersion` / `FileVersion` / `Version` in [D365ContextExporter.csproj](/tooling/D365ContextExporter/D365ContextExporter/D365ContextExporter.csproj) and `<version>` in [D365ContextExporter.nuspec](/tooling/D365ContextExporter/D365ContextExporter/D365ContextExporter.nuspec), kept identical. Scheme is `1.YYYY.M.N`.
-- **Changing `SampleConfig/` changes what users get on upgrade.** Those files are embedded resources deployed to the user's base directory on first run and redeployed when the plugin version differs from their `version.txt`. A user's `LEGAL.md` and custom files are never overwritten — keep it that way.
+- **Changing `SampleConfig/` changes what users get on upgrade.** Those files are embedded resources deployed to the user's base directory on first run and redeployed, if the person accepts, when the plugin version differs from their `version.txt`. A user's `LEGAL.md` and custom files are never overwritten, and an edited shipped file is backed up under `config\backup\` before it is replaced — keep it that way.
 - **New template filters** go in [TemplateFilters.cs](/tooling/D365ContextExporter/D365ContextExporter/Helpers/TemplateFilters.cs) and must be added to the built-in function table in the [tooling README](/tooling/D365ContextExporter/README.md).
 - CI ([build-and-pack-d365-context-exporter.yml](/.github/workflows/build-and-pack-d365-context-exporter.yml)) builds, tests and packs on push and PR to `main` under `tooling/D365ContextExporter/**`. Publishing uses trusted publishing — do not add credentials to the workflow.
 

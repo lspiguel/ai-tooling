@@ -6,8 +6,11 @@
 namespace Lspiguel.Xrm.D365ContextExporter
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
+    using System.Text;
     using System.Threading;
+    using System.Windows.Forms;
 
     using Lspiguel.Xrm.D365ContextExporter.Helpers;
     using Lspiguel.Xrm.D365ContextExporter.Models;
@@ -26,6 +29,7 @@ namespace Lspiguel.Xrm.D365ContextExporter
     {
         private CancellationTokenSource? cts;
         private bool initialized;
+        private bool running;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ContextExporterPluginControl"/> class.
@@ -77,7 +81,7 @@ namespace Lspiguel.Xrm.D365ContextExporter
 
         private void specPicker_SpecSelected(object sender, ExportJob? job)
         {
-            this.btnRun.Enabled = job != null;
+            this.UpdateRunButtons();
             if (job != null)
             {
                 this.progressControl.AppendLog($"Spec selected: {job}");
@@ -105,6 +109,97 @@ namespace Lspiguel.Xrm.D365ContextExporter
             this.StartExport();
         }
 
+        private void btnRunAll_Click(object sender, EventArgs e)
+        {
+            var specs = this.specPicker.SpecConfigPaths;
+            if (specs.Count == 0 || !this.ConfirmRunAll(specs))
+            {
+                return;
+            }
+
+            if (this.Service == null)
+            {
+                this.ExecuteMethod(this.StartRunAll);
+                return;
+            }
+
+            this.StartRunAll();
+        }
+
+        private bool ConfirmRunAll(IReadOnlyList<string> specs)
+        {
+            var names = new StringBuilder();
+            foreach (var path in specs)
+            {
+                names.AppendLine($"  • {PathResolver.SpecNameFromPath(path)}");
+            }
+
+            var outputDir = Path.Combine(this.dirPicker.SelectedDirectory, "output");
+            var message =
+                $"Run all {specs.Count} specs, one after another?\n\n{names}\n" +
+                "This can take a long time: each spec queries the environment and renders its template, " +
+                "and a large environment can take several minutes per spec. The plugin stays busy until the last spec ends.\n\n" +
+                "A spec that fails is logged and the others still run. Cancel stops the batch.\n\n" +
+                $"Each spec gets its own run folder, and its context file in:\n{outputDir}";
+
+            return MessageBox.Show(
+                this,
+                message,
+                "Run all specs",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+        }
+
+        private void StartRunAll()
+        {
+            var specs = this.specPicker.SpecConfigPaths;
+            if (this.Service == null || specs.Count == 0)
+            {
+                return;
+            }
+
+            var baseDir = this.dirPicker.SelectedDirectory;
+            this.BeginRun();
+
+            this.WorkAsync(new WorkAsyncInfo
+            {
+                Message = string.Empty,
+                Work = (worker, args) =>
+                {
+                    var runner = this.CreateJobRunner();
+                    var batch = new ExportBatchRunner(
+                        runner.Run,
+                        msg => this.BeginInvoke((Action)(() => this.progressControl.AppendLog(msg))),
+                        (current, total, spec) =>
+                            this.BeginInvoke((Action)(() =>
+                                this.progressControl.SetBatchProgress(current, total, spec))));
+                    args.Result = batch.Run(specs, baseDir, this.cts!.Token);
+                },
+                PostWorkCallBack = e =>
+                {
+                    this.EndRun();
+
+                    if (e.Error is OperationCanceledException)
+                    {
+                        // user cancelled — specs already finished keep their output
+                    }
+                    else if (e.Error != null)
+                    {
+                        this.progressControl.AppendLog($"ERROR: {e.Error.GetBaseException().Message}");
+                    }
+                    else if (e.Result is ExportBatchResult result && result.Succeeded.Count > 0)
+                    {
+                        this.outputPreview.ShowFolder(
+                            Path.Combine(baseDir, "output"),
+                            result.Succeeded.Count,
+                            result.Failed.Count);
+                        this.outputPreview.Visible = true;
+                    }
+                },
+            });
+        }
+
         private void StartExport()
         {
             if (this.Service == null || this.specPicker.SelectedJob == null)
@@ -130,31 +225,18 @@ namespace Lspiguel.Xrm.D365ContextExporter
                 return;
             }
 
-            this.btnRun.Enabled = false;
-            this.outputPreview.Visible = false;
-            this.cts = new CancellationTokenSource();
-
-            this.progressControl.ClearLog();
-            this.progressControl.SetRunning(true);
+            this.BeginRun();
 
             this.WorkAsync(new WorkAsyncInfo
             {
                 Message = string.Empty,
                 Work = (worker, args) =>
                 {
-                    var runner = new ExportJobRunner(
-                        this.Service,
-                        this.ConnectionDetail,
-                        msg => this.BeginInvoke((Action)(() => this.progressControl.AppendLog(msg))),
-                        (current, total, queryId) =>
-                            this.BeginInvoke((Action)(() =>
-                                this.progressControl.SetProgress(current, total, queryId))));
-                    args.Result = runner.Run(job, baseDir, cts.Token);
+                    args.Result = this.CreateJobRunner().Run(job, baseDir, this.cts!.Token);
                 },
                 PostWorkCallBack = e =>
                 {
-                    this.progressControl.SetRunning(false);
-                    this.btnRun.Enabled = true;
+                    this.EndRun();
 
                     if (e.Error is OperationCanceledException)
                     {
@@ -172,6 +254,39 @@ namespace Lspiguel.Xrm.D365ContextExporter
                     }
                 },
             });
+        }
+
+        private ExportJobRunner CreateJobRunner() =>
+            new ExportJobRunner(
+                this.Service,
+                this.ConnectionDetail,
+                msg => this.BeginInvoke((Action)(() => this.progressControl.AppendLog(msg))),
+                (current, total, queryId) =>
+                    this.BeginInvoke((Action)(() =>
+                        this.progressControl.SetProgress(current, total, queryId))));
+
+        private void BeginRun()
+        {
+            this.running = true;
+            this.UpdateRunButtons();
+            this.outputPreview.Visible = false;
+            this.cts = new CancellationTokenSource();
+
+            this.progressControl.ClearLog();
+            this.progressControl.SetRunning(true);
+        }
+
+        private void EndRun()
+        {
+            this.running = false;
+            this.progressControl.SetRunning(false);
+            this.UpdateRunButtons();
+        }
+
+        private void UpdateRunButtons()
+        {
+            this.btnRun.Enabled = !this.running && this.specPicker.SelectedJob != null;
+            this.btnRunAll.Enabled = !this.running && this.specPicker.SpecConfigPaths.Count > 0;
         }
 
         private void ShowWelcomeIfFirstLoad()
@@ -195,7 +310,7 @@ namespace Lspiguel.Xrm.D365ContextExporter
 
             if (!FirstRunHelper.IsConfigured(dir) && FirstRunHelper.OfferSetup(dir, this))
             {
-                FirstRunHelper.DeployReferenceConfig(dir, this, log, overwrite: false);
+                FirstRunHelper.DeployReferenceConfig(dir, this, log);
                 this.specPicker.LoadSpecs(dir);
             }
 

@@ -7,9 +7,6 @@
     "generatedBy": "D365 CE Context Exporter",
     "purpose": "AI assistant grounding context — Power Automate cloud flows with source definitions"
   },
-  "python": {
-    "interpreter": "auto"
-  },
   "transformation": "power-automate-flows.sbn",
   "queries": [
     {

@@ -7,59 +7,69 @@ environment: {{ _meta.environment.url }}
 
 ---
 
-{{-
-func depth_label
-  case $0
-    when 0; ret "None"
-    when 1; ret "User"
-    when 2; ret "Business Unit"
-    when 4; ret "Deep"
-    when 8; ret "Organization"
-    else;   ret ($0 ?? "—")
-  end
-end
-}}
 # Security Model — {{ _meta.environment.orgName }}
 
-> Only unmanaged roles are shown.
-
-{{ for bu_group in (group_by_key securityRoles "businessunitid.name") }}
-## Business Unit: {{ bu_group.key ?? "Root" }}
+> Scope: unmanaged roles in the root business unit that are not based on a Microsoft role template — the roles the project created. Each role is copied to every business unit; the copies hold the same privileges and are not listed.
+> Table privileges are shown as a matrix, one row per table (named as in the privilege, usually the schema name), with the depth in each cell: **User**, **BU** (business unit), **Parent BU** (parent: child business units), **Org** (organization). An empty cell means the role does not hold that privilege. Privileges that are not per table are listed after the matrix.
 
 {{
-  seen_names = []
-  distinct_roles = []
-  for row in bu_group.items
-    if !(seen_names | array.contains row.name)
-      seen_names = seen_names | array.add row.name
-      distinct_roles = distinct_roles | array.add row
-    end
-  end
-  distinct_roles = distinct_roles | array.sort "name"
-}}
-{{ for role in distinct_roles }}
-### {{ role.name }}
+  # prv{Action}{Table}; AppendTo is checked before Append.
+  actions = ["Create", "Read", "Write", "Delete", "AppendTo", "Append", "Assign", "Share"]
 
-{{-
-  has_privs = false
-  for p in bu_group.items
-    if p.name == role.name && p["priv.name"] != null && p["priv.name"] != ""
-      has_privs = true
-      break
+  func depth_short(mask)
+    case mask
+      when 1; ret "User"
+      when 2; ret "BU"
+      when 4; ret "Parent BU"
+      when 8; ret "Org"
+      else; ret "" + mask
     end
   end
 -}}
-{{ if has_privs }}
-| Privilege | Depth |
-|-----------|-------|
-{{ for p in bu_group.items -}}
-{{ if p.name == role.name && p["priv.name"] != null && p["priv.name"] != "" -}}
-| {{ p["priv.name"] }} | {{ depth_label p["rp.privilegedepthmask"] }} |
-{{ end -}}
-{{ end -}}
-{{ else }}
-_No privileges captured._
-{{ end -}}
+{{ for role_group in securityRoles | group_by_key "name" }}
+## {{ role_group.key | string.strip }}
 
+{{
+  matrix = {}
+  tables = []
+  other = []
+  for p in role_group.items
+    pname = p["priv.name"]
+    if pname == null || pname == ""
+      continue
+    end
+    depth = depth_short p["rp.privilegedepthmask"]
+    matched = false
+    for action in actions
+      prefix = "prv" + action
+      if (pname | string.starts_with prefix) && (pname | string.size) > (prefix | string.size)
+        tbl = pname | string.slice (prefix | string.size)
+        if matrix[tbl] == null
+          matrix[tbl] = {}
+          tables = tables | array.add tbl
+        end
+        matrix[tbl][action] = depth
+        matched = true
+        break
+      end
+    end
+    if !matched
+      other = other | array.add (pname + " (" + depth + ")")
+    end
+  end
+-}}
+{{ if tables.size > 0 -}}
+| Table | Create | Read | Write | Delete | Append | Append To | Assign | Share |
+|---|---|---|---|---|---|---|---|---|
+{{ for tbl in tables | array.sort -}}
+{{ row = matrix[tbl] -}}
+| {{ tbl }} | {{ row.Create }} | {{ row.Read }} | {{ row.Write }} | {{ row.Delete }} | {{ row.Append }} | {{ row.AppendTo }} | {{ row.Assign }} | {{ row.Share }} |
+{{ end }}
+{{ end -}}
+{{ if other.size > 0 -}}
+**Other privileges:** {{ other | array.sort | array.join ", " }}
+{{ end -}}
+{{ if tables.size == 0 && other.size == 0 -}}
+_No privileges._
 {{ end -}}
 {{ end }}

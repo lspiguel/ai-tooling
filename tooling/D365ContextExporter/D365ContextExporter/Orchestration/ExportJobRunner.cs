@@ -24,8 +24,11 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
     /// <summary>Orchestrates a single export run: executes all queries, writes intermediate outputs, and renders the Scriban template.</summary>
     internal sealed class ExportJobRunner
     {
-        private readonly IOrganizationService service;
-        private readonly ConnectionDetail connectionDetail;
+        private readonly FetchXmlQueryRunner fetchRunner;
+        private readonly WebApiQueryRunner webApiRunner;
+        private readonly MetadataQueryRunner metaRunner;
+        private readonly string environmentUrl;
+        private readonly string orgName;
         private readonly Action<string> log;
         private readonly Action<int, int, string>? onProgress;
 
@@ -41,9 +44,41 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
             ConnectionDetail connectionDetail,
             Action<string> log,
             Action<int, int, string>? onProgress = null)
+            : this(
+                new FetchXmlQueryRunner(service, log),
+                new WebApiQueryRunner(EnvironmentUrlOf(connectionDetail), () => GetToken(service, connectionDetail), new HttpClient(), log),
+                new MetadataQueryRunner(service, log),
+                EnvironmentUrlOf(connectionDetail),
+                connectionDetail.OrganizationFriendlyName ?? connectionDetail.Organization ?? string.Empty,
+                log,
+                onProgress)
         {
-            this.service = service;
-            this.connectionDetail = connectionDetail;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ExportJobRunner"/> class with the query runners supplied, so a run can be exercised without a live connection.
+        /// </summary>
+        /// <param name="fetchRunner">Runner for <c>fetchxml</c> queries.</param>
+        /// <param name="webApiRunner">Runner for <c>webapi</c> queries.</param>
+        /// <param name="metaRunner">Runner for <c>metadata</c> queries.</param>
+        /// <param name="environmentUrl">Environment URL written to <c>_meta.environment.url</c>, without a trailing slash.</param>
+        /// <param name="orgName">Organization name written to <c>_meta.environment.orgName</c>.</param>
+        /// <param name="log">Delegate called for each log line; must be thread-safe.</param>
+        /// <param name="onProgress">Optional delegate called with (current, total, queryId) after each query completes.</param>
+        internal ExportJobRunner(
+            FetchXmlQueryRunner fetchRunner,
+            WebApiQueryRunner webApiRunner,
+            MetadataQueryRunner metaRunner,
+            string environmentUrl,
+            string orgName,
+            Action<string> log,
+            Action<int, int, string>? onProgress = null)
+        {
+            this.fetchRunner = fetchRunner;
+            this.webApiRunner = webApiRunner;
+            this.metaRunner = metaRunner;
+            this.environmentUrl = environmentUrl;
+            this.orgName = orgName;
             this.log = log;
             this.onProgress = onProgress;
         }
@@ -59,16 +94,8 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
 
             this.log($"[Export] Starting spec '{job.Spec}' ({job.Queries.Count} queries).");
 
-            var runDir = Path.Combine(baseDir, "runs", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss"));
-            Directory.CreateDirectory(runDir);
+            var runDir = CreateRunDirectory(baseDir, DateTime.UtcNow);
             this.log($"[Export] Run directory: {runDir}");
-
-            var environmentUrl = this.connectionDetail.WebApplicationUrl?.TrimEnd('/') ?? string.Empty;
-            var orgName = this.connectionDetail.OrganizationFriendlyName ?? this.connectionDetail.Organization ?? string.Empty;
-
-            var fetchRunner = new FetchXmlQueryRunner(this.service, this.log);
-            var webApiRunner = new WebApiQueryRunner(environmentUrl, this.GetToken, new HttpClient(), this.log);
-            var metaRunner = new MetadataQueryRunner(this.service, this.log);
 
             var results = new Dictionary<string, object>();
             var failures = new List<Exception>();
@@ -90,10 +117,10 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
                     object result = query.Type switch
                     {
                         "fetchxml" => EntityJsonSerializer.SerializeEntities(
-                            fetchRunner.Run(query, baseDir, cancellationToken),
+                            this.fetchRunner.Run(query, baseDir, cancellationToken),
                             job.Output),
-                        "webapi" => webApiRunner.Run(query, cancellationToken),
-                        "metadata" => metaRunner.Run(query, cancellationToken),
+                        "webapi" => this.webApiRunner.Run(query, cancellationToken),
+                        "metadata" => this.metaRunner.Run(query, cancellationToken),
                         _ => throw new NotSupportedException($"Unknown query type '{query.Type}' for query '{query.Id}'."),
                     };
 
@@ -122,7 +149,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
             if (results.Count > 0)
             {
                 var intermediatePath = IntermediateJsonBuilder.WriteIntermediate(
-                    runDir, job, environmentUrl, orgName, results);
+                    runDir, job, this.environmentUrl, this.orgName, results);
                 this.log($"[Export] Intermediate JSON written: {intermediatePath}");
 
                 this.log($"[Render] Rendering template '{job.Transformation}'… (this can take several minutes for large data sets)");
@@ -133,6 +160,45 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
 
             this.log($"[Export] Run complete. Outputs in: {runDir}");
             return runDir;
+        }
+
+        /// <summary>
+        /// Creates <c>runs\&lt;yyyyMMdd-HHmmss&gt;</c> under <paramref name="baseDir"/>, adding <c>-2</c>, <c>-3</c>… when a run
+        /// in the same second already has that folder — specs run back to back can start within one second, and runs are never shared (R9).
+        /// </summary>
+        /// <param name="baseDir">The base directory.</param>
+        /// <param name="utcNow">The run's start time, in UTC.</param>
+        /// <returns>The path of the new, empty run directory.</returns>
+        internal static string CreateRunDirectory(string baseDir, DateTime utcNow)
+        {
+            var stamp = utcNow.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
+            var runDir = Path.Combine(baseDir, "runs", stamp);
+            for (var n = 2; Directory.Exists(runDir); n++)
+            {
+                runDir = Path.Combine(baseDir, "runs", $"{stamp}-{n}");
+            }
+
+            Directory.CreateDirectory(runDir);
+            return runDir;
+        }
+
+        private static string EnvironmentUrlOf(ConnectionDetail connectionDetail) =>
+            connectionDetail.WebApplicationUrl?.TrimEnd('/') ?? string.Empty;
+
+        private static string GetToken(IOrganizationService service, ConnectionDetail connectionDetail)
+        {
+            var csc = connectionDetail.ServiceClient as CrmServiceClient
+                   ?? service as CrmServiceClient;
+
+            var token = csc?.CurrentAccessToken;
+            if (string.IsNullOrEmpty(token))
+            {
+                throw new InvalidOperationException(
+                    "Could not acquire an OAuth access token from the current connection. " +
+                    "Ensure you are connected to a Dataverse environment using modern authentication.");
+            }
+
+            return token;
         }
 
         private void CopyOutputToSpecDir(string runDir, string baseDir, string specName)
@@ -176,22 +242,6 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
             var existingContent = File.ReadAllText(destFile);
             File.WriteAllText(destFile, legalContent + "\n\n" + existingContent);
             this.log($"[Legal] Legal notice prepended to: {destFile}");
-        }
-
-        private string GetToken()
-        {
-            var csc = this.connectionDetail.ServiceClient as CrmServiceClient
-                   ?? this.service as CrmServiceClient;
-
-            var token = csc?.CurrentAccessToken;
-            if (string.IsNullOrEmpty(token))
-            {
-                throw new InvalidOperationException(
-                    "Could not acquire an OAuth access token from the current connection. " +
-                    "Ensure you are connected to a Dataverse environment using modern authentication.");
-            }
-
-            return token;
         }
     }
 }

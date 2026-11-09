@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/lucisnospace/d365-context-exporter/schema/context-exporter.schema.json",
+  "$id": "https://raw.githubusercontent.com/lspiguel/ai-tooling/main/tooling/D365ContextExporter/D365ContextExporter/SampleConfig/context-exporter.schema.json",
   "title": "D365 CE Context Exporter Config",
   "description": "Configuration file for a D365 CE Context Exporter spec.",
   "type": "object",
@@ -43,18 +43,19 @@
     },
     "python": {
       "type": "object",
-      "description": "Python runtime settings.",
+      "description": "Ignored. Templates are rendered in-process with Scriban; Python is no longer used. Accepted only so configs written before the move to Scriban still load. Remove it from your config.",
+      "deprecationMessage": "Ignored since rendering moved to Scriban. Remove \"python\" from this config.",
       "additionalProperties": false,
       "properties": {
         "interpreter": {
           "type": "string",
-          "description": "'auto' uses interpreter discovery (venv → py launcher → PATH). Any other value is an absolute path to python.exe.",
-          "default": "auto"
+          "description": "Ignored. Formerly the Python interpreter to use.",
+          "deprecationMessage": "Ignored since rendering moved to Scriban."
         },
         "venv": {
           "type": "string",
-          "description": "Path to the virtual environment directory. Supports %LOCALAPPDATA% and other %VAR% tokens.",
-          "default": "%LOCALAPPDATA%\\D365ContextExporter\\venv"
+          "description": "Ignored. Formerly the Python virtual environment directory.",
+          "deprecationMessage": "Ignored since rendering moved to Scriban."
         }
       }
     },
