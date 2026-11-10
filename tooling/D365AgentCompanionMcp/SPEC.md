@@ -102,7 +102,7 @@ The same loop serves every moment above: a small set of WIP solutions per user s
 | Excluded | Handled by / reason |
 |---|---|
 | Solution export, unpack, pack, import, publish, delete | PAC CLI |
-| Creating or changing components directly (columns, forms, views, ribbons) | Authored locally in the unpacked solution and imported through PAC CLI. Phase 6 makes one exception for speed in development — web resource content ([§6.8](#68-direct-update-tools-phase-6), [§9.11](#911-direct-updates-in-development)) |
+| Creating or changing components directly (columns, forms, views, ribbons) | Authored locally in the unpacked solution and imported through PAC CLI. Phase 6 makes one exception for speed in development — web resource content ([§6.8](#68-direct-update-tools-phase-6), [§9.11](#911-direct-updates-in-development)). [Phase 7a](#phase-7a--power-pages-authoring) proposes a second, for the source of Power Pages site components |
 | Registering plug-in assemblies, plug-in types, steps and images, custom APIs and their parameters | A person, in the Plugin Registration Tool. Plug-in authoring by the agent — through a WIP, with `pac plugin push`, and by mirroring and switching steps — is deferred to [Phase 7](#phase-7--plug-in-authoring) ([§6.9](#69-plug-in-step-tools-phase-7), [§9.10](#910-plug-in-assemblies-steps-and-custom-apis-phase-7)) |
 | A general SDK facade (arbitrary `OrganizationRequest` execution) | Not needed for the workflow; large risk surface |
 | Record create, update, delete | Not needed for the workflow |
@@ -459,6 +459,7 @@ Example `inputSchema`, showing `connection` first and required:
 | `disable_steps` | Write | *Phase 7.* Disable plug-in steps |
 | `enable_steps` | Write | *Phase 7.* Enable plug-in steps |
 | `rebind_custom_apis` | Write | *Phase 7.* Point custom APIs at the plug-in type of the same name in another assembly |
+| `update_site_components` | Write | *Phase 7a, proposed; shaped by the Phase 6b spikes.* Update the source of Power Pages site components in a WIP from local files: web templates, page copy, page CSS and JavaScript, content snippets and web files |
 
 The Read tools were checked against the Microsoft Dataverse MCP server in spike S5 (2026-10-29); none is replaced. Findings are in [notes.md](notes.md#s5--overlap-with-the-dataverse-mcp-server).
 
@@ -2119,7 +2120,7 @@ Export, unpack, pack and import are the slowest part of the edit loop. For four 
 | Web resources | **Direct update** — one row per resource, content plus a targeted publish, and no PAC command does it | `update_web_resources` ([§6.8](#68-direct-update-tools-phase-6)) |
 | Plug-in assemblies, steps, custom APIs | **Deferred to Phase 7** with the rest of plug-in authoring. The proposal: push the build, and mirror and switch steps with tools | [§9.10](#910-plug-in-assemblies-steps-and-custom-apis-phase-7) |
 | Code components (PCF) | **Guidance only** — PAC already updates a control in place and can put it in the WIP | `pac pcf push` (below) |
-| Power Pages | **Not pursued** | — (below) |
+| Power Pages | **Reopened** (2026-11-10). Not pursued on 2026-11-03 (D13); now [Phase 7a](#phase-7a--power-pages-authoring), after the [Phase 6b](#phase-6b--power-pages-spikes) spikes | `update_site_components`, proposed (below) |
 
 #### Web resources
 
@@ -2149,13 +2150,16 @@ Adding a script to a form's libraries or events is a form edit and stays on the 
 4. **Push.** After the PAC profile check ([§4](#keeping-pac-cli-on-the-same-environment)), the first push is `pac pcf push --solution-unique-name <Resources WIP>` — the WIP exists already and gives the publisher — followed by `list_solution_components` on the WIP (R1). Later pushes add `--incremental`. Without `--solution-unique-name`, the push creates a `PowerAppsTools_<prefix>` solution that holds the control: a stray solution that the overlap check (W7) then reports.
 5. **Publishing is part of the push.** Every push publishes all customizations — in a shared development environment, others' pending changes too (X11). No separate publish is needed; if the change does not show, hard-refresh the browser.
 
-#### Power Pages — not pursued
+#### Power Pages — reopened for Phase 7a
 
-The decision is recorded so the question is not reopened without new facts:
+> [!NOTE]
+> **Reopened 2026-11-10 at the person's choice**, with a new fact: on the enhanced data model, the default for new sites, site configuration is solution-aware[^8]. The spikes are in [Phase 6b](#phase-6b--power-pages-spikes) and the proposed design in [Phase 7a](#phase-7a--power-pages-authoring). The decision of 2026-11-03 (D13) and its reasons are kept below.
 
-- With the standard data model, site configuration is `adx_*` records, not solution components, so a WIP cannot hold it.
+The decision of 2026-11-03, not to pursue Power Pages:
+
+- With the standard data model, site configuration is `adx_*` records, not solution components, so a WIP cannot hold it. *(2026-11-10: true for the standard data model only. On the enhanced data model, site components are `powerpagecomponent` rows that a WIP can hold.)*
 - `pac pages upload` already updates in place, and only what changed: it compares local files with the environment manifest written by the last download[^7]. Edits that span several page components travel together.
-- The gap is concurrency. The comparison is against the last download, not against the environment, so a design-studio edit made since then is overwritten silently. A read-only drift check would close it: map the changed files to record IDs through the manifest and compare `modifiedon`. It is a candidate if Power Pages is taken up. The enhanced data model has not been assessed.
+- The gap is concurrency. The comparison is against the last download, not against the environment, so a design-studio edit made since then is overwritten silently. A read-only drift check would close it: map the changed files to record IDs through the manifest and compare `modifiedon`. It is a candidate if Power Pages is taken up. *(2026-11-10: the drift check is part of Phase 7a, and spike S16 tests the overwrite. The enhanced data model has now been assessed from the documentation; Phase 6b confirms the behaviour.)*
 - The environment manifest (`<org-url>-manifest.yml`) is meant to be git-ignored[^7]. When it is tracked, each developer's upload is computed against someone else's download.
 
 ---
@@ -2215,8 +2219,8 @@ Short, throwaway investigations against a development environment. Each produces
 | S4 | Do the target agent clients (Claude Code, VS Code agent mode) connect to a local HTTP MCP server with a bearer header, read `structuredContent`, and how do they surface errors and long waits during approval? | Client configuration snippets and timeout behaviour documented |
 | S5 | Which of the Read tools does the Microsoft Dataverse MCP server already provide, and could it replace any of them? Requires a dated, sourced check. | Overlap table; decision recorded |
 | S6 | How does XrmToolBox host several tabs of one plugin? Is a static singleton shared across tabs (one assembly load per process)? Which hooks report a connection being set and changed, how does a plugin close its own tab, and how does it re-open the connection dialog? Is the connection ID stable across restarts, and can a dialog be owned by the main window? | Two tabs bound to different connections share one host; a duplicate is detected and both dialog actions work; closing tabs in any order leaves the registry correct |
-| S7 | *Cold storage — no build environment.* Does the promotion pipeline's component copy preserve each component's root component behaviour, and does it ever add required components or subcomponents? | `list_solution_components` on the build environment before and after promoting a WIP holding a metadata-only table, a column, a form and a web resource matches what was intended *(Moved to [Phase 6a](#6a3--pending-spikes), 2026-11-08.)* |
-| S8 | *Deferred with strategy C.* With Dataverse Git integration, does environment binding commit WIP solutions as solutions in their own right, and can an unbound WIP hold objects of solutions bound under solution binding? | Documented behaviour, and the recommended binding for projects that use WIP solutions *(Moved to [Phase 6a](#6a3--pending-spikes), 2026-11-08.)* |
+| S7 | *Cold storage — no build environment.* Does the promotion pipeline's component copy preserve each component's root component behaviour, and does it ever add required components or subcomponents? | `list_solution_components` on the build environment before and after promoting a WIP holding a metadata-only table, a column, a form and a web resource matches what was intended *(Moved to [Phase 6a](#6a3--pending-spikes) on 2026-11-08, then to [Phase 8](#phase-8--promotion-and-git-integration-spikes) on 2026-11-10.)* |
+| S8 | *Deferred with strategy C.* With Dataverse Git integration, does environment binding commit WIP solutions as solutions in their own right, and can an unbound WIP hold objects of solutions bound under solution binding? | Documented behaviour, and the recommended binding for projects that use WIP solutions *(Moved to [Phase 6a](#6a3--pending-spikes) on 2026-11-08, then to [Phase 8](#phase-8--promotion-and-git-integration-spikes) on 2026-11-10.)* |
 
 ### Phase 1 — Host, connections, approvals and log
 
@@ -2392,7 +2396,7 @@ S10 ran through a throwaway SDK console with its own sign-in, not through the pl
 |---|---|---|
 | 6a.1 | **Tool Library icon resolution.** The embedded icons were half the size XrmToolBox expects, so they looked blurry next to other tools | **Done** (2026-11-08) |
 | 6a.2 | **Automatic call log on disk.** An opt-in setting that writes every call and its outcome, in full, to a JSON file per connection and day | **Built** (2026-11-09); unit-tested, live check pending |
-| 6a.3 | **Pending spikes.** S7, S8 and S12 move here from Phase 0 and Phase 7 | S12 run (2026-11-09); S7 and S8 not run |
+| 6a.3 | **Pending spikes.** S7, S8 and S12 move here from Phase 0 and Phase 7. S7 and S8 move on to [Phase 8](#phase-8--promotion-and-git-integration-spikes) (2026-11-10) | **Done** (2026-11-09) — S12 run |
 | 6a.4 | **Live test of `update_web_resources`** for every web resource type, checking that every update is published. It changed §6.8: content written earlier without a publish is now published ([notes](notes.md#6a4--live-test-of-update_web_resources-2026-11-09)) | **Done** (2026-11-09) |
 
 #### 6a.1 — Tool Library icon resolution
@@ -2496,15 +2500,46 @@ The file ends with `]}` and a newline, and the plugin appends by overwriting tha
 
 #### 6a.3 — Pending spikes
 
-Spikes that have not been run move into this phase, so that open questions are in one place. They are unchanged except for where they are tracked. The original rows in Phase 0 and Phase 7 point here.
+Spikes that had not been run moved into this phase on 2026-11-08, so that open questions were in one place. They were unchanged except for where they were tracked. The original rows in Phase 0 and Phase 7 point here.
+
+S12 ran here. **S7 and S8 moved on to [Phase 8](#phase-8--promotion-and-git-integration-spikes) on 2026-11-10**, at the person's choice: S7 needs a build environment with the promotion pipeline and S8 needs Dataverse Git integration, and neither will be ready before Phase 7 is built.
 
 | ID | Question | Status | Feeds |
 |---|---|---|---|
-| S7 | *Cold storage — no build environment.* Does the promotion pipeline's component copy preserve each component's root component behaviour, and does it ever add required components or subcomponents? **Exit:** `list_solution_components` on the build environment before and after promoting a WIP holding a metadata-only table, a column, a form and a web resource matches what was intended | Not run; needs a build environment with the promotion pipeline. Until it runs, A1's R1 check after every promotion stays mandatory | §9.7 close-out strategy A |
-| S8 | *Deferred with strategy C.* With Dataverse Git integration, does environment binding commit WIP solutions as solutions in their own right, and can an unbound WIP hold objects of solutions bound under solution binding? **Exit:** documented behaviour, and the recommended binding for projects that use WIP solutions | Not run; waits for strategy C | §9.7, C2 |
 | S12 | Registration round trip, starting from the field findings in [Phase 7](#phase-7--plug-in-authoring). Does `pac plugin push` ever register new plug-in types, and if not, which route does — a WIP import with new `PluginType` entries in `.dll.data.xml`, or only the Plugin Registration Tool? What must a WIP hold for its export to carry steps, images and custom APIs — each step added as 92, the assembly with its subcomponents, or something else? Does importing a WIP with a new step file and its `RootComponent` create the step, with which import flags, and what makes the packager or the import skip it silently — a missing `Customizations.xml` anchor node, an unregistered plug-in type? The same for a custom API with request parameters and response properties. Through the plugin and the person's PAC profile only, on a data-free environment | **Run 2026-11-09** ([notes](notes.md#6a3--spike-s12-2026-11-09)). Push never registers types, and refuses a build that drops a registered one. A WIP import registers exactly the types listed in `.dll.data.xml`, and creates steps with images and custom APIs with parameters and properties, all in one import. The U10 skip: without the `<SolutionPluginAssemblies />` and `<SdkMessageProcessingSteps />` anchors in `Customizations.xml`, pack only warns and the import "succeeds" creating nothing — and an export has only the anchors for what the WIP holds. A step on an unregistered type fails the import. Each step is held as 92; the assembly (91) exports its types but no steps. Custom APIs need no `RootComponent`; adding an unmanaged one brings its assembly, parameters and properties | §9.10 (updated: G1, G4, G6, G7), the skill changes. **Phase 7 starts from its result** |
 
 Each spike, when run, gets a written finding in [notes](notes.md) and updates the sections it feeds, as in Phase 0.
+
+### Phase 6b — Power Pages spikes
+
+> [!NOTE]
+> **Opened 2026-11-10 at the person's choice, ahead of [Phase 7a](#phase-7a--power-pages-authoring).** D13 decided on 2026-11-03 not to pursue Power Pages, on two premises: site configuration is records outside solutions, and `pac pages upload` already updates in place. The first holds only for the standard data model. On the enhanced data model, the default for new sites, site configuration is solution-aware[^8]. These spikes settle what Phase 7a builds. Nothing is built in this phase, and the version does not change.
+
+**What the documentation already settles** (Microsoft Learn, checked 2026-11-10[^8]):
+
+| Fact | Consequence for the design |
+|---|---|
+| The enhanced data model is on by default, and new sites from most templates use it. Its configuration is in three solution-aware system tables: `powerpagesite`, `powerpagesitelanguage` and `powerpagecomponent` | A WIP can hold site components, so the overlap check (W7), W10 and close-out apply to them as to any component |
+| Each site component is a `powerpagecomponent` row with a `powerpagecomponenttype` (2 web page, 3 web file, 7 content snippet, 8 web template, 9 site setting, among others). Its properties are a JSON document in the `content` column, up to 1 MB. A web file's bytes are in the `filecontent` file column, up to 128 MB. Rows have `versionnumber` and `modifiedon` | The overwrite check can use `versionnumber`, as for web resources. A direct update changes one property inside a JSON document, not a column of its own |
+| The solution component type codes of the three tables differ per environment and are read from `solutioncomponentdefinition` | The resolution the plugin already does for custom APIs |
+| New site components are not added to the solution that holds the site | A component created during a story is added to the WIP, as any new component is |
+| The standard data model keeps configuration in `adx_*` tables, outside solutions. Four templates still create standard sites. A migration utility moves a site to the enhanced model | Standard sites stay outside WIPs. Migrating a site is the project's decision |
+| The site caches its configuration. A change is served within 15 minutes, or at once after a cache clear: design studio's **Preview**, the site's `/_services/about` page for a user whose web role holds every website access permission, or a restart in the admin center | Fast iteration needs a cache clear, and none of the documented routes is a Dataverse request |
+| `pac pages upload --modelVersion 2` uploads what changed since the last download in the same environment, using the environment manifest. It compares with that download, not with the environment | A design-studio edit made since the download is overwritten without warning ([§9.11](#power-pages--reopened-for-phase-7a)) |
+| Single-page application sites are uploaded with `pac pages upload-code-site` | Not in these spikes. Guidance only, as for PCF |
+
+**Method.** On a data-free environment with an enhanced-model site created from a starter template, through the plugin and the person's PAC profile only. Site components are added to WIPs with PAC (`pac solution add-solution-component` with the resolved code) until the plugin's selectors take them. A write the plugin does not have yet is made by the person, in the Power Pages Management app or the design studio, or by a throwaway spike tool in a development build of the plugin, approved and logged like any Write call. The agent never uses an SDK connection of its own.
+
+| ID | Question | Exit | Feeds |
+|---|---|---|---|
+| S13 | **Site components in a WIP.** Add to an empty WIP, one at a time: a web template, a web page with its localized content page, a web file, a content snippet and a site setting. What does the platform add with each — the site, the site language, a parent page, the page's content pages, table permissions — and with which root behaviour? Can the site record be held without its components? Export and unpack the WIP: where does each component land in the XML layout? Does importing the WIP with one component edited change only that component? | `list_solution_components` after each add, recorded. The unpacked layout per component type. An import that changes one web template and nothing else | N2, the selectors, the shaping and edit-loop skills, the segmentation map |
+| S14 | **What a direct update writes.** For each component type in scope: which property of `content` holds the source a developer edits, and how `pac pages download --modelVersion 2` maps files and YAML to rows and properties. Update one property and keep the others: does the design studio still open the component, and does a fresh download give back the same files with the change? For a web file: is writing `filecontent` enough, or must its name, MIME type or partial URL change with it? Does `versionnumber` rise on every update, identical content included? | A table per component type: the file in the download, the row, the property or column, and whether a one-property update round-trips | The `update_site_components` item model and its overwrite check |
+| S15 | **When the site shows a change.** After updating a web template, a page's copy and a web file: how long until the site serves the change without a cache clear? Does **Preview** clear it? Can any route the agent's tools reach clear it — a Dataverse request or a PAC command? How long do a direct update, a `pac pages upload` of one file and an import of a one-component WIP each take? | Measured times. The route the edit loop uses to make a change visible, or a statement that the person does it | Whether the tool is worth building, as S10 was for web resources. The step after an update |
+| S16 | **`pac pages upload` against the environment.** After a download, change one component in the design studio and another file locally, then upload. Is the studio change overwritten, and does the upload report anything? Does it write only the changed file's row, or raise `versionnumber` on others too? Does it add anything to a solution? What does the drift check need from the environment manifest to map a changed file to its row? | The overwrite reproduced or ruled out. The rows an upload writes. The mapping the drift check uses | The drift check (N3), and when the edit loop uploads rather than calling the tool |
+
+Each spike, when run, gets a written finding in [notes](notes.md) and updates the sections it feeds.
+
+**Exit:** every spike has a finding; §9.11 and Phase 7a are updated; Phase 7a's design is confirmed, changed or dropped. If S15 finds no route to make a change visible quickly, the tool's case rests on the overwrite check and the WIP alone, and Phase 7a says whether that is enough.
 
 ### Phase 7 — Plug-in authoring
 
@@ -2640,6 +2675,61 @@ This subsection says how the findings of spike S12 ([notes](notes.md#6a3--spike-
 5. The G4 read-back matches the plan.
 6. A plan from `d365ce-planning` for a story with a new type, a step with an image and a custom API lists them as agentic tasks, with every field the step file needs.
 
+### Phase 7a — Power Pages authoring
+
+> [!NOTE]
+> **Opened 2026-11-10 at the person's choice; not started.** Reopens D13 ([§9.11](#power-pages--reopened-for-phase-7a)). The design below is provisional: it starts from the spikes in [Phase 6b](#phase-6b--power-pages-spikes) and changes with their findings. It does not depend on Phase 7 and can be built before or after it.
+
+**Scope.** Power Pages sites on the enhanced data model, authored by the agent in development: Liquid web templates, page copy, page CSS and JavaScript, content snippets and web files, held in WIPs like any other component. Standard-model sites and single-page application sites get guidance only.
+
+**Why a tool, when `pac pages upload` already updates in place.** For the same reasons as `update_web_resources`:
+
+- The overwrite check is against the environment, not against the last download.
+- The upload writes only the components the story names, not everything changed since the last download.
+- Each component is held in the story's WIP.
+- Every write is approved and logged in the plugin tab.
+
+`pac pages upload` stays for what the tool does not cover.
+
+| Enhancement | Behaviour |
+|---|---|
+| **Site components in the selectors** | `add_solution_components`, `remove_solution_component` and `get_required_components` take `powerpagesite`, `powerpagesitelanguage` and `powerpagecomponent`, with codes resolved per environment as for custom APIs. `list_solution_components` resolves their names and, for a site component, its type (web page, web template and so on). What the platform adds with each is reported as S13 found |
+| **`get_component_state` for site components** | `versionNumber`, `modifiedOn` and `modifiedBy` of a `powerpagecomponent`, with its type and site: the baseline for the overwrite check |
+| **`update_site_components`** | A Write tool on [§6.8](#68-direct-update-tools-phase-6)'s conventions: files by path under the File root, `expectedVersion` per item, each component already in the named WIP, one dialog listing each item with path, size, SHA-256 and versions, the first failure stops the run, then a read-back. Each item names one component and one source field — a web template's source, a page's copy, CSS or JavaScript, a content snippet's value, or a web file's content — mapped to the property or column S14 found. For a property in `content`, the tool reads the JSON, replaces that property only and writes the document back, keeping every other property as it was. A web file's bytes go to `filecontent`. It creates nothing in this phase: a new component is created in the design studio or with `pac pages upload`, then added to the WIP. After writing, it makes the change visible by the route S15 settles |
+| **Drift check before `pac pages upload`** | For what the tool does not cover — component metadata, new components, deletions — the edit loop uploads with PAC after a read-only check. Each changed file is mapped to its row through the environment manifest, and its `versionnumber` is compared with the one recorded at download (N3). This was the candidate D13 named, now a skill script using `query` |
+| **Skill changes** | `agent-companion-context`: Power Pages in the segmentation map — which transport solution holds each site and its components — and each site's data model, recorded in the delivery facts. `agent-companion-wip-shaping`: site components in WIPs, what the platform adds with them (S13), N1 and N2. `agent-companion-wip-edit-loop`: the Power Pages loop — a download as the baseline, local edits, `update_site_components` or the checked upload, then making the change visible. `agent-companion-wip-close-out`: site components added to the transport solution like any other. `d365ce-planning`: Power Pages tasks planned as agentic when the site is on the enhanced data model and the plugin is connected. The `ai-dcrm-pages` naming rules apply to every component the agent creates |
+
+**Rules.** Provisional, until Phase 6b settles them.
+
+| # | Rule | Why |
+|---|---|---|
+| N1 | **WIPs and direct updates are for enhanced-model sites only.** The agent reports a standard-model site to the person, and its changes go through `pac pages upload` after the drift check (N3). Migrating a site is the project's decision, never a step the agent proposes within a story | Standard-model configuration is not solution-aware, and a migration changes the site for everyone |
+| N2 | **A WIP holds the site components a story touches, never the whole site.** The site record is added only when the change edits the site record itself. Anything the platform brings with a component is handled as R1 says | A site added with all its objects is the whole site. Its import overwrites every component, and its close-out carries everyone's changes |
+| N3 | **Every write to a site component is checked against the environment, not against the last download.** `update_site_components` checks `expectedVersion`; an upload runs the drift check first | `pac pages upload` compares with the last download, so a design-studio edit made since then is lost without a message |
+| N4 | **The environment manifest (`<org-url>-manifest.yml`) stays out of git** (U8) | It records one developer's last download from one environment[^7] |
+
+**Exit:** on the sandbox, with an enhanced-model site, a story changes a web template, one page's copy and a web file:
+
+- Each component is added to the story's WIP and read back as N2 expects.
+- Each is updated with `update_site_components` against its baseline, and the site serves the change by the route S15 settled.
+- After an edit in the design studio, a stale `expectedVersion` is refused.
+- A metadata change goes through `pac pages upload`, and the drift check catches a design-studio edit made after the download.
+- The WIP closes out into the site's transport solution, and an export of that solution carries exactly those components.
+
+### Phase 8 — Promotion and Git integration spikes
+
+> [!NOTE]
+> **Opened 2026-11-10 at the person's choice.** S7 and S8 moved here from [Phase 6a](#6a3--pending-spikes) because the environments they need will not be ready before Phase 7 is built: a build environment with the promotion pipeline for S7, and Dataverse Git integration for S8. Phase 7 does not depend on either spike. Until S7 runs, A1's R1 check after every promotion stays mandatory. Until S8 runs, strategy C stays deferred.
+
+| ID | Question | Needs | Status | Feeds |
+|---|---|---|---|---|
+| S7 | Does the promotion pipeline's component copy preserve each component's root component behaviour, and does it ever add required components or subcomponents? **Exit:** `list_solution_components` on the build environment before and after promoting a WIP holding a metadata-only table, a column, a form and a web resource matches what was intended | A build environment with the promotion pipeline configured. A second plugin tab is bound to it read-only | Not run | A1: whether the R1 check after promotion stays permanent. [§9.7](#97-close-out-strategies) close-out strategy A |
+| S8 | With Dataverse Git integration, does environment binding commit WIP solutions as solutions in their own right, and can an unbound WIP hold objects of solutions bound under solution binding? **Exit:** documented behaviour, and the recommended binding for projects that use WIP solutions | A development environment connected to Git, both bindings tried. It must be a managed environment[^4] | Not run; waits for strategy C | [§9.7](#97-close-out-strategies), C1, C2 |
+
+Each spike, when run, gets a written finding in [notes](notes.md) and updates the sections it feeds, as in Phase 0.
+
+**Exit:** both spikes have a written finding, and A1, C1 and C2 say what was found.
+
 ---
 
 ## 12. Human review checkpoints
@@ -2662,6 +2752,7 @@ This subsection says how the findings of spike S12 ([notes](notes.md#6a3--spike-
 | After import | Components behave as intended in the app; the WIP solution contains only what the story touched |
 | Ribbon changes | Button rules and commands reviewed against the base ribbon, not only the diff |
 | A direct web resource update *(Phase 6)* | Each path, size and SHA-256 is the file intended; the WIP is the story's Resources WIP ([§6.8](#68-direct-update-tools-phase-6)) |
+| A direct site component update *(Phase 7a)* | Each path, size and SHA-256 is the file intended, and each item names the component and field intended; the components are in the story's WIP, and the site is on the enhanced data model (N1–N3) |
 | A step switch *(Phase 7)* | Exactly one copy of each step will run after the switch, and the people sharing the development environment know their steps run side-loaded code meanwhile (M6, [§9.10](#step-state-is-not-transported)) |
 | Before an extract from development, a promotion or a close-out *(Phase 7)* | No open switch: originals enabled, mirrors disabled or removed, custom APIs bound to the shared assembly (M4) |
 | `pac plugin push` to a shared assembly *(Phase 7)* | Release build from merged source; G2 and G5 passed |
@@ -2712,5 +2803,7 @@ This subsection says how the findings of spike S12 ([notes](notes.md#6a3--spike-
 [^6]: Microsoft Learn — *pac pcf*, <https://learn.microsoft.com/power-platform/developer/cli/reference/pcf#pac-pcf-push>, *Package a code component*, <https://learn.microsoft.com/power-apps/developer/component-framework/import-custom-controls#deploy-code-components>, and *Code components ALM*, <https://learn.microsoft.com/power-apps/developer/component-framework/code-components-alm> (checked 2026-11-03). Supports: `--incremental` pushes only changed files using entity updates; `--solution-unique-name` names the solution the component is added to; without it, push creates a `PowerAppsTools_<prefix>` solution; push bypasses the versioning requirement; an update by solution import needs at least the patch version raised; debugging with the test harness and a Fiddler AutoResponder rule.
 
 [^7]: Microsoft Learn — *Microsoft Power Platform CLI support for Power Pages*, <https://learn.microsoft.com/power-pages/configure/power-platform-cli#manifest-files> (checked 2026-11-03). Supports: `pac pages upload` uploads only content changed since the last download in the same environment, tracked by the environment manifest `<org-url>-manifest.yml`, which is meant for local development and should be git-ignored; `--forceUploadAll` uploads everything.
+
+[^8]: Microsoft Learn — *Enhanced data model*, <https://learn.microsoft.com/power-pages/admin/enhanced-data-model>; *Use solutions with Power Pages*, <https://learn.microsoft.com/power-pages/configure/power-pages-solutions>; *Power Platform CLI solution support for Power Pages (preview)*, <https://learn.microsoft.com/power-pages/configure/power-platform-cli-solution-management>; *Site Component (powerpagecomponent) table/entity reference*, <https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/powerpagecomponent>; *How server-side caching works in Power Pages*, <https://learn.microsoft.com/power-pages/admin/clear-server-side-cache>; *Standard to enhanced data model migration overview*, <https://learn.microsoft.com/power-pages/admin/migrate-enhanced-data-model>; *Create and deploy a single-page application in Power Pages*, <https://learn.microsoft.com/power-pages/configure/create-code-sites> (all checked 2026-11-10). Supports: the enhanced data model is enabled by default and used by new sites from most templates, while four templates still create standard sites; its system tables `powerpagesite`, `powerpagesitelanguage` and `powerpagecomponent` are solution-aware; site components can be added to a solution one by one, and new ones are not added to the site's solution automatically; component type codes are read from `solutioncomponentdefinition`; `powerpagecomponenttype` values; `content` is a memo of up to 1,048,576 characters holding the component's properties, `filecontent` a file column of up to 128 MB for web files, and the table has `versionnumber`; configuration changes reach the site within 15 minutes, or at once after a cache clear from design studio Preview, `/_services/about` or a site restart; standard-model sites can be migrated with `pac pages migrate-datamodel`; single-page application sites use `pac pages upload-code-site`.
 
 SDK message names and behaviours used in this spec (`WhoAmIRequest`, `RetrieveRequiredComponentsRequest`, `AddSolutionComponentRequest`, `RemoveSolutionComponentRequest`, `RetrieveEntityRibbonRequest`, `RetrieveApplicationRibbonRequest`, root component behaviour values, component type codes) are from working knowledge; root component behaviours, the `AddSolutionComponentRequest` flags and PAC's add behaviour were confirmed in spikes S2 and S3 (2026-10-29, [notes](notes.md#s2--addsolutioncomponentrequest-flags-and-exports)). MCP protocol details follow revisions 2026-07-28 (primary) and 2025-11-25 / 2025-06-18 (handshake fallback) of the Model Context Protocol specification (<https://modelcontextprotocol.io/specification/2026-07-28>, <https://modelcontextprotocol.io/specification/2025-11-25>, checked 2026-10-29); client behaviour is confirmed in spike S4; XrmToolBox multi-tab and connection-handling behaviour in spike S6. The transport-solution order, segmentation map and promotion pipeline in [§9.5](#95-transport-solutions-and-segmented-wip-solutions)–[§9.7](#97-close-out-strategies) are generalized from existing delivery pipeline templates; the promotion copy step's behaviour is confirmed in spike S7.
