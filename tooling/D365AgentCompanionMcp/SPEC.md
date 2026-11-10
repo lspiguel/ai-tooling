@@ -2528,7 +2528,16 @@ Each spike, when run, gets a written finding in [notes](notes.md) and updates th
 | `pac pages upload --modelVersion 2` uploads what changed since the last download in the same environment, using the environment manifest. It compares with that download, not with the environment | A design-studio edit made since the download is overwritten without warning ([§9.11](#power-pages--reopened-for-phase-7a)) |
 | Single-page application sites are uploaded with `pac pages upload-code-site` | Not in these spikes. Guidance only, as for PCF |
 
-**Method.** On a data-free environment with an enhanced-model site created from a starter template, through the plugin and the person's PAC profile only. Site components are added to WIPs with PAC (`pac solution add-solution-component` with the resolved code) until the plugin's selectors take them. A write the plugin does not have yet is made by the person, in the Power Pages Management app or the design studio, or by a throwaway spike tool in a development build of the plugin, approved and logged like any Write call. The agent never uses an SDK connection of its own.
+**Method.** On a data-free environment with an enhanced-model site created from a starter template, through the plugin and the person's PAC profile only. Site components are added to WIPs with PAC (`pac solution add-solution-component` with the resolved code) until the plugin's selectors take them. The agent never uses an SDK connection of its own.
+
+**Writes go through a throwaway spike tool** (the person's choice, 2026-11-10). The plugin has no write for site components, so a development build of the plugin carries one spike tool, `spike_write_site_component`:
+
+| | |
+|---|---|
+| What it does | Writes one `powerpagecomponent` row: either one named top-level property of `content`, read and written back with every other property kept, or the bytes of `filecontent`. The value is a file under the File root, as in §6.8. It returns `versionnumber` and `modifiedon` before and after. It never creates or deletes a row, and touches no other table |
+| What it keeps | Write tier: `reason` (R12), dev-environment confirmation, a per-call approval dialog showing the row, its type and site, the property, the file's size and SHA-256, and the log (R13). No grant covers it: it prompts every time, like publisher creation |
+| Where it lives | A spike branch, built locally in Debug. It is never merged, packed or released, and the release build never lists it. It is removed when Phase 6b ends, and the spike branch is deleted. What it teaches goes into `update_site_components` |
+| What stays with the person | The design-studio edits that S16 needs, to play a maker working beside the agent, and every cache clear done in a browser for S15 |
 
 | ID | Question | Exit | Feeds |
 |---|---|---|---|
