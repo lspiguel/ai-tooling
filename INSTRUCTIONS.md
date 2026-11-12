@@ -219,7 +219,7 @@ This applies on a repo-connected surface whose agent client has the plugin's end
 
 ## Scripts
 
-[scripts/](/scripts/) holds standalone utilities. Where a script is needed on both platforms, ship the pair (`azdevops-auth.ps1` / `azdevops-auth.sh`) with matching behaviour. PowerShell is the primary surface; scripts take parameters rather than hardcoded paths and must not embed credentials.
+[tooling/scripts/](/tooling/scripts/) holds standalone utilities. Where a script is needed on both platforms, ship the pair (`azdevops-auth.ps1` / `azdevops-auth.sh`) with matching behaviour. PowerShell is the primary surface; scripts take parameters rather than hardcoded paths and must not embed credentials.
 
 ---
 

@@ -28,6 +28,9 @@ nuget.exe pack tooling\D365AgentCompanionMcp\D365AgentCompanionMcp\D365AgentComp
       - The Record queries switch is gone: a query that touches records is approved on its own. The settings file is upgraded on first load; the always dev-environment confirmation is withdrawn.
       - The agent-companion skills cover direct web resource updates, the PCF push path and the plug-in components.
       - Optional call log on disk: a Write call log to disk checkbox in Active Approvals writes every call and its outcome, in full, to one JSON file per connection and day in a folder you choose. A folder inside a Git working tree is refused. Off by default, and never reported to the agent.
+      - The plug-in and custom API registration tables are configuration tables for the query tool, so research on registered steps and custom APIs runs under a read approval.
+      - Panel: the host section is on top and Active Approvals stands out at its top right. Approval, publisher creation and File root dialogs and the Active Approvals window open centred on XrmToolBox.
+      - Sharper icons in XrmToolBox and the Tool Library.
     </releaseNotes>
     <copyright>Copyright 2026- Luciano Spiguel</copyright>
     <tags>XrmToolBox MCP AI Agent D365 Dataverse Solutions ALM</tags>

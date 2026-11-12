@@ -89,7 +89,7 @@ Categories 1 and 3 carry the developed workflows today; the rest are still in fl
 | [docs/](docs/) | Reference documentation, including the [AI Tool Taxonomy](docs/ai-tool-taxonomy.md), architecture notes, and decision records |
 | [tooling/](tooling/) | Custom tooling: the [D365 Context Exporter](tooling/D365ContextExporter/README.md), and the [Agent Companion MCP](tooling/D365AgentCompanionMcp/README.md) — an XrmToolBox plugin giving a coding agent person-approved Dataverse operations, available in the XrmToolBox Tool Library ([spotlight](#spotlight-agent-companion-mcp)) |
 | [skills/](skills/) | Reusable skills and reference guides for AI assistants |
-| [scripts/](scripts/) | Utility scripts supporting AI-assisted tasks and automation |
+| [tooling/scripts/](tooling/scripts/) | Utility scripts supporting AI-assisted tasks and automation |
 | [INSTRUCTIONS.md](INSTRUCTIONS.md) | Conventions, hard rules, and working agreements for AI tools contributing to this repository |
 | [CLAUDE.md](CLAUDE.md) · [AGENTS.md](AGENTS.md) · [.github/copilot-instructions.md](.github/copilot-instructions.md) | Per-tool entry points, each pointing at [INSTRUCTIONS.md](INSTRUCTIONS.md) as the single source of truth |
 

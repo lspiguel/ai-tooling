@@ -1,6 +1,6 @@
 # Agent Companion MCP — specification and plan
 
-> **Status:** Draft · **Date:** 2026-10-25 · **Updated:** 2026-11-03 · **Plugin:** `D365AgentCompanionMcp` · **Intended path:** `tooling/D365AgentCompanionMcp/SPEC.md`
+> **Status:** Draft · **Date:** 2026-10-25 · **Updated:** 2026-11-11 · **Plugin:** `D365AgentCompanionMcp` · **Intended path:** `tooling/D365AgentCompanionMcp/SPEC.md`
 
 An XrmToolBox plugin that exposes a local Model Context Protocol (MCP) endpoint over one or more XrmToolBox connections. It gives a coding agent the few Dataverse operations PAC CLI cannot perform, so the agent can bootstrap and maintain small, unmanaged work-in-progress (WIP) solutions locally. One MCP host serves the whole XrmToolBox process; each open plugin tab binds one connection and is the window where a person sees and authorizes every call to it.
 
@@ -2365,7 +2365,7 @@ Scripts ship inside the skill that uses them. A companion skill may call a scrip
 ### Phase 6 — Planned enhancements
 
 > [!NOTE]
-> **Phase 6 is built (2026-11-05), as version 1.2026.11.2; the live exit checks are pending.** Phase 5 shipped on 2026-11-03, and Phase 6 was shaped from real use before it was built. Spikes S10 and S11 ran on 2026-11-03; their results are written into [§6.8](#68-direct-update-tools-phase-6) and [§9.11](#911-direct-updates-in-development). Plug-in authoring, step mirroring and switching included, moved to [Phase 7](#phase-7--plug-in-authoring) the same day. Phase 6 builds as version **1.2026.11.2** (two-file rule); the `.nuspec` release notes are rewritten for it.
+> **Phase 6 is built (2026-11-05), as version 1.2026.11.2; the live exit checks are pending.** Phase 5 shipped on 2026-11-03, and Phase 6 was shaped from real use before it was built. Spikes S10 and S11 ran on 2026-11-03; their results are written into [§6.8](#68-direct-update-tools-phase-6) and [§9.11](#911-direct-updates-in-development). Plug-in authoring, step mirroring and switching included, moved to [Phase 7](#phase-7--plug-in-authoring) the same day. Phase 6 builds as version **1.2026.11.2** (two-file rule); the `.nuspec` release notes are rewritten for it. It ships with the Phase 6a refinements: [what the 1.2026.11.2 release holds](#what-the-12026112-release-holds).
 
 **Status (2026-11-05): built; live exit checks pending.** Every enhancement below is built and unit-tested, and the skills carry the direct-update and plug-in component guidance. Implementation choices, what the build found, and the exit-check steps are in [notes.md](notes.md#phase-6--execution).
 
@@ -2400,6 +2400,29 @@ S10 ran through a throwaway SDK console with its own sign-in, not through the pl
 | 6a.2 | **Automatic call log on disk.** An opt-in setting that writes every call and its outcome, in full, to a JSON file per connection and day | **Built** (2026-11-09); unit-tested, live check pending |
 | 6a.3 | **Pending spikes.** S7, S8 and S12 move here from Phase 0 and Phase 7. S7 and S8 move on to [Phase 8](#phase-8--promotion-and-git-integration-spikes) (2026-11-10) | **Done** (2026-11-09) — S12 run |
 | 6a.4 | **Live test of `update_web_resources`** for every web resource type, checking that every update is published. It changed §6.8: content written earlier without a publish is now published ([notes](notes.md#6a4--live-test-of-update_web_resources-2026-11-09)) | **Done** (2026-11-09) |
+| 6a.5 | **Panel and window refinements.** The Host group first, a prominent **Active Approvals…** button, **Close** at the right of the Active Approvals window, and the windows that do not block XrmToolBox opened centred on it | **Built** (2026-11-11); unit-tested, live check pending |
+
+#### What the 1.2026.11.2 release holds
+
+1.2026.11.2 is the first release after 1.2026.10.1 (Phase 5). Version 1.2026.11.1 was set on a branch for U6 and never released; its change ships here. The status of each live check is in [notes](notes.md#release-12026112--status).
+
+| In 1.2026.11.2 | Specified in |
+|---|---|
+| Scoped approvals and grants: the Tenant and Global scopes, record reads and Write calls as grants of their own, the **Record queries** switch removed, *Stale* grants, the settings upgrade | [Phase 6](#phase-6--planned-enhancements), [§7](#phase-6--scopes-and-grants) |
+| The Active Approvals window, holding the grants, the File roots, the bearer token and the call log setting | [§8.8](#88-active-approvals-window-phase-6) |
+| `update_web_resources` and the File root, with the publish fix from the live test (6a.4) | [§6.8](#68-direct-update-tools-phase-6) |
+| Registered plug-in assemblies, steps, custom APIs, request parameters and response properties in `add_solution_components`, `remove_solution_component` and `get_required_components` | [§6.6](#add_solution_components) |
+| The plug-in and custom API registration tables on the configuration allow-list (U6, first numbered 1.2026.11.1) | [§6.5](#65-read-tools) |
+| The skill changes for direct updates, the PCF push path and plug-in components | [Phase 6](#phase-6--planned-enhancements) |
+| Sharper icons in XrmToolBox and the Tool Library | [6a.1](#6a1--tool-library-icon-resolution) |
+| The optional call log on disk | [6a.2](#6a2--automatic-call-log-on-disk) |
+| The panel and window refinements | [6a.5](#6a5--panel-and-window-refinements), [§8.1](#81-main-panel), [§8.8](#88-active-approvals-window-phase-6) |
+
+**Not in 1.2026.11.2.**
+
+- Plug-in registration through a WIP, `pac plugin push` guidance, step mirroring and switching, custom API rebinding, and the skill changes from spike S12: [Phase 7](#phase-7--plug-in-authoring). Registration stays with a person, and the skills say so.
+- Power Pages: the spikes of [Phase 6b](#phase-6b--power-pages-spikes) and the authoring of [Phase 7a](#phase-7a--power-pages-authoring).
+- Spikes S7 and S8: [Phase 8](#phase-8--promotion-and-git-integration-spikes).
 
 #### 6a.1 — Tool Library icon resolution
 
@@ -2511,6 +2534,18 @@ S12 ran here. **S7 and S8 moved on to [Phase 8](#phase-8--promotion-and-git-inte
 | S12 | Registration round trip, starting from the field findings in [Phase 7](#phase-7--plug-in-authoring). Does `pac plugin push` ever register new plug-in types, and if not, which route does — a WIP import with new `PluginType` entries in `.dll.data.xml`, or only the Plugin Registration Tool? What must a WIP hold for its export to carry steps, images and custom APIs — each step added as 92, the assembly with its subcomponents, or something else? Does importing a WIP with a new step file and its `RootComponent` create the step, with which import flags, and what makes the packager or the import skip it silently — a missing `Customizations.xml` anchor node, an unregistered plug-in type? The same for a custom API with request parameters and response properties. Through the plugin and the person's PAC profile only, on a data-free environment | **Run 2026-11-09** ([notes](notes.md#6a3--spike-s12-2026-11-09)). Push never registers types, and refuses a build that drops a registered one. A WIP import registers exactly the types listed in `.dll.data.xml`, and creates steps with images and custom APIs with parameters and properties, all in one import. The U10 skip: without the `<SolutionPluginAssemblies />` and `<SdkMessageProcessingSteps />` anchors in `Customizations.xml`, pack only warns and the import "succeeds" creating nothing — and an export has only the anchors for what the WIP holds. A step on an unregistered type fails the import. Each step is held as 92; the assembly (91) exports its types but no steps. Custom APIs need no `RootComponent`; adding an unmanaged one brings its assembly, parameters and properties | §9.10 (updated: G1, G4, G6, G7), the skill changes. **Phase 7 starts from its result** |
 
 Each spike, when run, gets a written finding in [notes](notes.md) and updates the sections it feeds, as in Phase 0.
+
+#### 6a.5 — Panel and window refinements
+
+> [!NOTE]
+> **Built (2026-11-11), still version 1.2026.11.2.** Unit-tested; the check below has not run in XrmToolBox yet. Asked for by the person after using the build.
+
+- **The Host group comes first.** The main panel shows *Host — shared by all tabs* on top and *This tab* below it ([§8.1](#81-main-panel)).
+- **Active Approvals… stands out.** The button sits at the right end of the *Server* row and stays on that row's first line when the row wraps. It has an accent frame, a tinted background and bold text. **Copy client config** keeps its own *Clients* row ([§8.1](#81-main-panel)).
+- **Close is at the right of the Active Approvals window,** as the [§8.8](#88-active-approvals-window-phase-6) mockup shows, with **Reset all approvals** at the left. Close is hidden while the window asks to confirm **Reset all**.
+- **Windows that do not block XrmToolBox open centred on it.** This covers the approval dialog (publisher creation included), the File root prompt, the Active Approvals window and the File root prompt it opens. Each opens centred on the window that owns it: the XrmToolBox window, or the floating window of a floated tab. It is kept on that window's screen, and is centred on the screen when the owner is minimized. `CenterParent` applies only to modal dialogs, so Windows had been placing these. The modal dialogs were already centred.
+
+**Check:** in XrmToolBox, the main panel shows the Host group first, with **Active Approvals…** at its top right, also when the panel is narrow. An approval dialog, a publisher creation dialog, the File root prompt and the Active Approvals window each open centred on the XrmToolBox window, with XrmToolBox on either monitor. **Close** is at the bottom right of the Active Approvals window.
 
 ### Phase 6b — Power Pages spikes
 
