@@ -26,7 +26,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
         private readonly CompanionHost host;
         private readonly string originLabel;
         private readonly FlowLayoutPanel body = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Dock = DockStyle.Fill };
-        private readonly FlowLayoutPanel footerHost = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 44, Padding = new Padding(8) };
+        private readonly FlowLayoutPanel footerHost = new FlowLayoutPanel { Dock = DockStyle.Fill };
+        private readonly Button closeButton;
         private readonly CheckBox diskLog = new CheckBox { Text = "Write call log to disk", AutoSize = true, Padding = new Padding(0, 4, 0, 0) };
         private readonly Label diskLogFolder = UiBuilder.Text();
         private readonly Label diskLogWarning = UiBuilder.Text();
@@ -58,8 +59,14 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
             callLog.Controls.Add(UiBuilder.Row(UiBuilder.Caption("Call log"), this.diskLog, this.diskLogFolder));
             callLog.Controls.Add(this.diskLogWarning);
 
+            // Close stands alone at the right end of the footer (SPEC §8.8); the rest of the footer is re-rendered.
+            this.closeButton = UiBuilder.Button("Close", (s, e) => this.Close());
+            var footer = new Panel { Dock = DockStyle.Bottom, Height = 44, Padding = new Padding(8) };
+            footer.Controls.Add(this.footerHost);
+            footer.Controls.Add(new FlowLayoutPanel { Dock = DockStyle.Right, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Controls = { this.closeButton } });
+
             this.Controls.Add(this.body);
-            this.Controls.Add(this.footerHost);
+            this.Controls.Add(footer);
             this.Controls.Add(callLog);
             this.Controls.Add(token);
             this.body.SizeChanged += (s, e) => this.FitWidth();
@@ -82,7 +89,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
         /// <param name="host">The host.</param>
         /// <param name="owner">The XrmToolBox main window.</param>
         /// <param name="originLabel">The tab label recorded with File roots set from here.</param>
-        public static void ShowFor(CompanionHost host, IWin32Window? owner, string originLabel)
+        public static void ShowFor(CompanionHost host, Form? owner, string originLabel)
         {
             if (open != null && !open.IsDisposed)
             {
@@ -97,7 +104,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
                 open.Dispose();
                 open = null;
             };
-            open.Show(owner);
+            open.ShowCentered(owner);
         }
 
         /// <inheritdoc/>
@@ -256,6 +263,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
         private void RenderFooter()
         {
             this.footerHost.Controls.Clear();
+            this.closeButton.Visible = this.confirming != "all";
             if (this.confirming == "all")
             {
                 this.footerHost.Controls.Add(UiBuilder.Text("Revoke every grant? Calls already running finish under their approval. File roots are kept."));
@@ -265,7 +273,6 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
             }
 
             this.footerHost.Controls.Add(UiBuilder.Button("Reset all approvals", (s, e) => this.Confirm("all")));
-            this.footerHost.Controls.Add(UiBuilder.Button("Close", (s, e) => this.Close()));
         }
 
         private void AddTenant(ApprovalTree.TenantNode tenant, IReadOnlyList<ConnectionIdentity> bound)
@@ -474,7 +481,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
                 }
             };
             form.FormClosed += (s, e) => form.Dispose();
-            form.Show(this);
+            form.ShowCentered(this);
         }
     }
 }

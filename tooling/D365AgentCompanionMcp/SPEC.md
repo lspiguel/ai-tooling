@@ -1465,10 +1465,17 @@ The settings still record no arguments or results.
 
 ### 8.1 Main panel
 
-Each tab shows its own connection on top and the shared host below it.
+Each tab shows the shared host on top and its own connection below it.
 
 ```
-┌─ Agent Companion MCP ─────────────────────────────────────────────┐
+┌─ Host — shared by all tabs ───────────────────────────────────────┐
+│ Server     : ● Running   127.0.0.1:47321/mcp  ┃Active Approvals…┃ │
+│              [Stop server — all connections]                      │
+│ Clients    : [Copy client config]                                 │
+│ Bound      : 2 — [ClientName] DEV (this tab), [ClientName] DEV2   │
+│ Limits     : Max page size [500]  Response cap [40K]  Timeout     │
+│              [120 s]                                              │
+├─ This tab ────────────────────────────────────────────────────────┤
 │ This tab   : [ConnectionName] → [ClientName] DEV                  │
 │              https://<org>.crm.dynamics.com                       │
 │ Dev env    : Confirmed — this environment, remembered  [Clear]    │
@@ -1476,13 +1483,6 @@ Each tab shows its own connection on top and the shared host below it.
 │ File root  : C:\Repos\[ClientName]-d365   tenant · read-only      │
 │ Reads      : Approved — this environment, remembered              │
 │                                                      [Revoke]     │
-├─ Host — shared by all tabs ───────────────────────────────────────┤
-│ Server     : ● Running   http://127.0.0.1:47321/mcp               │
-│ Token      : ●●●●●●●●●●●●●●●●  [Copy] [Regenerate]                │
-│              [Stop server — all connections] [Copy client config] │
-│ Bound      : 2 — [ClientName] DEV (this tab), [ClientName] DEV2   │
-│ Limits     : Max page size [500]  Response cap [40K]  Timeout     │
-│              [120 s]                                              │
 ├─ Call log — this connection ─── no wrap; scrolls horizontally ───┤
 │ 2026-10-30 14:02:11  list_publishers  reason —  connection=000000 │
 │   → ok  environment  0.3 s  publishers=[{"publish…  nextCursor=nu │
@@ -1507,6 +1507,8 @@ The mockup shows the panel as Phase 6 changes it:
 
 - **Settings** no longer has the v1 **Record queries** checkbox. From Phase 6, record reads are grants ([§7](#phase-6--scopes-and-grants)).
 - **File root** is new. It shows the File root that applies to the tab's environment and the level it was set at ([§6.8](#file-root)), or *Not set — asked for on first use*. It is read-only here. It is set, changed and cleared in the Active Approvals window ([§8.8](#88-active-approvals-window-phase-6)), and the line updates when that happens.
+- **Token** leaves the panel for the Active Approvals window. **Copy client config** stays, on its own *Clients* row.
+- **Active Approvals…** opens the window. It is the panel's most prominent button: it stands at the right end of the *Server* row, apart from the other buttons and in place when that row wraps, and has an accent frame, a tinted background and bold text, because that window holds every grant and the token.
 
 ### 8.2 Approval dialog
 

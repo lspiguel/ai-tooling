@@ -199,7 +199,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
                 };
 
                 // Owned by the main window, so it appears whichever tab is in front (C9).
-                form.Show(this.MainWindow);
+                form.ShowCentered(this.MainWindow);
             });
 
             return completion.Task;
@@ -233,7 +233,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
                 };
 
                 // Owned by the main window, like the approval dialog, so it appears whichever tab is in front (C9).
-                form.Show(this.MainWindow);
+                form.ShowCentered(this.MainWindow);
             });
 
             return completion.Task;
@@ -319,9 +319,13 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
 
             var hostGroup = UiBuilder.Group(
                 "Host — shared by all tabs",
-                UiBuilder.Row(UiBuilder.Caption("Server"), this.serverText, this.startStopButton),
+                UiBuilder.RowWithTrailing(
+                    UiBuilder.AccentButton("Active Approvals…", (s, e) => this.ShowActiveApprovals()),
+                    UiBuilder.Caption("Server"),
+                    this.serverText,
+                    this.startStopButton),
                 UiBuilder.Row(UiBuilder.Caption("Port"), this.port, UiBuilder.Button("Apply port — all clients", (s, e) => this.ApplyPort())),
-                UiBuilder.Row(UiBuilder.Caption("Clients"), UiBuilder.Button("Copy client config", (s, e) => this.CopyClientConfig()), UiBuilder.Button("Active Approvals…", (s, e) => this.ShowActiveApprovals())),
+                UiBuilder.Row(UiBuilder.Caption("Clients"), UiBuilder.Button("Copy client config", (s, e) => this.CopyClientConfig())),
                 UiBuilder.Row(UiBuilder.Caption("Bound"), this.boundText),
                 UiBuilder.Row(
                     UiBuilder.Caption("Limits"),
@@ -353,8 +357,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp
                 table.Controls.Add(control);
             }
 
-            Add(tabGroup, new RowStyle(SizeType.AutoSize));
             Add(hostGroup, new RowStyle(SizeType.AutoSize));
+            Add(tabGroup, new RowStyle(SizeType.AutoSize));
             Add(UiBuilder.Text("Call log — this connection   (no wrap; double-click a line for its detail)"), new RowStyle(SizeType.AutoSize));
 
             // The call log takes whatever height is left; the host log keeps a fixed height of about ten lines.

@@ -128,6 +128,26 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.UITests
         }
 
         [Test]
+        public void Close_StandsAtTheRightEndOfTheFooter_AndHidesWhileResetAllAsks()
+        {
+            using var form = new ActiveApprovalsForm(_host, "tab 1") { StartPosition = FormStartPosition.Manual, Left = -3000 };
+            form.Show();
+            Application.DoEvents();
+
+            var close = Walk<Button>(form).Single(b => b.Text == "Close");
+            var reset = Walk<Button>(form).Single(b => b.Text == "Reset all approvals");
+            var closeRight = form.RectangleToClient(close.RectangleToScreen(close.ClientRectangle)).Right;
+            Assert.That(form.ClientSize.Width - closeRight, Is.LessThanOrEqualTo(16), "Close is at the right edge");
+            Assert.That(form.RectangleToClient(reset.RectangleToScreen(reset.ClientRectangle)).Left, Is.LessThan(form.ClientSize.Width / 2), "Reset all approvals stays on the left");
+            Assert.That(close.Height, Is.EqualTo(reset.Height), "Close keeps its natural height");
+
+            Click(form, "Reset all approvals");
+            Assert.That(close.Visible, Is.False, "the confirmation offers Reset all or Cancel only");
+            Click(form, "Cancel");
+            Assert.That(close.Visible, Is.True);
+        }
+
+        [Test]
         public void AFileRoot_ShowsUnderItsTenant_AndClearAsksFirst_ThenRemovesIt()
         {
             Allow(ApprovalKind.ReadApproval, ApprovalScope.Tenant, "Zulu DEV", TenantX);
