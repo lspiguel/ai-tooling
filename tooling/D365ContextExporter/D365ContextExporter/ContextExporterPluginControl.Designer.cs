@@ -21,6 +21,7 @@
             this.specPicker = new Lspiguel.Xrm.D365ContextExporter.UI.SpecPickerControl();
             this.toolbarPanel = new System.Windows.Forms.FlowLayoutPanel();
             this.btnRun = new System.Windows.Forms.Button();
+            this.btnRunAll = new System.Windows.Forms.Button();
             this.progressControl = new Lspiguel.Xrm.D365ContextExporter.UI.ExportProgressControl();
             this.outputPreview = new Lspiguel.Xrm.D365ContextExporter.UI.OutputPreviewControl();
             this.mainLayout.SuspendLayout();
@@ -70,6 +71,7 @@
             // 
             this.toolbarPanel.AutoSize = true;
             this.toolbarPanel.Controls.Add(this.btnRun);
+            this.toolbarPanel.Controls.Add(this.btnRunAll);
             this.toolbarPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.toolbarPanel.Location = new System.Drawing.Point(3, 101);
             this.toolbarPanel.Name = "toolbarPanel";
@@ -86,6 +88,17 @@
             this.btnRun.Text = "Run Export";
             this.btnRun.UseVisualStyleBackColor = true;
             this.btnRun.Click += new System.EventHandler(this.btnRun_Click);
+            // 
+            // btnRunAll
+            // 
+            this.btnRunAll.Enabled = false;
+            this.btnRunAll.Location = new System.Drawing.Point(95, 3);
+            this.btnRunAll.Name = "btnRunAll";
+            this.btnRunAll.Size = new System.Drawing.Size(100, 24);
+            this.btnRunAll.TabIndex = 1;
+            this.btnRunAll.Text = "Run All Specs";
+            this.btnRunAll.UseVisualStyleBackColor = true;
+            this.btnRunAll.Click += new System.EventHandler(this.btnRunAll_Click);
             // 
             // progressControl
             // 
@@ -127,6 +140,7 @@
         private Lspiguel.Xrm.D365ContextExporter.UI.SpecPickerControl specPicker;
         private System.Windows.Forms.FlowLayoutPanel toolbarPanel;
         private System.Windows.Forms.Button btnRun;
+        private System.Windows.Forms.Button btnRunAll;
         private Lspiguel.Xrm.D365ContextExporter.UI.ExportProgressControl progressControl;
         private Lspiguel.Xrm.D365ContextExporter.UI.OutputPreviewControl outputPreview;
     }

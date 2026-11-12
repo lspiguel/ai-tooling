@@ -6,6 +6,7 @@
 namespace Lspiguel.Xrm.D365ContextExporter.UI
 {
     using System;
+    using System.Collections.Generic;
     using System.Windows.Forms;
 
     using Lspiguel.Xrm.D365ContextExporter.Helpers;
@@ -32,6 +33,24 @@ namespace Lspiguel.Xrm.D365ContextExporter.UI
 
         /// <summary>Gets the currently loaded export job, or <see langword="null"/> when none is selected.</summary>
         public ExportJob? SelectedJob { get; private set; }
+
+        /// <summary>Gets the spec files listed in the drop-down, in display order.</summary>
+        public IReadOnlyList<string> SpecConfigPaths
+        {
+            get
+            {
+                var paths = new List<string>();
+                foreach (var item in this.cmbSpecs.Items)
+                {
+                    if (item is SpecItem spec)
+                    {
+                        paths.Add(spec.ConfigFilePath);
+                    }
+                }
+
+                return paths;
+            }
+        }
 
         /// <summary>Rescans the <c>config/</c> directory under <paramref name="baseDir"/> and repopulates the combo box.</summary>
         /// <param name="baseDir">The base directory to scan.</param>

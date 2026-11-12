@@ -1,0 +1,46 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="powerpagecomponent">
+    <attribute name="powerpagecomponentid" />
+    <attribute name="name" />
+    <attribute name="powerpagecomponenttype" />
+    <attribute name="powerpagesiteid" />
+    <attribute name="powerpagesitelanguageid" />
+    <attribute name="content" />
+    <filter type="and">
+      <condition attribute="statecode" operator="eq" value="0" />
+      <condition attribute="powerpagecomponenttype" operator="in">
+        <value>1</value>
+        <value>2</value>
+        <value>4</value>
+        <value>5</value>
+        <value>6</value>
+        <value>7</value>
+        <value>9</value>
+        <value>10</value>
+        <value>11</value>
+        <value>13</value>
+        <value>15</value>
+        <value>17</value>
+        <value>18</value>
+        <value>19</value>
+        <value>20</value>
+        <value>30</value>
+        <value>33</value>
+      </condition>
+      <filter type="or">
+        <condition attribute="powerpagecomponenttype" operator="ne" value="9" />
+        <filter type="and">
+          <condition attribute="name" operator="not-like" value="%secret%" />
+          <condition attribute="name" operator="not-like" value="%password%" />
+          <condition attribute="name" operator="not-like" value="%key%" />
+          <condition attribute="name" operator="not-like" value="%token%" />
+          <condition attribute="name" operator="not-like" value="%credential%" />
+          <condition attribute="name" operator="not-like" value="%connectionstring%" />
+          <condition attribute="name" operator="not-like" value="%certificate%" />
+        </filter>
+      </filter>
+    </filter>
+    <order attribute="powerpagecomponenttype" descending="false" />
+    <order attribute="name" descending="false" />
+  </entity>
+</fetch>

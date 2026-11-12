@@ -1,0 +1,12 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="role">
+    <attribute name="roleid" />
+    <attribute name="name" />
+    <filter type="and">
+      <condition attribute="ismanaged" operator="eq" value="0" />
+      <condition attribute="parentroleid" operator="null" />
+      <condition attribute="roletemplateid" operator="null" />
+    </filter>
+    <order attribute="name" descending="false" />
+  </entity>
+</fetch>

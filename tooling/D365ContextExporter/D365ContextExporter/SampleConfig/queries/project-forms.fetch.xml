@@ -1,0 +1,38 @@
+<fetch version="1.0" output-format="xml-platform" mapping="logical" distinct="false">
+  <entity name="systemform">
+    <attribute name="formid" />
+    <attribute name="name" />
+    <attribute name="type" />
+    <attribute name="objecttypecode" />
+    <attribute name="isdefault" />
+    <attribute name="ismanaged" />
+    <filter type="and">
+      <condition attribute="type" operator="in">
+        <value>2</value>
+        <value>6</value>
+        <value>7</value>
+        <value>11</value>
+      </condition>
+      <filter type="or">
+        <condition attribute="ismanaged" operator="eq" value="0" />
+        <link-entity name="solutioncomponent" from="objectid" to="formid" link-type="any">
+          <filter type="and">
+            <condition attribute="componenttype" operator="eq" value="60" />
+            <link-entity name="solution" from="solutionid" to="solutionid" link-type="any">
+              <filter type="and">
+                <condition attribute="ismanaged" operator="eq" value="0" />
+                <condition attribute="isvisible" operator="eq" value="1" />
+                <condition attribute="uniquename" operator="not-in">
+                  <value>Default</value>
+                  <value>Active</value>
+                </condition>
+              </filter>
+            </link-entity>
+          </filter>
+        </link-entity>
+      </filter>
+    </filter>
+    <order attribute="objecttypecode" descending="false" />
+    <order attribute="name" descending="false" />
+  </entity>
+</fetch>

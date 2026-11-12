@@ -6,9 +6,9 @@
     <AssemblyName>D365ContextExporter</AssemblyName>
     <Company>Luciano Spiguel</Company>
     <Authors>Luciano Spiguel</Authors>
-    <AssemblyVersion>1.2026.7.2</AssemblyVersion>
-    <FileVersion>1.2026.7.2</FileVersion>
-    <Version>1.2026.7.2</Version>
+    <AssemblyVersion>1.2026.11.1</AssemblyVersion>
+    <FileVersion>1.2026.11.1</FileVersion>
+    <Version>1.2026.11.1</Version>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <PackageScribanIncludeSource>true</PackageScribanIncludeSource>
@@ -20,7 +20,7 @@
     <Description>XrmToolBox plugin that executes FetchXML and Web API queries against a Dataverse environment, serialises results to an intermediate JSON file, and uses an internal scripting post-processor to produce Markdown grounding files for non-agentic AI assistants.</Description>
     <Copyright>Copyright 2026- Luciano Spiguel</Copyright>
     <PackageProjectUrl>https://github.com/lspiguel/ai-tooling</PackageProjectUrl>
-    <PackageIcon>d365-context-exporter-icon-c-128px-transparent.png</PackageIcon>
+    <PackageIcon>d365-context-exporter-icon-c-150px-transparent.png</PackageIcon>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
@@ -75,7 +75,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="d365-context-exporter-icon-c-128px-transparent.png">
+    <None Update="d365-context-exporter-icon-c-150px-transparent.png">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>

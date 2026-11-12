@@ -7,9 +7,6 @@
     "generatedBy": "D365 CE Context Exporter",
     "purpose": "AI assistant grounding context — solution inventory"
   },
-  "python": {
-    "interpreter": "auto"
-  },
   "transformation": "solution-inventory.sbn",
   "queries": [
     {

@@ -68,6 +68,14 @@ namespace Lspiguel.Xrm.D365ContextExporter.Tests.HelpersTests
         }
 
         [Test]
+        public void SerializeEntity_BooleanManagedPropertyMapsToValue()
+        {
+            var entity = MakeEntity("role", Guid.NewGuid(), ("iscustomizable", (object?)new BooleanManagedProperty(false)));
+            var dict = EntityJsonSerializer.SerializeEntity(entity, Array.Empty<string>());
+            Assert.That(dict["iscustomizable"], Is.EqualTo(false));
+        }
+
+        [Test]
         public void SerializeEntity_GuidConvertedToString()
         {
             var g = Guid.NewGuid();

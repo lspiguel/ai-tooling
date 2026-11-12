@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - 'tooling/D365ContextExporter/**'
+      - '.github/workflows/build-and-pack-d365-context-exporter.yml'
   pull_request:
     branches: [main]
     paths:
       - 'tooling/D365ContextExporter/**'
+      - '.github/workflows/build-and-pack-d365-context-exporter.yml'
 
 jobs:
   build:
@@ -16,15 +18,15 @@ jobs:
     outputs:
       nupkg-name: ${{ steps.pack.outputs.nupkg-name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.x'
 
       - name: Setup NuGet
-        uses: nuget/setup-nuget@v2
+        uses: nuget/setup-nuget@v4
 
       - name: Restore
         run: dotnet restore tooling/D365ContextExporter/D365ContextExporter.sln
@@ -50,7 +52,7 @@ jobs:
           echo "nupkg-name=$name" >> $env:GITHUB_OUTPUT
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: D365ContextExporter-nupkg
           path: nupkg/*.nupkg
@@ -62,30 +64,31 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: D365ContextExporter-nupkg
           path: nupkg
 
       - name: Setup NuGet
-        uses: nuget/setup-nuget@v2
+        uses: nuget/setup-nuget@v4
 
-      - name: Get NuGet API key via OIDC
-        id: oidc
-        shell: pwsh
-        run: |
-          $token = Invoke-RestMethod `
-            -Uri "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=nuget.org" `
-            -Headers @{ Authorization = "bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN" } |
-            Select-Object -ExpandProperty value
-          echo "::add-mask::$token"
-          echo "api-key=$token" >> $env:GITHUB_OUTPUT
+      # Trusted publishing: exchanges the GitHub OIDC token for a short-lived nuget.org API key,
+      # matched against the nuget.org policy for this repository and workflow file.
+      - name: NuGet login (OIDC)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
 
+      # -SkipDuplicate: a merge that does not bump the version leaves the published package as is.
       - name: Push to NuGet
         shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         run: |
           $pkg = (Get-ChildItem nupkg/*.nupkg | Select-Object -First 1).FullName
           nuget push $pkg `
-            -ApiKey ${{ steps.oidc.outputs.api-key }} `
+            -ApiKey $env:NUGET_API_KEY `
             -Source https://api.nuget.org/v3/index.json `
+            -SkipDuplicate `
             -NonInteractive

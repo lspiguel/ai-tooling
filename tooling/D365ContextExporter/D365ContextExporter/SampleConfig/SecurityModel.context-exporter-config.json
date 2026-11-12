@@ -7,9 +7,6 @@
     "generatedBy": "D365 CE Context Exporter",
     "purpose": "AI assistant grounding context — security roles and entity list"
   },
-  "python": {
-    "interpreter": "auto"
-  },
   "transformation": "security-model.sbn",
   "queries": [
     {

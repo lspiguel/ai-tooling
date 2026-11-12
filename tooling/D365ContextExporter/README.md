@@ -40,24 +40,46 @@ The plugin connects to your Dataverse environment, runs a set of FetchXML and We
 2. **Connect** — connect XrmToolBox to your Dataverse environment.
 3. **Pick a base directory** — click the folder picker and choose (or create) an empty folder. On first use the plugin will offer to deploy the reference configuration there.
 4. **Run first-time setup** — accept the prompt to deploy sample specs, FetchXML queries, and Scriban templates to the folder.
-5. **Select a spec** — choose one of the available specs from the dropdown (six sample specs are provided out of the box).
-6. **Click Run** — the plugin executes all queries, renders the template, and places the output in `output\<SpecName>.context.md`.
+5. **Select a spec** — choose one of the available specs from the dropdown (sample specs are provided out of the box).
+6. **Click Run Export** — the plugin executes all queries, renders the template, and places the output in `output\<SpecName>.context.md`. **Run All Specs** runs every spec in the list one after another, after a confirmation, since that can take a long time; a spec that fails is logged and the others still run, and the result panel then points to the `output` folder.
 7. **Upload** — attach or paste the `.context.md` file into your AI assistant conversation as grounding context.
 
 <!-- TODO: screenshot — spec picker and Run button -->
 
 ## Sample specs
 
-Six specs are deployed on first-time setup:
+These specs are deployed on first-time setup:
 
 | Spec | What it captures |
 |---|---|
-| `EntityDictionary` | All entity definitions with their attributes |
-| `SecurityModel` | Security roles and privilege depths |
-| `SolutionsReference` | Solution hierarchy and components |
-| `FormsAndViews` | Entity forms and views |
-| `Optionsets` | Global option sets |
-| `SolutionInventory` | Solutions, plugins, flows, environment variables, custom APIs |
+| `EntityDictionary` | The tables the project created or customized, with every column except lookup and choice name companions and currency base columns |
+| `SecurityModel` | The project's security roles and their privilege depths |
+| `SolutionsReference` | The complete customization reference — the project's solutions, custom tables, customized managed tables, virtual tables (with each table's relationships), option sets, plug-ins and steps, custom APIs, classic workflows, cloud flows, business rules, business process flows, security roles, app modules and environment variables |
+| `FormsAndViews` | The forms and views the project created or customized |
+| `Optionsets` | Unmanaged global option sets |
+| `PowerAutomateFlows` | The project's cloud flows with their definitions |
+| `Relationships` | The project's relationships: one-to-many by primary table with lookup column, behavior (parental, referential…) and cascade settings, Web API navigation properties and related menu; many-to-many with intersect table; and an index of lookups by table |
+| `PowerPages` | Power Pages sites on the enhanced data model: the page map (URLs, templates, the forms and lists each page hosts, access rules), web roles and what each can do, table permissions, basic forms, lists, multistep forms and their steps, cloud flows, Web API exposure, site settings, templates and navigation |
+| `SolutionInventory` | Visible solutions with publisher, version, managed state and install date |
+
+### What counts as the project's
+
+The sample specs describe what the project built or customized, not everything installed in the environment. They are meant to run against a **development environment**, where the project's work is unmanaged:
+
+| Component | Included when |
+|---|---|
+| Table | It is unmanaged; or it has unmanaged custom columns; or it has forms or views the project created or customized; or it is a component of a project solution. Intersect (N:N) tables are left out |
+| Column | It is an unmanaged custom column. `EntityDictionary` lists every column of the tables it includes |
+| Form, view, app | It is unmanaged, or a component of a project solution |
+| Option set, plug-in step, workflow, cloud flow, custom API, environment variable | It is unmanaged. Plug-in steps are those of unmanaged plug-in assemblies, with their state |
+| Security role | It is unmanaged, in the root business unit and not based on a Microsoft role template |
+| Relationship | It is custom and unmanaged — created by a maker, not the system relationships every table gets (owner, created by, notes, activities) |
+
+A *project solution* is any visible, unmanaged solution other than `Default` and `Active`. Cloud flows named `CXP_…` are left out: Customer Insights – Journeys generates them for its journeys. Against a downstream environment, where the project's solutions are managed, most sections come out empty.
+
+A standard column the project changed without creating it — a new label or required level on a shipped column — is not listed in `SolutionsReference`. Likewise, a shipped relationship whose cascade or menu settings the project changed is not listed in `Relationships`.
+
+`PowerPages` covers every active site on the enhanced data model, and only active components. Sites on the standard data model (`adx_` tables) are not covered. Page HTML, web template source and custom JavaScript are not exported, only whether a page or form has custom code and how long it is; page copy is read only to find the forms and lists a page embeds with Liquid. A reference to an inactive component is shown with its name and *(inactive)*. The values of site settings whose names contain *secret*, *password*, *key*, *token*, *credential*, *connectionstring* or *certificate* are never read from Dataverse; only their names are listed.
 
 ## Folder structure
 
@@ -67,6 +89,12 @@ After first-time setup your base directory will look like this:
 Context-Exporter/
 ├── config/
 │   ├── queries/                  FetchXML query files
+│   │   ├── power-pages-component-names.fetch.xml
+│   │   ├── power-pages-components.fetch.xml
+│   │   ├── power-pages-sites.fetch.xml
+│   │   ├── project-forms.fetch.xml
+│   │   ├── project-tables.fetch.xml
+│   │   ├── project-views.fetch.xml
 │   │   ├── solutions-detail.fetch.xml
 │   │   ├── security-roles.fetch.xml
 │   │   └── ...
@@ -74,15 +102,22 @@ Context-Exporter/
 │   │   ├── entity-dictionary.sbn
 │   │   ├── forms-and-views.sbn
 │   │   ├── optionsets.sbn
+│   │   ├── power-automate-flows.sbn
+│   │   ├── power-pages.sbn
+│   │   ├── relationships.sbn
 │   │   ├── security-model.sbn
 │   │   ├── solution-inventory.sbn
 │   │   └── solutions-reference.sbn
 │   ├── EntityDictionary.context-exporter-config.json
 │   ├── FormsAndViews.context-exporter-config.json
 │   ├── Optionsets.context-exporter-config.json
+│   ├── PowerAutomateFlows.context-exporter-config.json
+│   ├── PowerPages.context-exporter-config.json
+│   ├── Relationships.context-exporter-config.json
 │   ├── SecurityModel.context-exporter-config.json
 │   ├── SolutionInventory.context-exporter-config.json
-│   └── SolutionsReference.context-exporter-config.json
+│   ├── SolutionsReference.context-exporter-config.json
+│   └── context-exporter.schema.json   JSON schema for editor IntelliSense
 ├── output/                       Rendered grounding files (git-ignored)
 │   └── EntityDictionary.context.md
 ├── runs/                         Per-run working directories (git-ignored)
@@ -95,7 +130,12 @@ Context-Exporter/
 
 ## Plugin upgrades
 
-When the plugin detects that its version differs from the `version.txt` in your base directory, it offers to redeploy the reference configuration (queries, templates, and sample specs). Your `LEGAL.md` and any custom files are never overwritten during an upgrade.
+When the plugin detects that its version differs from the `version.txt` in your base directory, it offers to redeploy the reference configuration (queries, templates, and sample specs).
+
+- **Yes** replaces every shipped query, template and sample spec with the new version. If you edited one of them, your copy is backed up first to `config/backup/<previous version>/`, under the same path it had below `config/` — so an edited `config/queries/security-roles.fetch.xml` is kept as `config/backup/<previous version>/queries/security-roles.fetch.xml`. Backups are never deleted or overwritten; carry your edits across by hand.
+- **No** leaves every file as it is and does not ask again for this version.
+
+Either way, your `LEGAL.md` and any file whose name the plugin does not ship are never touched. To keep a customised spec, query or template safe from upgrades, save it under a name of your own.
 
 ## Configuration reference
 
@@ -141,8 +181,9 @@ Templates use the [Scriban](https://github.com/scriban/scriban) template languag
 > XrmToolBox to lock the file, which broke updating and uninstalling the tool from the
 > Tool Library ("The process cannot access the file … because it is being used by another
 > process"). You should not need them anyway — query results are already parsed and
-> available as template variables, so there is no JSON left to deserialise by the time a
-> template runs.
+> available as template variables. When a column holds JSON text — Power Pages keeps each
+> component's settings in `powerpagecomponent.content`, for example — use the `parse_json`
+> function instead.
 
 ### Built-in template functions
 
@@ -158,16 +199,18 @@ The following functions are available in all templates:
 | `group_by_key` | `(items, key)` | Groups an array by a key; returns `[{key, items}]`. |
 | `optionset_label` | `(options, value)` | Resolves an option set integer value to its localised label. |
 | `attr_type_abbrev` | `(type)` | Abbreviates a Dataverse attribute type string (e.g. `Lookup` → `lkp`). |
-| `req_indicator` | `(requiredLevel)` | Returns `**R**` for Required, `r` for Recommended, `-` otherwise. |
+| `req_indicator` | `(requiredLevel)` | Returns `**R**` for Required or ApplicationRequired (business required), `r` for Recommended, `-` otherwise, including SystemRequired. |
 | `iso_date` | `(dateString)` | Truncates a date-time string to `yyyy-MM-dd`. |
 | `component_type_name` | `(code)` | Resolves a solution component type code to a human-readable name. |
-| `format_forms` | `(forms)` | Formats a list of form objects as `Name(type), …`. |
+| `format_forms` | `(forms)` | Formats a list of form objects as `Name(type), …`, with the documented form types (`main`, `quickView`, `quickCreate`, `card`, `dialog`, …). |
 | `format_views` | `(views)` | Formats a list of view objects as a comma-separated name list. |
 | `entity_forms` | `(forms, entityLogicalName)` | Filters a form array to those belonging to the given entity. |
 | `entity_views` | `(views, entityLogicalName)` | Filters a view array to those belonging to the given entity. |
 | `plugin_stage` | `(code)` | Resolves a plugin stage integer (10/20/40/45) to `PreVal`, `Pre`, or `Post`. |
 | `plugin_mode` | `(code)` | Resolves a plugin mode integer (0/1) to `Sync` or `Async`. |
-| `flow_trigger` | `(name)` | Infers the trigger type of a cloud flow from its name (`HTTP`, `Sched`, `Child`, `Manual`, `Auto`). |
+| `flow_trigger` | `(name)` | Guesses the trigger type of a cloud flow from its name (`HTTP`, `Sched`, `Child`, `Manual`, `Auto`). Unreliable — prefer `flow_trigger_info`. |
+| `parse_json` | `(text)` | Parses JSON text held in a column into objects and arrays, for example `{{ c = row.content | parse_json }}{{ c.partialurl }}`. `null` for empty or invalid JSON. Use it instead of `object.from_json`. |
+| `flow_trigger_info` | `(clientdata)` | Describes a cloud flow's trigger from its definition (`workflow.clientdata`): for example `Dataverse: Added or Modified on contact (scope Organization); columns: …`, `Scheduled: every 1 Day`, `HTTP request`, `Manual or child flow`, `Power Apps`, `Power Pages`, `Selected row: contacts`, `Business process flow step`. `—` when there is no definition. |
 | `classic_trigger` | `(workflow)` | Returns the trigger string for a classic workflow object (`Create/Update/Delete`). |
 | `envvar_type` | `(code)` | Resolves an environment variable type integer to its type name. |
 | `api_param_type` | `(code)` | Resolves a custom API parameter type integer to a short type string. |
@@ -182,6 +225,8 @@ dotnet test    tooling/D365ContextExporter/D365ContextExporter.Tests/D365Context
 ```
 
 For local development, copy the DLL to your XrmToolBox Plugins folder. See `Directory.Build.targets.example` for a template that automates this on build.
+
+The plugin's behaviour is specified in [SPEC.md](SPEC.md); its development history, design decisions and open items are in [notes.md](notes.md).
 
 ## License
 

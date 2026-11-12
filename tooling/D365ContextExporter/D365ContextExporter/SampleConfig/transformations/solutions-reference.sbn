@@ -11,147 +11,243 @@ environment: {{ _meta.environment.url }}
 
 **Platform:** Dynamics 365 Customer Engagement
 
+> Scope: what the project built or customized. A table is included when it is unmanaged, has unmanaged custom columns, has forms or views the project created or customized, or is a component of a project solution (visible, unmanaged, other than Default and Active). Components installed by first-party or ISV managed solutions and left as shipped are left out.
+
+{{
+  # Lookups built once, so each table does not scan every form and view.
+  project_table_ids = {}
+  for c in projectTables
+    project_table_ids[c.objectid] = true
+  end
+
+  forms_by_table = {}
+  for g in forms | group_by_key "objecttypecode"
+    if g.key != null
+      forms_by_table[g.key] = g.items
+    end
+  end
+
+  views_by_table = {}
+  for g in views | group_by_key "returnedtypecode"
+    if g.key != null
+      views_by_table[g.key] = g.items
+    end
+  end
+
+  # The project's relationships (custom, unmanaged), indexed by each table they involve.
+  lookups_by_table = {}
+  referenced_by_table = {}
+  for r in oneToMany
+    lookups_by_table[r.ReferencingEntity] = (lookups_by_table[r.ReferencingEntity] ?? []) | array.add ("`" + r.ReferencingAttribute + "` → " + r.ReferencedEntity)
+    referenced_by_table[r.ReferencedEntity] = (referenced_by_table[r.ReferencedEntity] ?? []) | array.add (r.ReferencingEntity + ".`" + r.ReferencingAttribute + "`")
+  end
+  many_by_table = {}
+  for r in manyToMany
+    many_by_table[r.Entity1LogicalName] = (many_by_table[r.Entity1LogicalName] ?? []) | array.add (r.Entity2LogicalName + " (`" + r.SchemaName + "`)")
+    if r.Entity2LogicalName != r.Entity1LogicalName
+      many_by_table[r.Entity2LogicalName] = (many_by_table[r.Entity2LogicalName] ?? []) | array.add (r.Entity1LogicalName + " (`" + r.SchemaName + "`)")
+    end
+  end
+
+  form_type_labels = {}
+  form_type_labels["2"] = "main"
+  form_type_labels["6"] = "quick view"
+  form_type_labels["7"] = "quick create"
+  form_type_labels["11"] = "card"
+
+  view_type_labels = {}
+  view_type_labels["0"] = "public"
+  view_type_labels["1"] = "advanced find"
+  view_type_labels["2"] = "associated"
+  view_type_labels["4"] = "quick find"
+  view_type_labels["64"] = "lookup"
+
+  custom_tables = []
+  customized_tables = []
+  # Managed tables in a project solution with no project columns, forms or views to show
+  # (in the solution for a relationship, a ribbon or as a dependency): listed by name only.
+  solution_only_tables = []
+  virtual_tables = []
+  for e in entities | array.sort "LogicalName"
+    if e.IsIntersect
+      continue
+    end
+    attrs = e.Attributes ?? []
+    has_columns = false
+    for a in attrs
+      if !(a.AttributeType == "Money" && (a.LogicalName | string.ends_with "_base"))
+        has_columns = true
+        break
+      end
+    end
+    has_content = has_columns || forms_by_table[e.LogicalName] != null || views_by_table[e.LogicalName] != null
+    customized = has_content || project_table_ids[e.MetadataId] != null
+    is_virtual = e.TableType == "Virtual" || (e.TableType != "Elastic" && e.DataProviderId != null && e.DataProviderId != "00000000-0000-0000-0000-000000000000")
+    if is_virtual && (!e.IsManaged || customized)
+      virtual_tables = virtual_tables | array.add e
+    else if !e.IsManaged
+      custom_tables = custom_tables | array.add e
+    else if has_content
+      customized_tables = customized_tables | array.add e
+    else if customized
+      solution_only_tables = solution_only_tables | array.add e.LogicalName
+    end
+  end
+
+  project_solutions = []
+  for sol in solutions | array.sort "friendlyname"
+    if !sol.ismanaged
+      project_solutions = project_solutions | array.add sol
+    end
+  end
+-}}
+
 ## Solutions
 
-| Solution | Publisher | Version | Managed | Installed On |
+Visible unmanaged solutions — the project's transport, patch and work-in-progress solutions.
+
+| Solution | Unique Name | Publisher | Version | Installed On |
 |---|---|---|---|---|
-{{ for sol in solutions | array.sort 'friendlyname' -}}
-| {{ sol.friendlyname }} | {{ sol["pub.publisherfriendlyname"] ?? "—" }} | {{ sol.version ?? "—" }} | {{ if sol.ismanaged }}Yes{{ else }}No{{ end }} | {{ sol.installedon ?? "—" | iso_date }} |
+{{ for sol in project_solutions -}}
+| {{ sol.friendlyname | string.strip }} | `{{ sol.uniquename }}` | {{ sol.publisherfriendlyname ?? "—" }} | {{ sol.version ?? "—" }} | {{ sol.installedon ?? "" | iso_date }} |
 {{ end }}
 
 ---
 
 ## Field Type Legend
 
-`str`=nvarchar, `text`=ntext, `lkp`=lookup, `opt`=picklist, `multiopt`=multiselectpicklist, `bool`=bit, `int`=int, `dec`=decimal, `money`=money, `dt`=datetime, `img`=image, `pk`=primarykey
-Required: **R**=required, **r**=recommended, `-`=none
+`str`=text, `text`=multiline text, `lkp`=lookup, `opt`=choice, `multiopt`=choices (multi-select), `bool`=yes/no, `int`=whole number, `dec`=decimal, `money`=currency, `dt`=date and time, `img`=image, `file`=file, `pk`=unique identifier
+Required: **R**=required, **r**=recommended, `-`=optional
 
 ---
 
-## Custom Entities
-
 {{
-  custom_ents = []
-  std_ents = []
-  virtual_ents = []
-  for e in entities
-    is_virtual = e.IsVirtual != null && e.IsVirtual
-    if is_virtual
-      virtual_ents = virtual_ents | array.add e
-    else if e.IsCustomEntity
-      custom_ents = custom_ents | array.add e
-    else
-      std_ents = std_ents | array.add e
+func column_type(attr)
+  $type_name = attr.AttributeTypeName != null ? attr.AttributeTypeName.Value : null
+  if $type_name != null && $type_name != ""
+    ret ($type_name | string.remove_last "Type") | attr_type_abbrev
+  end
+  ret attr.AttributeType | attr_type_abbrev
+end
+
+func render_columns(table)
+  $cols = []
+  for attr in (table.Attributes ?? []) | array.sort "LogicalName"
+    if !(attr.AttributeType == "Money" && (attr.LogicalName | string.ends_with "_base"))
+      $cols = $cols | array.add attr
     end
   end
-  custom_ents = custom_ents | array.sort 'LogicalName'
-  std_ents = std_ents | array.sort 'LogicalName'
-  virtual_ents = virtual_ents | array.sort 'LogicalName'
+  if $cols.size == 0
+    ret "_No project columns._\n"
+  end
+  $out = "| Logical Name | Display Name | Type | Req |\n|---|---|---|---|\n"
+  for attr in $cols
+    $out = $out + "| " + attr.LogicalName + " | " + (attr.DisplayName | display_label attr.LogicalName) + " | " + column_type(attr) + " | " + (attr.RequiredLevel | req_indicator) + " |\n"
+  end
+  ret $out
+end
+
+func render_forms(table)
+  $items = forms_by_table[table.LogicalName]
+  if $items == null
+    ret "—"
+  end
+  $parts = []
+  for f in $items | array.sort "name"
+    $parts = $parts | array.add (f.name + " (" + (form_type_labels["" + f.type] ?? ("" + f.type)) + ")")
+  end
+  ret $parts | array.join ", "
+end
+
+func render_views(table)
+  $items = views_by_table[table.LogicalName]
+  if $items == null
+    ret "—"
+  end
+  $parts = []
+  for v in $items | array.sort "name"
+    $label = view_type_labels["" + v.querytype] ?? ("" + v.querytype)
+    $parts = $parts | array.add ($label == "public" ? v.name : (v.name + " (" + $label + ")"))
+  end
+  ret $parts | array.join ", "
+end
+
+func render_relationships(table)
+  $parts = []
+  $lookups = lookups_by_table[table.LogicalName]
+  if $lookups != null
+    $parts = $parts | array.add ("lookups " + ($lookups | array.sort | array.join ", "))
+  end
+  $referenced = referenced_by_table[table.LogicalName]
+  if $referenced != null
+    $parts = $parts | array.add ("referenced by " + ($referenced | array.sort | array.join ", "))
+  end
+  $many = many_by_table[table.LogicalName]
+  if $many != null
+    $parts = $parts | array.add ("N:N with " + ($many | array.sort | array.join ", "))
+  end
+  ret $parts.size > 0 ? ($parts | array.join "; ") : "—"
+end
+
+func render_table(table, heading_suffix)
+  $out = "\n### " + table.LogicalName + " — \"" + (table.DisplayName | display_label table.LogicalName) + "\"" + heading_suffix + "\n\n"
+  $desc = table.Description | display_label ""
+  if $desc != ""
+    $out = $out + $desc + "\n\n"
+  end
+  $out = $out + render_columns(table) + "\n"
+  $out = $out + "**Forms:** " + render_forms(table) + "\n"
+  $out = $out + "**Views:** " + render_views(table) + "\n"
+  $out = $out + "**Relationships:** " + render_relationships(table) + "\n"
+  ret $out
+end
 -}}
-{{ for entity in custom_ents -}}
-{{
-  dn = entity.DisplayName | display_label entity.LogicalName
-  desc = entity.Description | display_label ""
-  custom_attrs = []
-  for attr in (entity.Attributes ?? [])
-    if attr.IsCustomAttribute
-      custom_attrs = custom_attrs | array.add attr
-    end
-  end
--}}
-{{ if custom_attrs.size > 0 -}}
 
-### {{ entity.LogicalName }} — "{{ dn }}"
-{{ if entity.IsActivity -}}*(custom activity)*{{ end -}}
-{{ if desc != "" -}}{{ desc -}}{{ end -}}
+## Custom Tables
 
-**Fields:**
-
-| Logical Name | Display Name | Type | Req |
-|---|---|---|---|
-{{ for attr in custom_attrs | array.sort 'LogicalName' -}}
-{{ adn = attr.DisplayName | display_label attr.LogicalName -}}
-{{ req = attr.RequiredLevel | req_indicator -}}
-| {{ attr.LogicalName }} | {{ adn }} | {{ attr.AttributeType | attr_type_abbrev }} | {{ req }} |
-{{ end }}
-**Forms:** {{ forms | entity_forms entity.LogicalName | format_forms }}
-**Views:** {{ views | entity_views entity.LogicalName | format_views }}
-{{ end }}
-{{ end }}
+Unmanaged tables — created by the project or an unmanaged partner solution.
+{{ for t in custom_tables }}{{ render_table t (t.IsActivity ? " *(custom activity)*" : "") }}{{ end }}
 
 ---
 
-## Standard Entity Extensions
+## Customized Managed Tables
 
-{{ for entity in std_ents }}
-{{
-  custom_attrs = []
-  for attr in (entity.Attributes ?? [])
-    if attr.IsCustomAttribute
-      custom_attrs = custom_attrs | array.add attr
-    end
-  end
-}}
-{{ if custom_attrs.size > 0 }}
-{{ dn = entity.DisplayName | display_label entity.LogicalName }}
+Tables installed by Microsoft or ISV managed solutions that the project customized. Only the project's columns, forms and views are listed.
+{{ for t in customized_tables }}{{ render_table t (t.IsCustomEntity ? "" : " *(standard)*") }}{{ end }}
+{{- if solution_only_tables.size > 0 }}
 
-### {{ entity.LogicalName }} — "{{ dn }}"
-
-**Custom Fields:**
-
-| Logical Name | Display Name | Type | Req |
-|---|---|---|---|
-{{ for attr in custom_attrs | array.sort 'LogicalName' -}}
-{{ adn = attr.DisplayName | display_label attr.LogicalName -}}
-{{ req = attr.RequiredLevel | req_indicator -}}
-| {{ attr.LogicalName }} | {{ adn }} | {{ attr.AttributeType | attr_type_abbrev }} | {{ req }} |
-{{ end }}
-**Forms:** {{ forms | entity_forms entity.LogicalName | format_forms }}
-**Views:** {{ views | entity_views entity.LogicalName | format_views }}
-{{ end }}
-{{ end }}
+**Also in project solutions** — no project columns, forms or views; typically there for a relationship, a ribbon or as a dependency: {{ solution_only_tables | array.join ", " }}
+{{- end }}
 
 ---
 
-## Virtual Table Entities
+## Virtual Tables
 
-{{ if virtual_ents.size > 0 }}
-{{ for entity in virtual_ents }}
-{{ dn = entity.DisplayName | display_label entity.LogicalName }}
-
-### {{ entity.LogicalName }} *(Virtual)*
-
-{{ dn }}
-
-**Fields:**
-
-| Logical Name | Display Name | Type | Req |
-|---|---|---|---|
-{{ for attr in (entity.Attributes ?? []) | array.sort 'LogicalName' -}}
-{{ adn = attr.DisplayName | display_label attr.LogicalName -}}
-{{ req = attr.RequiredLevel | req_indicator -}}
-| {{ attr.LogicalName }} | {{ adn }} | {{ attr.AttributeType | attr_type_abbrev }} | {{ req }} |
-{{ end }}
-{{ end }}
-{{ else }}
-_No virtual table entities found._
-{{ end }}
+{{ if virtual_tables.size > 0 -}}
+{{ for t in virtual_tables }}{{ render_table t " *(virtual)*" }}{{ end }}
+{{- else -}}
+_No virtual tables found._
+{{- end }}
 
 ---
 
 ## Option Sets (Global)
 
+Unmanaged global choices. Values are listed in the order they are defined.
+
 | Logical Name | Display Name | Values |
 |---|---|---|
-{{ for os in globalOptionSets | array.sort 'Name' -}}
+{{ for os in globalOptionSets | array.sort "Name" -}}
 {{-
-  osdn = os.DisplayName | display_label os.Name
+  if os.IsManaged
+    continue
+  end
   opt_labels = []
-  for opt in (os.Options ?? []) | array.sort 'Value'
-    opt_labels = opt_labels | array.add (opt.Label | display_label ("" + opt.Value))
+  for opt in (os.Options ?? [])
+    opt_labels = opt_labels | array.add ((opt.Label | display_label ("" + opt.Value)) + " (" + opt.Value + ")")
   end
 -}}
-| {{ os.Name }} | {{ osdn }} | {{ opt_labels | array.join ", " }} |
+| {{ os.Name }} | {{ os.DisplayName | display_label os.Name }} | {{ opt_labels | array.join ", " }} |
 {{ end }}
 
 ---
@@ -171,13 +267,12 @@ _No virtual table entities found._
 
 ### SDK Message Processing Steps
 
-{{ custom_plugin_typenames = pluginAssemblies | pluck "pt.typename" }}
-| Step | Entity | Message | Stage | Mode |
-|---|---|---|---|---|
-{{ for step in sdkSteps | array.sort 'name' -}}
-{{ if custom_plugin_typenames | array.contains step["pt.typename"] -}}
-| {{ step.name }} | {{ step["flt.primaryobjecttypecode"] ?? "—" }} | {{ step["msg.name"] ?? "—" }} | {{ step.stage | plugin_stage }} | {{ step.mode | plugin_mode }} |
-{{ end -}}
+Steps registered on the project's (unmanaged) plug-in assemblies. Disabled steps do not run.
+
+| Step | Table | Message | Stage | Mode | Filtering Columns | State |
+|---|---|---|---|---|---|---|
+{{ for step in sdkSteps | array.sort "name" -}}
+| {{ step.name }} | {{ step["flt.primaryobjecttypecode"] ?? "—" }} | {{ step["msg.name"] ?? "—" }} | {{ step.stage | plugin_stage }} | {{ step.mode | plugin_mode }} | {{ step.filteringattributes ?? "—" }} | {{ if step.statecode == 1 }}**Disabled**{{ else }}Enabled{{ end }} |
 {{ end }}
 
 ---
@@ -189,7 +284,7 @@ _No virtual table entities found._
   for group in customApiResponses | group_by_key "uniquename"
     api_resp_map[group.key] = group.items
   end
-}}
+-}}
 
 | API | Request Params | Response |
 |---|---|---|
@@ -222,6 +317,8 @@ _No virtual table entities found._
 
 ## Processes
 
+Unmanaged processes. Drafts are marked; they do not run.
+
 ### Classic Workflows
 
 {{
@@ -239,39 +336,35 @@ _No virtual table entities found._
   end
   classic_wfs = classic_wfs | array.sort "name"
   cloud_wfs = cloud_wfs | array.sort "name"
-}}
-{{ for ent_group in classic_wfs | group_by_key "primaryentity" -}}
-{{ if ent_group.key != null && ent_group.key != "" }}
+-}}
+{{ for ent_group in classic_wfs | group_by_key "primaryentity" }}
+{{- if ent_group.key == null || ent_group.key == ""; continue; end -}}
+#### {{ ent_group.key }}
 
-#### {{ ent_group.key | string.capitalize }}
-
-| Name | Trigger |
-|---|---|
-{{ for wf in ent_group.items | array.sort 'name' -}}
-| {{ wf.name }} | {{ wf | classic_trigger }} |
+| Name | Trigger | State |
+|---|---|---|
+{{ for wf in ent_group.items | array.sort "name" -}}
+| {{ wf.name }} | {{ wf | classic_trigger }} | {{ if wf.statecode == 1 }}Activated{{ else }}**Draft**{{ end }} |
 {{ end }}
 {{ end -}}
-{{ end }}
 
 ### Cloud Flows
 
-| Name | Trigger |
-|---|---|
+| Name | Trigger | State |
+|---|---|---|
 {{ for wf in cloud_wfs -}}
-| {{ wf.name }}{{ if (wf.statuscode ?? 2) != 2 }} *(inactive)*{{ end }} | {{ wf.name | flow_trigger }} |
+| {{ wf.name }} | {{ wf.clientdata | flow_trigger_info }} | {{ if wf.statecode == 1 }}Activated{{ else }}**Draft**{{ end }} |
 {{ end }}
-
 ### Business Rules
 
-{{ for ent_group in brs | group_by_key "primaryentity" -}}
-{{ if ent_group.key != null && ent_group.key != "" }}
+{{ for ent_group in brs | group_by_key "primaryentity" }}
+{{- if ent_group.key == null || ent_group.key == ""; continue; end -}}
 #### {{ ent_group.key }}
 
-{{ for r in ent_group.items | array.sort 'name' -}}
-- {{ r.name }}
+{{ for r in ent_group.items | array.sort "name" -}}
+- {{ r.name }}{{ if r.statecode != 1 }} **(draft)**{{ end }}
 {{ end }}
 {{ end -}}
-{{ end }}
 
 ---
 
@@ -289,45 +382,56 @@ _No virtual table entities found._
       bpf_stage_map[pid_id] = bpf_stage_map[pid_id] | array.add stage
     end
   end
-}}
-{{ for bpf in businessProcessFlows | array.sort 'name' -}}
-{{
+-}}
+{{ for bpf in businessProcessFlows | array.sort "name" }}
+{{- 
   bpf_id = bpf.workflowid ?? bpf._id
-  stages = bpf_stage_map[bpf_id] ?? []
-}}
+  # A process can hold several stage records with the same name and table; list each stage once.
+  stages = []
+  seen_stages = {}
+  for stage in bpf_stage_map[bpf_id] ?? []
+    stage_key = stage.stagename + "|" + (stage.primaryentitytypecode ?? "")
+    if seen_stages[stage_key] == null
+      seen_stages[stage_key] = true
+      stages = stages | array.add stage
+    end
+  end
+-}}
+### {{ bpf.name }}{{ if (bpf.statuscode ?? 2) != 2 }} **(draft)**{{ end }}
 
-### {{ bpf.name }}{{ if (bpf.statuscode ?? 2) != 2 }} *(inactive)*{{ end }}
-
-**Entity:** `{{ bpf.primaryentity }}`
+**Table:** `{{ bpf.primaryentity }}`
 
 {{ if stages.size > 0 -}}
-| Stage | Entity |
+| Stage | Table |
 |---|---|
-{{ for stage in stages | array.sort 'stagename' -}}
+{{ for stage in stages | array.sort "stagename" -}}
 | {{ stage.stagename }} | {{ stage.primaryentitytypecode ?? bpf.primaryentity }} |
-{{ end }}
+{{ end -}}
 {{ else -}}
 _No stages found._
-{{ end -}}
 {{ end }}
+{{ end -}}
 
 ---
 
 ## Security Roles
 
-{{ role_names = securityRoles | pluck "name" | array.sort }}
-{{ for name in role_names -}}
-- {{ name }}
+Unmanaged roles not based on a Microsoft role template.
+
+{{ for name in securityRoles | pluck "name" | array.sort -}}
+- {{ name | string.strip }}
 {{ end }}
 
 ---
 
 ## App Modules
 
-| App | Type | Managed |
+Unmanaged apps, and managed apps the project customized.
+
+| App | Unique Name | Managed |
 |---|---|---|
-{{ for app in appModules | array.sort 'name' -}}
-| {{ app.name }} | {{ if (app.uniquename ?? "") | string.downcase | string.contains "canvas" }}Canvas{{ else }}Model-Driven{{ end }} | {{ if app.ismanaged }}Yes{{ else }}No{{ end }} |
+{{ for app in appModules | array.sort "name" -}}
+| {{ app.name }} | `{{ app.uniquename }}` | {{ if app.ismanaged }}Yes{{ else }}No{{ end }} |
 {{ end }}
 
 ---
@@ -336,6 +440,6 @@ _No stages found._
 
 | Variable | Display Name | Type |
 |---|---|---|
-{{ for ev in envVars | array.sort 'schemaname' -}}
+{{ for ev in envVars | array.sort "schemaname" -}}
 | {{ ev.schemaname }} | {{ ev.displayname ?? "—" }} | {{ ev.type | envvar_type }} |
 {{ end }}

@@ -57,10 +57,11 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
 
             if (template.HasErrors)
             {
+                // Scriban positions are zero-based; editors count lines and columns from one.
                 var errors = string.Join(
                     Environment.NewLine,
                     template.Messages.Select(m =>
-                        $"{m.Span.FileName}({m.Span.Start.Line},{m.Span.Start.Column}): {m.Message}"));
+                        $"{m.Span.FileName}({m.Span.Start.Line + 1},{m.Span.Start.Column + 1}): {m.Message}"));
                 throw new InvalidOperationException(
                     $"Template parse errors in '{job.Transformation}':{Environment.NewLine}{errors}");
             }
@@ -93,7 +94,10 @@ namespace Lspiguel.Xrm.D365ContextExporter.Orchestration
             this.log($"[Render] output.md written ({new FileInfo(outputPath).Length} bytes)");
         }
 
-        private static object? ConvertJToken(JToken token)
+        /// <summary>Converts a parsed JSON token into Scriban values: objects to <see cref="ScriptObject"/>, arrays to <see cref="ScriptArray"/>, values to .NET values.</summary>
+        /// <param name="token">The JSON token.</param>
+        /// <returns>The converted value, or <c>null</c>.</returns>
+        internal static object? ConvertJToken(JToken token)
         {
             return token switch
             {

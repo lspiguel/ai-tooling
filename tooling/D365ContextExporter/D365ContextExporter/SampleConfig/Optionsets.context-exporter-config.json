@@ -7,9 +7,6 @@
     "generatedBy": "D365 CE Context Exporter",
     "purpose": "AI assistant grounding context — global option sets"
   },
-  "python": {
-    "interpreter": "auto"
-  },
   "transformation": "optionsets.sbn",
   "queries": [
     {

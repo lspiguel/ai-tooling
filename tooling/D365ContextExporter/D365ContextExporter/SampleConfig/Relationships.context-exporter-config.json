@@ -1,0 +1,31 @@
+{
+  "$schema": "./context-exporter.schema.json",
+  "spec": "Relationships",
+  "version": "1.0.0",
+  "legal": "LEGAL.md",
+  "frontMatter": {
+    "generatedBy": "D365 CE Context Exporter",
+    "purpose": "AI assistant grounding context — the project's table relationships"
+  },
+  "transformation": "relationships.sbn",
+  "queries": [
+    {
+      "id": "relationships-one-to-many",
+      "type": "webapi",
+      "path": "RelationshipDefinitions/Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata?$select=SchemaName,ReferencedEntity,ReferencedAttribute,ReferencingEntity,ReferencingAttribute,ReferencedEntityNavigationPropertyName,ReferencingEntityNavigationPropertyName,IsHierarchical,CascadeConfiguration,AssociatedMenuConfiguration&$filter=IsCustomRelationship eq true and IsManaged eq false",
+      "resultKey": "oneToMany"
+    },
+    {
+      "id": "relationships-many-to-many",
+      "type": "webapi",
+      "path": "RelationshipDefinitions/Microsoft.Dynamics.CRM.ManyToManyRelationshipMetadata?$select=SchemaName,Entity1LogicalName,Entity2LogicalName,IntersectEntityName,Entity1IntersectAttribute,Entity2IntersectAttribute,Entity1NavigationPropertyName,Entity2NavigationPropertyName,Entity1AssociatedMenuConfiguration,Entity2AssociatedMenuConfiguration&$filter=IsCustomRelationship eq true and IsManaged eq false",
+      "resultKey": "manyToMany"
+    },
+    {
+      "id": "table-names",
+      "type": "webapi",
+      "path": "EntityDefinitions?$select=LogicalName,DisplayName",
+      "resultKey": "tables"
+    }
+  ]
+}

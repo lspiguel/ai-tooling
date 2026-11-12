@@ -5,6 +5,24 @@
     <attribute name="uniquename" />
     <attribute name="description" />
     <attribute name="ismanaged" />
+    <filter type="or">
+      <condition attribute="ismanaged" operator="eq" value="0" />
+      <link-entity name="solutioncomponent" from="objectid" to="appmoduleid" link-type="any">
+        <filter type="and">
+          <condition attribute="componenttype" operator="eq" value="80" />
+          <link-entity name="solution" from="solutionid" to="solutionid" link-type="any">
+            <filter type="and">
+              <condition attribute="ismanaged" operator="eq" value="0" />
+              <condition attribute="isvisible" operator="eq" value="1" />
+              <condition attribute="uniquename" operator="not-in">
+                <value>Default</value>
+                <value>Active</value>
+              </condition>
+            </filter>
+          </link-entity>
+        </filter>
+      </link-entity>
+    </filter>
     <order attribute="name" descending="false" />
   </entity>
 </fetch>

@@ -16,6 +16,7 @@
       <condition attribute="category" operator="eq" value="5" />
       <condition attribute="type" operator="eq" value="1" />
       <condition attribute="ismanaged" operator="eq" value="0" />
+      <condition attribute="name" operator="not-begin-with" value="CXP_" />
     </filter>
     <order attribute="name" descending="false" />
   </entity>

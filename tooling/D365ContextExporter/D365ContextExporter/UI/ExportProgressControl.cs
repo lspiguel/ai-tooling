@@ -11,6 +11,8 @@ namespace Lspiguel.Xrm.D365ContextExporter.UI
     /// <summary>A log panel with a cancel button and per-query progress indicator.</summary>
     public partial class ExportProgressControl : UserControl
     {
+        private string specPrefix = string.Empty;
+
         /// <summary>Raised when the user clicks the Cancel button.</summary>
         public event EventHandler? CancelRequested;
 
@@ -60,7 +62,23 @@ namespace Lspiguel.Xrm.D365ContextExporter.UI
                 return;
             }
 
-            this.lblProgress.Text = $"Query {current} / {total}";
+            this.lblProgress.Text = $"{this.specPrefix}Query {current} / {total}";
+        }
+
+        /// <summary>Shows which spec of a batch is running; the query progress that follows is shown after it.</summary>
+        /// <param name="current">Current spec index (1-based).</param>
+        /// <param name="total">Number of specs in the batch.</param>
+        /// <param name="specName">Name of the spec starting.</param>
+        public void SetBatchProgress(int current, int total, string specName)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action<int, int, string>(this.SetBatchProgress), current, total, specName);
+                return;
+            }
+
+            this.specPrefix = $"Spec {current} / {total} ({specName}) · ";
+            this.lblProgress.Text = $"{this.specPrefix}Running…";
         }
 
         /// <summary>Enables or disables the cancel button and toggles the status label.</summary>
@@ -73,6 +91,7 @@ namespace Lspiguel.Xrm.D365ContextExporter.UI
                 return;
             }
 
+            this.specPrefix = string.Empty;
             this.btnCancel.Enabled = running;
             this.lblProgress.Text = running ? "Running…" : string.Empty;
             this.spinnerProgress.Visible = running;
