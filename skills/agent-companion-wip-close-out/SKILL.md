@@ -1,11 +1,11 @@
 ---
 name: agent-companion-wip-close-out
-description: Used together with the Agent Companion MCP - the XrmToolBox plugin that gives a coding agent person-approved access to Dynamics 365 CE / Dataverse environments - and needs a plugin tab bound to the development environment (and, for promotion to a build environment, a second tab bound read-only to it). Ends WIP solutions by their route and their destination's close-out strategy - an in-place WIP once its edit has reached the transport source, a placement WIP by adding its components to the transport solution in development or by promotion to a build environment - checking dependencies against the transport order, verifying the transport solution afterwards, preparing (not running) pipeline runs for a person, and deleting the WIP. Also covers aligning development from a build environment and finding leftover WIPs. Use when a WIP solution has been imported and validated, when the person asks to close out a story or a WIP, or when leftover WIP solutions need clearing.
+description: Used together with the Agent Companion MCP - the XrmToolBox plugin that gives a coding agent person-approved access to Dynamics 365 CE / Dataverse environments - and needs a plugin tab bound to the development environment (and, for promotion to a build environment, a second tab bound read-only to it). Ends WIP solutions by their route and their destination's close-out strategy - promote to a build environment (A) or consolidate in development (B) - an in-place WIP once its edit has reached the transport source, a placement WIP by adding its components to the transport solution in development or by promotion to a build environment - checking dependencies against the transport order, verifying the transport solution afterwards, preparing (not running) pipeline runs for a person, and deleting the WIP. Also covers aligning development from a build environment and finding leftover WIPs. Use when a WIP solution has been imported and validated, when the person asks to close out, promote or finish a story or a WIP, when a promotion to a build environment has run and needs verifying, or when leftover WIP solutions need clearing.
 ---
 
 # Ending WIP solutions with the Agent Companion MCP
 
-A WIP is never a delivery channel and is never deployed downstream (R11). It ends in one of two ways, decided by its route and by where its destination transport solution is extracted from. This skill carries that out; it does not decide the strategy — `agent-companion-context` derived it — and it does not run pipelines, commits or pushes: it prepares them for the person (T6).
+A WIP is never a delivery channel and is never deployed downstream — to test, UAT or production (R11). **Promotion to a build environment is not a downstream deployment:** under A it is how a WIP reaches its transport solution, and the normal way it ends. A WIP ends in one of two ways, decided by its route and by where its destination transport solution is extracted from. This skill carries that out; it does not decide the strategy — `agent-companion-context` derived it — and it does not run pipelines, commits or pushes: it prepares them for the person (T6).
 
 **Preconditions.** The ledger names the WIP, its route, its destination and how it ends; the steps for close-out were stated and confirmed (T3). Without the plugin's tools, stop and say the Agent Companion MCP is needed.
 
@@ -13,7 +13,7 @@ A WIP is never a delivery channel and is never deployed downstream (R11). It end
 
 ## How each WIP ends
 
-|  | Destination extracted from **development** (B) | Destination extracted from a **build environment** (A) |
+|  | Destination extracted from **development** — B, consolidate in development | Destination extracted from a **build environment** — A, promote to build |
 |---|---|---|
 | **In place** — every component already has a transport home | Ends at import and validation: re-check (W10), then delete. Nothing to add; the edit ships with the next extract (X2) | Promoted first, then deleted. The edit reaches transport only through the promotion |
 | **Placement** — at least one component has no transport home | Close-out B: add the components to the transport solution in development, verify, delete | Close-out A: promotion, verify on the build connection, delete |
@@ -30,10 +30,10 @@ When strategies meet in one project — a transport solution extracted from buil
 
 1. **Validated.** The import succeeded, its read-back showed nothing unexpected, and the person confirmed the behaviour (`agent-companion-wip-edit-loop`, step 8).
 2. **Re-check (W10).** `list_solution_components` on the WIP, every page. Every component must already have a transport home — the transport-home query in `agent-companion-wip-shaping`'s references, on the transport source (T4). A component without one — authored during the edit — makes the WIP a **placement** WIP: do not delete it; update the ledger, tell the person, and close it out as placement.
-3. **Under A**, the WIP is promoted first — the steps under [Close-out A](#close-out-a--promotion). Under B, go on.
+3. **Under A**, the WIP is promoted first — the steps under [Close-out A](#close-out-a--promote-to-build). Under B, go on.
 4. **Delete** (below).
 
-## Close-out B — add to transport in development
+## Close-out B — consolidate in development
 
 For each placement WIP of the story, in transport order (W5, X8):
 
@@ -53,7 +53,7 @@ For each placement WIP of the story, in transport order (W5, X8):
 
 There is no pipeline validation under B; the map is applied only by this procedure and by the person approving each add (B1).
 
-## Close-out A — promotion
+## Close-out A — promote to build
 
 For each WIP to promote — placement WIPs of a story together, in transport order (A3, X8):
 
@@ -87,7 +87,7 @@ Under A, development can be brought in line with build so that it holds the same
 
 ## Leftover WIPs (X9)
 
-`list_solutions` with `nameContains: "_Agent_WIP_"`. Report WIPs the ledger does not know, or whose work item is closed. Delete only this task's WIPs, and only after their close-out. Another person's WIP is theirs to delete.
+`list_solutions` with `nameContains: "_Agent_WIP_"`, and again with the project's own WIP naming pattern where it has one (delivery facts) — for example its initials or work item IDs. Report WIPs the ledger does not know, or whose work item is closed. Delete only this task's WIPs, and only after their close-out. Another person's WIP is theirs to delete.
 
 ---
 

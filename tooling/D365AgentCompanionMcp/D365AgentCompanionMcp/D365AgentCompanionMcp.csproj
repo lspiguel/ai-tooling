@@ -6,9 +6,9 @@
     <AssemblyName>D365AgentCompanionMcp</AssemblyName>
     <Company>Luciano Spiguel</Company>
     <Authors>Luciano Spiguel</Authors>
-    <AssemblyVersion>1.2026.10.1</AssemblyVersion>
-    <FileVersion>1.2026.10.1</FileVersion>
-    <Version>1.2026.10.1</Version>
+    <AssemblyVersion>1.2026.11.2</AssemblyVersion>
+    <FileVersion>1.2026.11.2</FileVersion>
+    <Version>1.2026.11.2</Version>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <PolySharpUsePublicAccessibilityForGeneratedTypes>false</PolySharpUsePublicAccessibilityForGeneratedTypes>

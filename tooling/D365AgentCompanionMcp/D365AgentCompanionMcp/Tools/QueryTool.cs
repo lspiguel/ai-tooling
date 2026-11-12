@@ -11,8 +11,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
 
     /// <summary>
     /// The <c>query</c> Read tool (SPEC §6.5): FetchXML, always paged. A query reading any table outside the
-    /// configuration allow-list touches records: the dialog flags it, and it is refused with <c>tool_disabled</c>
-    /// before any dialog when record queries are off for the connection (C8).
+    /// configuration allow-list touches records: the dialog flags it, and it runs only under a record-read grant or
+    /// a per-call approval that says it reads records (SPEC §7, Phase 6).
     /// </summary>
     internal static class QueryTool
     {
@@ -27,7 +27,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         public static ToolDefinition QueryToolDefinition() => ToolDefinition.Paged(
             Query,
             ToolTier.Read,
-            "Runs FetchXML, paged. Name every column; <all-attributes /> and top are refused. page, count and paging-cookie are set by the server. A query on a table outside the configuration allow-list (publisher, solution, solutioncomponent, systemform, savedquery, sitemap, appmodule, appmodulecomponent, webresource, ribboncustomization, organization, workflow, customcontrol, environmentvariabledefinition, connectionreference, pluginassembly, sdkmessageprocessingstep, customapi, role, fieldsecurityprofile) touches records: the approval says so, and it fails with tool_disabled when record queries are off. Values: option sets {_option,label}, multi-select {_options,labels}, lookups {_ref:{entity,id},name}, money {_money,formatted}; empty columns are omitted; link-entity columns are keyed alias.column.",
+            "Runs FetchXML, paged. Name every column; <all-attributes /> and top are refused. page, count and paging-cookie are set by the server. A query on a table outside the configuration allow-list (publisher, solution, solutioncomponent, systemform, savedquery, sitemap, appmodule, appmodulecomponent, webresource, ribboncustomization, organization, workflow, customcontrol, environmentvariabledefinition, connectionreference, pluginassembly, plugintype, sdkmessage, sdkmessagefilter, sdkmessageprocessingstep, sdkmessageprocessingstepimage, customapi, customapirequestparameter, customapiresponseproperty, role, fieldsecurityprofile) touches records: the approval says so, and it needs its own record-read approval, which a read approval does not cover. Values: option sets {_option,label}, multi-select {_options,labels}, lookups {_ref:{entity,id},name}, money {_money,formatted}; empty columns are omitted; link-entity columns are keyed alias.column.",
             50,
             InputSchema.ForConnection()
                 .String(FetchXml, "The FetchXML query.", required: true, minLength: 1)
@@ -40,21 +40,13 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             PageField.Every("touchesRecords", OutputSchema.Boolean()))
             .WithInspection(Inspect);
 
-        /// <summary>Checks the query before the dialog: rules, record detection and the per-connection switch.</summary>
+        /// <summary>Checks the query before the dialog: rules and record detection.</summary>
         /// <param name="binding">The connection.</param>
         /// <param name="arguments">The arguments.</param>
         /// <returns>What the dialog must flag.</returns>
         internal static CallInspection Inspect(BoundConnection binding, JObject arguments)
         {
             var query = FetchXmlQuery.Parse((string)arguments[FetchXml]!);
-            if (query.TouchesRecords && !binding.RecordQueriesEnabled)
-            {
-                throw new ToolException(
-                    ToolErrorCodes.ToolDisabled,
-                    $"Record queries are switched off for this connection, and this query reads records ({string.Join(", ", query.RecordTables)}). Ask the person.",
-                    new JObject { ["recordTables"] = new JArray(query.RecordTables) });
-            }
-
             return new CallInspection(query.TouchesRecords);
         }
 

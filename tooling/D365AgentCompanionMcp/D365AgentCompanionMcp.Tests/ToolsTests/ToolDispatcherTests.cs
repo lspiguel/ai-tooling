@@ -158,9 +158,9 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
             await Call(ConnectionTools.WhoAmI, Args(ConnA));
 
             var reloaded = TestHost.Create(store: _settings);
-            Assert.That(reloaded.Approvals.Find(ApprovalKind.ReadApproval, OrgA)?.Scope, Is.EqualTo(ApprovalScope.Environment));
+            Assert.That(reloaded.Approvals.Find(ApprovalKind.ReadApproval, _a.Identity)?.Scope, Is.EqualTo(ApprovalScope.Environment));
 
-            _host.Approvals.RevokeOrganization(ApprovalKind.ReadApproval, OrgA);
+            _host.Approvals.RevokeEnvironment(ApprovalKind.ReadApproval, _a.Identity);
             _tabA.Answer = (r, c) => Task.FromResult(ApprovalDecision.AllowOnce);
             await Call(ConnectionTools.WhoAmI, Args(ConnA));
             Assert.That(_tabA.Requests, Has.Count.EqualTo(2));
@@ -183,7 +183,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
             await Call(ConnectionTools.WhoAmI, Args(ConnA, new JObject { ["reason"] = "Initials for WIP naming." }));
 
             var request = _tabA.Requests.Single();
-            Assert.That(request.Options, Is.EqualTo(new[] { ApprovalDecision.AllowOnce, ApprovalDecision.AllowSession, ApprovalDecision.AllowEnvironment }));
+            Assert.That(request.Options, Is.EqualTo(new[] { ApprovalDecision.AllowOnce, ApprovalDecision.AllowSession, ApprovalDecision.AllowEnvironment, ApprovalDecision.AllowGlobal }), "no tenant ID, so no Per tenant");
+            Assert.That(request.TenantDisabledReason, Is.Not.Null);
             Assert.That(request.Reason, Is.EqualTo("Initials for WIP naming."));
             Assert.That(request.Arguments, Does.Not.Contain("Initials"), "the reason is shown in its own box only");
             Assert.That(request.Arguments, Does.Contain(ConnA));
@@ -345,7 +346,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
 
             Assert.That(result.IsError, Is.False);
             var request = _tabA.Requests.Single();
-            Assert.That(request.Options, Is.EqualTo(new[] { ApprovalDecision.AllowOnce }));
+            Assert.That(request.Options, Is.EqualTo(new[] { ApprovalDecision.AllowOnce, ApprovalDecision.AllowSession, ApprovalDecision.AllowEnvironment }), "Write stops at one environment");
             Assert.That(request.Tier, Is.EqualTo(ToolTier.Write));
             Assert.That(request.Reason, Is.EqualTo("Story 1234."));
             Assert.That(_tabA.CallLog.Snapshot().Single().CallLine, Does.Contain("reason \"Story 1234.\""));
@@ -354,8 +355,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
         [Test]
         public async Task Write_EnvironmentReadApproval_DoesNotSkipTheWriteDialog()
         {
-            _host.Approvals.GrantForOrganization(ApprovalKind.ReadApproval, ApprovalScope.Environment, OrgA, "Dev A org", "tab A");
-            _host.Approvals.GrantForOrganization(ApprovalKind.DevEnvironment, ApprovalScope.Environment, OrgA, "Dev A org", "tab A");
+            _host.Approvals.Allow(ApprovalKind.ReadApproval, ApprovalScope.Environment, _a.Identity, "tab A");
+            _host.Approvals.Allow(ApprovalKind.DevEnvironment, ApprovalScope.Environment, _a.Identity, "tab A");
 
             await Call(FakeWrite, Args(ConnA, new JObject { ["name"] = "x", ["reason"] = "Story 1234." }));
 

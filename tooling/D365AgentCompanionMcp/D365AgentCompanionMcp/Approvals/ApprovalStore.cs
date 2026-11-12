@@ -11,9 +11,10 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Approvals
     using Lspiguel.Xrm.D365AgentCompanionMcp.Common;
 
     /// <summary>
-    /// Every standing grant — session, environment and always, for Read approval and dev-environment confirmation —
-    /// in one listable store, held per organization (SPEC §7, C8). A tab's Revoke and Clear, the always settings,
-    /// and a host stop are all calls on this store. Once scopes are never stored: they end with their call or binding.
+    /// Every standing grant — session, environment, tenant and global, for Read approval, record reads, Write and
+    /// dev-environment confirmation — in one listable store (SPEC §7, C8). A tab's Revoke and Clear, the Active
+    /// Approvals window's Revoke and Reset, and a host stop are all calls on this store. Once scopes are never
+    /// stored: they end with their call or binding.
     /// </summary>
     internal sealed class ApprovalStore
     {
@@ -23,13 +24,13 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Approvals
         private readonly IClock clock;
 
         /// <summary>Initializes a new instance of the <see cref="ApprovalStore"/> class and loads the persisted grants.</summary>
-        /// <param name="persistence">Where environment and always grants are kept.</param>
+        /// <param name="persistence">Where environment, tenant and global grants are kept.</param>
         /// <param name="clock">The clock for grant times.</param>
         public ApprovalStore(IGrantPersistence persistence, IClock clock)
         {
             this.persistence = persistence;
             this.clock = clock;
-            this.grants.AddRange(persistence.LoadGrants().Where(g => g.IsPersistent));
+            this.grants.AddRange(persistence.LoadGrants().Where(g => g.IsPersistent && g.Kind.Allows(g.Scope)));
         }
 
         /// <summary>Raised after any change.</summary>
@@ -45,22 +46,34 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Approvals
             }
         }
 
-        /// <summary>Finds the broadest grant covering an organization: always, then environment, then session.</summary>
+        /// <summary>Finds the broadest grant covering a connection: global, then tenant, environment and session.</summary>
         /// <param name="kind">The kind asked for.</param>
-        /// <param name="organizationId">The organization.</param>
+        /// <param name="identity">The connection.</param>
         /// <returns>The grant, or <c>null</c>.</returns>
-        public Grant? Find(ApprovalKind kind, Guid organizationId)
+        public Grant? Find(ApprovalKind kind, ConnectionIdentity identity)
         {
             lock (this.gate)
             {
-                return this.grants.Where(g => g.Covers(kind, organizationId)).OrderByDescending(g => g.Scope).FirstOrDefault();
+                return this.grants.Where(g => g.Covers(kind, identity)).OrderByDescending(g => g.Scope).FirstOrDefault();
             }
         }
 
-        /// <summary>Tells whether an always grant of this kind is on.</summary>
+        /// <summary>Lists the grants of a kind that match a connection's organization but differ on an environment or tenant ID.</summary>
+        /// <param name="kind">The kind.</param>
+        /// <param name="identity">The connection.</param>
+        /// <returns>The stale grants.</returns>
+        public IReadOnlyList<Grant> Stale(ApprovalKind kind, ConnectionIdentity identity)
+        {
+            lock (this.gate)
+            {
+                return this.grants.Where(g => g.Kind == kind && g.IsStale(identity)).ToList();
+            }
+        }
+
+        /// <summary>Tells whether a global grant of this kind is on.</summary>
         /// <param name="kind">The kind.</param>
         /// <returns><c>true</c> when on.</returns>
-        public bool IsAlways(ApprovalKind kind)
+        public bool IsGlobal(ApprovalKind kind)
         {
             lock (this.gate)
             {
@@ -68,74 +81,133 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Approvals
             }
         }
 
-        /// <summary>Grants a session or environment scope for one organization, replacing a grant of the same kind for it.</summary>
+        /// <summary>
+        /// Records a grant the person gave in a dialog, replacing a grant of the same kind and reach: for one
+        /// environment, the earlier session or environment grant of that kind; for a tenant, the tenant's; for global, the global one.
+        /// </summary>
         /// <param name="kind">The kind.</param>
-        /// <param name="scope"><see cref="ApprovalScope.Session"/> or <see cref="ApprovalScope.Environment"/>.</param>
-        /// <param name="organizationId">The organization.</param>
-        /// <param name="organizationName">Its friendly name.</param>
+        /// <param name="scope">The scope; <see cref="ApprovalScope.Once"/> is never stored, and Write and the dev-environment confirmation stop at <see cref="ApprovalScope.Environment"/>.</param>
+        /// <param name="identity">The connection the person was asked about.</param>
         /// <param name="originTab">The tab the person granted it from.</param>
-        public void GrantForOrganization(ApprovalKind kind, ApprovalScope scope, Guid organizationId, string organizationName, string originTab)
+        public void Allow(ApprovalKind kind, ApprovalScope scope, ConnectionIdentity identity, string originTab)
         {
-            if (scope != ApprovalScope.Session && scope != ApprovalScope.Environment)
+            if (!kind.Allows(scope))
             {
-                throw new ArgumentOutOfRangeException(nameof(scope), scope, "Only session and environment scopes are granted per organization.");
+                throw new ArgumentOutOfRangeException(nameof(scope), scope, $"A {kind} grant cannot have this scope.");
+            }
+
+            if (scope == ApprovalScope.Tenant && identity.TenantId == Guid.Empty)
+            {
+                throw new ArgumentException("A tenant grant needs the connection's tenant ID.", nameof(identity));
             }
 
             this.Mutate(() =>
             {
-                this.grants.RemoveAll(g => g.Kind == kind && g.Scope != ApprovalScope.Always && g.OrganizationId == organizationId);
-                this.grants.Add(new Grant(kind, scope, organizationId, organizationName, this.clock.UtcNow, originTab));
-            });
-        }
-
-        /// <summary>Switches an always grant on or off. Only the settings dialog calls this.</summary>
-        /// <param name="kind">The kind.</param>
-        /// <param name="on">Whether it is on.</param>
-        /// <param name="origin">Where it was set.</param>
-        public void SetAlways(ApprovalKind kind, bool on, string origin)
-        {
-            this.Mutate(() =>
-            {
-                this.grants.RemoveAll(g => g.Kind == kind && g.Scope == ApprovalScope.Always);
-                if (on)
+                var now = this.clock.UtcNow;
+                switch (scope)
                 {
-                    this.grants.Add(new Grant(kind, ApprovalScope.Always, Guid.Empty, "All organizations", this.clock.UtcNow, origin));
+                    case ApprovalScope.Always:
+                        this.grants.RemoveAll(g => g.Kind == kind && g.Scope == ApprovalScope.Always);
+                        this.grants.Add(new Grant(kind, scope, Guid.Empty, "All environments", now, originTab));
+                        break;
+                    case ApprovalScope.Tenant:
+                        this.grants.RemoveAll(g => g.Kind == kind && g.Scope == ApprovalScope.Tenant && g.TenantId == identity.TenantId);
+                        this.grants.Add(new Grant(kind, scope, Guid.Empty, identity.Name, now, originTab, null, identity.TenantId));
+                        break;
+                    default:
+                        this.grants.RemoveAll(g => g.Kind == kind && (g.Scope == ApprovalScope.Session || g.Scope == ApprovalScope.Environment) && g.Matches(identity));
+                        this.grants.Add(new Grant(kind, scope, identity.OrganizationId, identity.Name, now, originTab, identity.EnvironmentId, identity.TenantId));
+                        break;
                 }
             });
         }
 
-        /// <summary>Removes the session and environment grants of one kind for one organization — a tab's Revoke or Clear.</summary>
+        /// <summary>
+        /// Fills in the environment and tenant IDs a connection reports into the session and environment grants that
+        /// match its organization and did not know them (SPEC §7, Identity). Called when a connection binds.
+        /// </summary>
+        /// <param name="identity">The connection.</param>
+        public void FillIdentity(ConnectionIdentity identity)
+        {
+            if (identity.EnvironmentId.Length == 0 && identity.TenantId == Guid.Empty)
+            {
+                return;
+            }
+
+            this.Mutate(() =>
+            {
+                for (var i = 0; i < this.grants.Count; i++)
+                {
+                    var grant = this.grants[i];
+                    if ((grant.Scope == ApprovalScope.Session || grant.Scope == ApprovalScope.Environment) && grant.Matches(identity))
+                    {
+                        this.grants[i] = grant.WithIdentity(identity);
+                    }
+                }
+            });
+        }
+
+        /// <summary>
+        /// Removes the session and environment grants of one kind that cover exactly a connection's environment — a
+        /// tab's Revoke or Clear. Tenant and global grants are broader and are revoked in the Active Approvals window.
+        /// </summary>
         /// <param name="kind">The kind.</param>
-        /// <param name="organizationId">The organization.</param>
-        public void RevokeOrganization(ApprovalKind kind, Guid organizationId) =>
-            this.Mutate(() => this.grants.RemoveAll(g => g.Kind == kind && g.Scope != ApprovalScope.Always && g.OrganizationId == organizationId));
+        /// <param name="identity">The connection.</param>
+        public void RevokeEnvironment(ApprovalKind kind, ConnectionIdentity identity) =>
+            this.Mutate(() => this.grants.RemoveAll(g => g.Kind == kind && (g.Scope == ApprovalScope.Session || g.Scope == ApprovalScope.Environment) && g.Matches(identity)));
 
         /// <summary>Removes one grant.</summary>
         /// <param name="grant">The grant.</param>
         public void Remove(Grant grant) => this.Mutate(() => this.grants.Remove(grant));
 
-        /// <summary>Removes every grant of one scope.</summary>
-        /// <param name="scope">The scope.</param>
-        public void ClearScope(ApprovalScope scope) => this.Mutate(() => this.grants.RemoveAll(g => g.Scope == scope));
+        /// <summary>Removes the given grants — a reset of an environment or a tenant, whose members the window lists.</summary>
+        /// <param name="toRemove">The grants.</param>
+        public void Remove(IEnumerable<Grant> toRemove)
+        {
+            var set = new HashSet<Grant>(toRemove);
+            this.Mutate(() => this.grants.RemoveAll(set.Contains));
+        }
+
+        /// <summary>Removes every global grant.</summary>
+        public void ClearGlobal() => this.Mutate(() => this.grants.RemoveAll(g => g.Scope == ApprovalScope.Always));
+
+        /// <summary>Removes a tenant's own grants and the grants of every environment recorded under it.</summary>
+        /// <param name="tenantId">The tenant.</param>
+        public void ClearTenant(Guid tenantId) =>
+            this.Mutate(() => this.grants.RemoveAll(g => g.Scope != ApprovalScope.Always && g.TenantId == tenantId));
+
+        /// <summary>Removes the session and environment grants of one environment.</summary>
+        /// <param name="environmentKey">The environment, as <see cref="Grant.EnvironmentKey"/> names it.</param>
+        public void ClearEnvironment(string environmentKey) =>
+            this.Mutate(() => this.grants.RemoveAll(g => (g.Scope == ApprovalScope.Session || g.Scope == ApprovalScope.Environment) && g.EnvironmentKey == environmentKey));
+
+        /// <summary>Removes every grant — Reset all approvals.</summary>
+        public void ClearAll() => this.Mutate(() => this.grants.Clear());
 
         /// <summary>Ends every session-scoped grant, for a host stop (H3).</summary>
-        public void EndSession() => this.ClearScope(ApprovalScope.Session);
+        public void EndSession() => this.Mutate(() => this.grants.RemoveAll(g => g.Scope == ApprovalScope.Session));
 
         private void Mutate(Action change)
         {
+            bool changed;
             List<Grant> persistent;
             lock (this.gate)
             {
-                var before = this.grants.Where(g => g.IsPersistent).ToList();
+                var before = this.grants.ToList();
+                var persistentBefore = before.Where(g => g.IsPersistent).ToList();
                 change();
                 persistent = this.grants.Where(g => g.IsPersistent).ToList();
-                if (!before.SequenceEqual(persistent))
+                changed = !before.SequenceEqual(this.grants);
+                if (!persistentBefore.SequenceEqual(persistent))
                 {
                     this.persistence.SaveGrants(persistent);
                 }
             }
 
-            this.Changed?.Invoke(this, EventArgs.Empty);
+            if (changed)
+            {
+                this.Changed?.Invoke(this, EventArgs.Empty);
+            }
         }
     }
 }

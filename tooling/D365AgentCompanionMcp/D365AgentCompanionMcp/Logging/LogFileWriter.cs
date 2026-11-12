@@ -14,8 +14,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Logging
     using Lspiguel.Xrm.D365AgentCompanionMcp.Common;
 
     /// <summary>
-    /// <b>Save as…</b>: the only way the log reaches disk (SPEC §8.6, R13). The file holds the lines exactly as
-    /// shown, truncation included — never full arguments or results.
+    /// <b>Save as…</b>: the lines of a tab and the host log, saved by hand (SPEC §8.6, R13). The file holds the lines exactly as
+    /// shown, truncation included — never full arguments or results; those reach disk only through <see cref="DiskCallLog"/>.
     /// </summary>
     internal static class LogFileWriter
     {

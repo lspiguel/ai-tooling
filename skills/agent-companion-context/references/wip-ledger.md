@@ -16,6 +16,8 @@ One shape that every agent-companion skill reads and updates (K5). It lives in t
 | Segmentation map | <path> | <client>-d365 |
 | Transport order | Resources › Base › … | map |
 | Transport source | Base: development · Apps: build | <pipeline file> / person |
+| Close-out strategy | Base: B — consolidate in development · Apps: A — promote to build | person / derived |
+| WIP naming | `<initials>_Agent_WIP_<id>_<Group>` / project pattern | delivery facts / earlier WIPs |
 | Pipelines | promotion <name>, extraction <name> — run by a person | <pipeline files> |
 | Protected prefixes | <list> | |
 | Work item | <id> | task |
@@ -34,7 +36,7 @@ Stated before the first Write call and before close-out (T3); restated whenever 
 2. Add: Resources ← new_/account/form.js (placement); Base ← account (shell), account main form (in place), new_rating (placement).
 3. Export, unpack, baseline; edit; validate; overwrite check.
 4. Import Resources, then Base (W5). Development is shared: each import publishes others' pending changes (X11).
-5. Close-out by B: Resources then Base. A person runs no pipeline; the next scheduled extract ships them.
+5. Close-out by B (consolidate in development): Resources then Base. A person runs no pipeline; the next scheduled extract ships them.
 6. Delete both WIPs after the close-out read-back.
 Who runs what: every pipeline run, commit and push — <person>.
 ```
@@ -63,14 +65,14 @@ One row per component the task touches.
 ```
 
 - **Route** is *placement* when any component in the WIP has no transport home, otherwise *in place* (W9).
-- **Ends by** is one of: *import and validation* (in place, source development) · *promotion* (in place or placement, source build) · *close-out B* (placement, source development).
+- **Ends by** is one of: *import and validation* (in place, source development) · *promotion* (in place or placement, source build) · *close-out B* (placement, source development — consolidate in development).
 - **State** moves forward only: `planned` → `created` → `shaped` (read back clean, R1) → `baseline taken` → `edited` → `imported` → `validated` → `closed out` / `promoted` → `deleted`. A state that has to go back — a failed import, a stopped overwrite check — is noted next to it.
 
 ## Reconcile
 
 When a skill enters a task already under way (K6):
 
-1. `list_solutions` with `nameContains: "_Agent_WIP_<work item id>"` on the development connection. Every WIP in the ledger must be there unless its state is `deleted`; any WIP there but not in the ledger is added, after asking the person whose it is.
+1. `list_solutions` with `nameContains: "_Agent_WIP_<work item id>"` on the development connection — and, where the project names WIPs its own way, with the work item ID in that pattern as well. Every WIP in the ledger must be there unless its state is `deleted`; any WIP there but not in the ledger is added, after asking the person whose it is.
 2. `list_solution_components` on each open WIP, every page. Update the Components table; a component the ledger does not list — added in the maker portal, or authored during an edit — is classified and routed before anything else happens (it may change the WIP's route, W10).
 3. For a WIP marked `imported` or later, nothing in the environment says whether the person validated it; ask.
 4. Under strategy A, check the build connection: a promoted WIP's components are in the destination transport solution, and the WIP itself is gone from build.

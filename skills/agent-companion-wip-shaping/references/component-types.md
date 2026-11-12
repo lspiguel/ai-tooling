@@ -15,6 +15,10 @@ Confirmed against the `solutioncomponent` type option set in the plugin's spikes
 | 61 | Web resource | `{ "type": 61, "id": "<webresourceid>" }` | MCP or PAC | |
 | 62 | Sitemap | `{ "type": 62, "id": "<sitemapid>" }` | MCP or PAC | Root, behaviour 0 |
 | 80 | Model-driven app | `{ "type": 80, "id": "<appmoduleid>" }` | MCP only | PAC 2.14.1 does not know the type. The export's `AppModuleComponents` can be empty while the app has components; compare before importing |
+| 91 | Plug-in assembly | `{ "type": 91, "name": "Acme.Plugins" }`, with `"version": "1.0.0.0"` when several versions are registered under the name; or by `id` | MCP or PAC | From plugin 1.2026.11.2. Must be registered already. An ambiguous name fails with `invalid_argument` listing the versions. Adding it adds neither its steps nor its types |
+| 92 | Plug-in step | `{ "type": 92, "id": "<sdkmessageprocessingstepid>" }` | MCP or PAC | From plugin 1.2026.11.2. By ID only: step names are not unique. Its images travel with it and are not separate components; its secure configuration is never exported. Add each step on its own |
+| per environment | Custom API | `{ "componentTable": "customapi", "uniqueName": "new_Api" }`, or by `id` | MCP or PAC | From plugin 1.2026.11.2. The type code is assigned per environment, so it is selected by table, never by number: a numeric type of 10000 or above is refused |
+| per environment | Custom API request parameter, response property | `{ "componentTable": "customapirequestparameter", "customApi": "new_Api", "uniqueName": "p1" }`, or `"customapiresponseproperty"`, or by `id` | MCP or PAC | From plugin 1.2026.11.2. Whether adding a custom API also brings its parameters and properties is for the read-back to show: anything not requested is reported as unexpected |
 
 Paths for 9, 10, 62 and 80 were verified live on 2026-10-31 (plugin notes, Phase 4).
 
@@ -39,10 +43,11 @@ The plugin refuses them, so they are added with `pac solution add-solution-compo
 | 63 | Connection role | Base |
 | 66 | Custom control (PCF) | Resources |
 | 70 | Field security profile | Security |
-| 90, 91, 92, 93 | Plug-in type, assembly, step, step image | Assemblies |
+| 90, 93 | Plug-in type, step image | Assemblies — travel with their assembly's registration; the plugin does not add them on their own |
+| 91, 92 | Plug-in assembly, step | Assemblies — the MCP accepts them from plugin 1.2026.11.2 (table above); PAC works on any version |
 | 300 | Canvas app | Apps |
 | 380, 381 | Environment variable definition, value | Resources — values travel with the WIP (X7) |
-| ≥ 10000 | Custom API and its parameters (Assemblies), connection reference (Processes), team template and masking rule (Security), others | By name, per the map |
+| ≥ 10000 | Custom API and its parameters (Assemblies — the MCP accepts them by `componentTable` from plugin 1.2026.11.2), connection reference (Processes), team template and masking rule (Security), others | By name, per the map |
 
 A cloud flow being edited is often better served by a flow-editing skill if one is installed; it still gets its WIP from this skill (K7).
 

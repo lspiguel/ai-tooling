@@ -20,6 +20,21 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
         public static readonly Guid ManagedSolutionId = new Guid("51000000-0000-0000-0000-000000000002");
         public static readonly Guid WorkflowId = new Guid("29000000-0000-0000-0000-000000000001");
 
+        // Plug-in components: two versions of one assembly, one of another, a step, and a custom API with a parameter and a property.
+        public static readonly Guid AssemblyV1Id = new Guid("91000000-0000-0000-0000-000000000001");
+        public static readonly Guid AssemblyV2Id = new Guid("91000000-0000-0000-0000-000000000002");
+        public static readonly Guid SoloAssemblyId = new Guid("91000000-0000-0000-0000-000000000003");
+        public static readonly Guid StepId = new Guid("92000000-0000-0000-0000-000000000001");
+        public static readonly Guid CustomApiId = new Guid("a1000000-0000-0000-0000-000000000001");
+        public static readonly Guid ParameterId = new Guid("a2000000-0000-0000-0000-000000000001");
+        public static readonly Guid PropertyId = new Guid("a3000000-0000-0000-0000-000000000001");
+        public static readonly Guid OtherApiParameterId = new Guid("a2000000-0000-0000-0000-000000000002");
+
+        /// <summary>The type codes this environment assigned to the custom API tables.</summary>
+        public const int CustomApiCode = 10038;
+        public const int ParameterCode = 10039;
+        public const int PropertyCode = 10040;
+
         public ShapingData(Mock<IOrganizationService> mock)
         {
             DiscoveryData.Add(mock);
@@ -118,6 +133,38 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
                             return row;
                         });
                     return new EntityCollection(rows.ToList());
+                case "solutioncomponentdefinition":
+                    var definitions = new[]
+                    {
+                        new Entity("solutioncomponentdefinition", Guid.NewGuid()) { ["primaryentityname"] = "customapi", ["solutioncomponenttype"] = CustomApiCode },
+                        new Entity("solutioncomponentdefinition", Guid.NewGuid()) { ["primaryentityname"] = "customapirequestparameter", ["solutioncomponenttype"] = ParameterCode },
+                        new Entity("solutioncomponentdefinition", Guid.NewGuid()) { ["primaryentityname"] = "customapiresponseproperty", ["solutioncomponenttype"] = PropertyCode },
+                    };
+                    return new EntityCollection(definitions
+                        .Where(d => Equal("primaryentityname") is not string table || (string)d["primaryentityname"] == table)
+                        .Where(d => Equal("solutioncomponenttype") is not string code || ((int)d["solutioncomponenttype"]).ToString() == code)
+                        .ToList());
+                case "pluginassembly":
+                    var assemblies = new[]
+                    {
+                        new Entity("pluginassembly", AssemblyV1Id) { ["name"] = "Acme.Plugins", ["version"] = "1.0.0.0" },
+                        new Entity("pluginassembly", AssemblyV2Id) { ["name"] = "Acme.Plugins", ["version"] = "2.0.0.0" },
+                        new Entity("pluginassembly", SoloAssemblyId) { ["name"] = "Solo.Plugins", ["version"] = "1.0.0.0" },
+                    };
+                    return query.Criteria.Conditions.Any(c => c.Operator == ConditionOperator.In)
+                        ? InIds(query, assemblies)
+                        : new EntityCollection(assemblies.Where(a => Equal("name") is not string name || (string)a["name"] == name).ToList());
+                case "sdkmessageprocessingstep":
+                    return InIds(query, new Entity("sdkmessageprocessingstep", StepId) { ["name"] = "Acme.Plugins.AccountPlugin: Update of account" });
+                case "customapi":
+                    return new EntityCollection(new[] { new Entity("customapi", CustomApiId) { ["uniquename"] = "new_Api" } }
+                        .Where(a => Equal("uniquename") is not string name || (string)a["uniquename"] == name)
+                        .Where(a => Equal("customapiid") is not string id || a.Id.ToString() == id)
+                        .ToList());
+                case "customapirequestparameter":
+                    return ApiChild(query, Equal, "customapirequestparameter", ParameterId, "p1", OtherApiParameterId);
+                case "customapiresponseproperty":
+                    return ApiChild(query, Equal, "customapiresponseproperty", PropertyId, "out1", null);
                 case "systemform":
                     return InIds(query, new Entity("systemform", DiscoveryData.MainFormId) { ["name"] = "Account", ["objecttypecode"] = "account" });
                 case "savedquery":
@@ -125,6 +172,21 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
                 default:
                     return new EntityCollection();
             }
+        }
+
+        private static EntityCollection ApiChild(QueryExpression query, Func<string, string?> equal, string table, Guid id, string uniqueName, Guid? otherApiId)
+        {
+            var rows = new List<Entity> { new Entity(table, id) { ["uniquename"] = uniqueName, ["customapiid"] = new EntityReference("customapi", CustomApiId) } };
+            if (otherApiId.HasValue)
+            {
+                rows.Add(new Entity(table, otherApiId.Value) { ["uniquename"] = uniqueName, ["customapiid"] = new EntityReference("customapi", Guid.NewGuid()) });
+            }
+
+            return new EntityCollection(rows
+                .Where(r => equal(table + "id") is not string rowId || r.Id.ToString() == rowId)
+                .Where(r => equal("uniquename") is not string name || (string)r["uniquename"] == name)
+                .Where(r => equal("customapiid") is not string api || r.GetAttributeValue<EntityReference>("customapiid").Id.ToString() == api)
+                .ToList());
         }
 
         private static EntityCollection InIds(QueryExpression query, params Entity[] rows)

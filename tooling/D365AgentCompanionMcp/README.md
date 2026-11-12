@@ -48,9 +48,11 @@ The plugin is the approval window and the endpoint; the agent does the work, usi
 
 When the plugin opens after an update, it shows a *Plugin updated* page once. The skills and the MCP client configuration may have changed with the new version, so the page offers to reinstall them through your agent — **Export skills…** for the new skill zips, and prompts that ask the agent to replace its agent-companion skills (and only those) and to check its endpoint registration — plus the test prompt. Reinstalling is optional: **Skip** goes straight to the main panel, and the page does not come back until the next update.
 
+An older settings file is upgraded when the plugin loads it. Read grants you gave per environment or globally are kept and gain their environment and tenant IDs the next time that environment is bound; the *always* development-environment confirmation is withdrawn, so confirm each development environment again. The token, port and limits are never touched. Downgrading drops the grants an older plugin does not know, and you approve again.
+
 ## Registering the endpoint
 
-The endpoint is `http://127.0.0.1:47321/mcp` (the port can be changed on the main panel) and every request carries the bearer token shown, masked, on the main panel. The token is kept across XrmToolBox restarts; **Regenerate** replaces it for every client.
+The endpoint is `http://127.0.0.1:47321/mcp` (the port can be changed on the main panel) and every request carries the bearer token, shown masked in the **Active Approvals** window. The token is kept across XrmToolBox restarts; **Regenerate** replaces it for every client. **Copy client config** on the main panel copies the URL and token for setup.
 
 Claude Code:
 
@@ -89,7 +91,13 @@ VS Code (`.vscode/mcp.json` outside any client repository, or your user profile)
 
 **One tab per connection.** Each tab binds one XrmToolBox connection, and every call names the connection it is for — there is no default. A second tab on the same environment is refused, so the approvals and the log for an environment are always in one place. One MCP endpoint serves every tab in the XrmToolBox process.
 
-**Approvals.** Reads are approved once, for the session, or for the environment; writes are approved one call at a time; publisher creation needs the prefix typed in. A denial or a timeout reaches the agent as a normal result, and it does not retry without new instructions. The call log keeps one line for each call and one for its outcome; **Save as…** writes it to a text file.
+**Approvals.** A project usually has one repository and many environments, often in one tenant, so an approval reaches as far as you choose: **once**, **session only**, **per environment**, **per tenant** or **global**. Reads, record reads (a `query` that touches records) and writes are separate grants: one never covers another. Write approvals and the development-environment confirmation stop at one environment, because only development is written. Whatever a grant covers, every Write call still needs a reason, the development-environment confirmation and a log entry, and publisher creation is typed in every time. Per tenant and global carry a warning, because they also cover environments bound later. A denial or a timeout reaches the agent as a normal result, and it does not retry without new instructions. The call log keeps one line for each call and one for its outcome; **Save as…** writes it to a text file.
+
+**Call log on disk.** Tick **Write call log to disk** in the Active Approvals window to keep a full record without remembering to save: every call and its outcome, with full arguments and results, goes to one JSON file per connection and day (`AgentCompanion-[ConnectionName]-yyyyMMdd.json`) in a folder you choose. The files can hold client data and are not encrypted, so a folder inside a Git working tree is refused. The setting applies to every tab and is kept until you untick it. It is off by default, and the agent is never told whether it is on.
+
+**Active Approvals.** One window, opened from any tab, lists every grant and File root across all environments and tenants as one tree — Global first, then each tenant with its environments, then environments that report no tenant. Each row has **Revoke**; each heading has **Reset**, which asks inside the window before it revokes. A grant whose environment no longer matches (a copied or restored environment) is marked *Stale* and not applied. The bearer token is shown here, masked, with **Copy** and **Regenerate**.
+
+**File root.** Tools that take files — `update_web_resources` — read them by path under the File root: the root folder of the git repository that holds the source files the agent edits, set for one environment or for every environment in a tenant. The first call that needs it asks you to choose; a relative path is read from it, an absolute path must lie inside it, and links are refused. It is shown and changed in Active Approvals.
 
 ## WIP solutions
 
@@ -157,8 +165,9 @@ Any of them can be active at once; each owns its own decisions, so they never gi
 | `get_entity_ribbon`, `get_application_ribbon` | Read | The full classic ribbon, not just the diff an export holds |
 | `query` | Read | FetchXML, paged; flags any query that touches records |
 | `get_component_state`, `get_required_components` | Read | Versions for the overwrite check; dependencies against the transport order |
-| `create_solution`, `add_solution_components`, `remove_solution_component` | Write | Shape a WIP solution |
+| `create_solution`, `add_solution_components`, `remove_solution_component` | Write | Shape a WIP solution — including already-registered plug-in assemblies, steps, custom APIs and their parameters and properties |
 | `create_publisher` | Publisher | Off unless switched on; confirmed by typing the prefix |
+| `update_web_resources` | Write | Create or update web resources from local files in a WIP, with the overwrite check inside the tool and a targeted publish |
 
 ## Settings
 
@@ -169,8 +178,9 @@ Any of them can be active at once; each owns its own decisions, so they never gi
 | Response cap | Host | 40,000 characters per page; larger results are paged, never truncated or written to a file |
 | Maximum page size | Host | 500 items |
 | Approval timeout | Host | 120 seconds; a call not approved in time is denied |
-| Development environment confirmed | Connection | Off — confirm once, for the session, for the environment, or always |
-| Record queries | Connection | On; off refuses any `query` that touches records |
+| Development environment confirmed | Connection | Off — confirm once, for the session, or for the environment; never wider |
+| Approvals (reads, record reads, writes) | Environment, tenant or global | Every call asks; grants are given in the dialogs and managed in Active Approvals |
+| File root | Environment or tenant | Not set — asked for on the first call that takes files |
 | Publisher creation | Connection | Off |
 
 Host settings apply to every tab; changing the port or the token affects every client configuration.

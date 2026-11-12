@@ -11,8 +11,9 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
     using Lspiguel.Xrm.D365AgentCompanionMcp.Approvals;
 
     /// <summary>
-    /// The one in-memory copy of <see cref="HostSettings"/>, shared by the token store, the approval store and the
-    /// panel. Every change is saved at once.
+    /// The one in-memory copy of <see cref="HostSettings"/>, shared by the token store, the approval store, the File
+    /// root store and the panel. Every change is saved at once. A file written by an older schema is upgraded on load
+    /// (SPEC §7, Saved settings).
     /// </summary>
     internal sealed class HostSettingsStore : IGrantPersistence
     {
@@ -25,7 +26,16 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
         public HostSettingsStore(ISettingsStore backing)
         {
             this.backing = backing;
-            this.current = HostLimits.Normalize(backing.Load() ?? new HostSettings());
+            var loaded = backing.Load();
+            this.current = HostLimits.Normalize(loaded ?? new HostSettings());
+            if (loaded == null)
+            {
+                this.current.SchemaVersion = HostSettings.CurrentSchemaVersion;
+            }
+            else if (Upgrade(this.current))
+            {
+                backing.Save(this.current);
+            }
         }
 
         /// <summary>Raised after a change.</summary>
@@ -63,16 +73,39 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
         /// <inheritdoc/>
         public void SaveGrants(IReadOnlyList<Grant> grants) => this.Update(s => s.Grants = grants.Select(ToPersisted).ToList());
 
+        /// <summary>
+        /// Brings settings written by an older schema up to date. The mapping from version 0 keeps every grant it can
+        /// and drops the <i>always</i> dev-environment confirmation, which Phase 6 withdraws; it never touches the
+        /// port, limits, bearer token or setup version. A grant it cannot carry is dropped and the person approves again.
+        /// </summary>
+        /// <param name="settings">The settings, changed in place.</param>
+        /// <returns><c>true</c> when the settings changed.</returns>
+        internal static bool Upgrade(HostSettings settings)
+        {
+            if (settings.SchemaVersion >= HostSettings.CurrentSchemaVersion)
+            {
+                return false;
+            }
+
+            settings.Grants ??= new List<PersistedGrant>();
+            settings.FileRoots ??= new List<PersistedFileRoot>();
+            settings.Grants.RemoveAll(g => ToGrant(g) == null);
+            settings.SchemaVersion = HostSettings.CurrentSchemaVersion;
+            return true;
+        }
+
         private static Grant? ToGrant(PersistedGrant persisted)
         {
             if (!Enum.TryParse(persisted.Kind, out ApprovalKind kind)
                 || !Enum.TryParse(persisted.Scope, out ApprovalScope scope)
-                || (scope != ApprovalScope.Environment && scope != ApprovalScope.Always))
+                || !kind.Allows(scope)
+                || scope == ApprovalScope.Session
+                || (scope == ApprovalScope.Tenant && persisted.TenantId == Guid.Empty))
             {
                 return null;
             }
 
-            return new Grant(kind, scope, persisted.OrganizationId, persisted.OrganizationName, persisted.GrantedOnUtc, persisted.OriginTab);
+            return new Grant(kind, scope, persisted.OrganizationId, persisted.OrganizationName, persisted.GrantedOnUtc, persisted.OriginTab, persisted.EnvironmentId, persisted.TenantId);
         }
 
         private static PersistedGrant ToPersisted(Grant grant) => new PersistedGrant
@@ -83,6 +116,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
             OrganizationName = grant.OrganizationName,
             GrantedOnUtc = grant.GrantedOnUtc,
             OriginTab = grant.OriginTab,
+            EnvironmentId = grant.EnvironmentId,
+            TenantId = grant.TenantId,
         };
     }
 }

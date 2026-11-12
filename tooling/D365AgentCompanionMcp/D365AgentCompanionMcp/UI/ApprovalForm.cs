@@ -36,7 +36,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
             this.confirmation = request.Confirmation;
             this.Text = this.confirmation != null ? "Create publisher — read carefully" : $"Approve tool call — {request.OrganizationName}";
             this.StartPosition = FormStartPosition.CenterParent;
-            this.ClientSize = new Size(720, string.IsNullOrEmpty(request.Summary) ? 520 : 700);
+            this.ClientSize = new Size(820, string.IsNullOrEmpty(request.Summary) ? 580 : 760);
             this.MinimizeBox = false;
             this.MaximizeBox = false;
             this.ShowInTaskbar = false;
@@ -63,7 +63,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
 
             if (request.TouchesRecords)
             {
-                rows.Add(Warning("⚠ This query reads records, not only configuration."));
+                rows.Add(Warning("⚠ This query reads records, not only configuration. The scopes below grant record reads only; a read approval does not cover them."));
             }
 
             if (request.Reason != null || request.Tier != ToolTier.Read)
@@ -88,7 +88,27 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
                 rows.Add(UiBuilder.Row(UiBuilder.Text("Type the prefix to confirm:"), this.typed));
             }
 
-            var buttons = request.Options.Select(o => UiBuilder.Button(this.confirmation != null ? "Create publisher" : Caption(o), (s, e) => this.Decide(o))).ToList();
+            var buttons = new List<Control>();
+            foreach (var option in request.Options)
+            {
+                var offered = option;
+                buttons.Add(UiBuilder.Button(this.confirmation != null ? "Create publisher" : Caption(offered), (s, e) => this.Decide(offered)));
+            }
+
+            if (request.TenantDisabledReason != null)
+            {
+                // Per tenant needs a tenant ID; the button shows, disabled, with the reason (SPEC 8.2).
+                var disabled = UiBuilder.Button(Caption(ApprovalDecision.AllowTenant), (s, e) => { });
+                disabled.Enabled = false;
+                buttons.Insert(Math.Min(buttons.Count, 3), disabled);
+                rows.Add(UiBuilder.Text($"Allow for this tenant is unavailable: {request.TenantDisabledReason}."));
+            }
+
+            if (request.Options.Contains(ApprovalDecision.AllowTenant) || request.Options.Contains(ApprovalDecision.AllowGlobal))
+            {
+                rows.Add(Warning("⚠ Per tenant and Global also cover environments bound later, and every call under them runs without asking again. Revoke them in Active Approvals."));
+            }
+
             var deny = UiBuilder.Button("Deny", (s, e) => this.Decide(ApprovalDecision.Deny));
             buttons.Add(deny);
             this.CancelButton = deny;
@@ -143,6 +163,10 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
                     return "Allow for this session";
                 case ApprovalDecision.AllowEnvironment:
                     return "Allow for this environment";
+                case ApprovalDecision.AllowTenant:
+                    return "Allow for this tenant";
+                case ApprovalDecision.AllowGlobal:
+                    return "Allow globally";
                 default:
                     return "Allow once";
             }
@@ -152,7 +176,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.UI
         {
             var label = UiBuilder.Text(text);
             label.ForeColor = UiBuilder.WarningColor;
-            label.MaximumSize = new Size(690, 0);
+            label.MaximumSize = new Size(790, 0);
             return label;
         }
 

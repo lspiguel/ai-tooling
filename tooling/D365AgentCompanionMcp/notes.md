@@ -8,14 +8,344 @@
 
 | Phase | Status | Exit criterion |
 |---|---|---|
-| [0 — Spikes](SPEC.md#phase-0--spikes) | **Done for v1** (2026-10-30). S7 in cold storage (no build environment); S8 deferred with strategy C. Sandbox and workstation cleaned up | Every v1 spike has a written finding, and the spec is updated |
+| [0 — Spikes](SPEC.md#phase-0--spikes) | **Done for v1** (2026-10-30). S7 in cold storage (no build environment); S8 deferred with strategy C — both now tracked in [Phase 8](SPEC.md#phase-8--promotion-and-git-integration-spikes). Sandbox and workstation cleaned up | Every v1 spike has a written finding, and the spec is updated |
 | [1 — Host, connections, approvals and log](SPEC.md#phase-1--host-connections-approvals-and-log) | **Done** (2026-10-30) — built, unit-tested, and all twelve live exit checks passed in XrmToolBox. See [Phase 1 — execution](#phase-1--execution) | See spec |
 | [2 — Discovery](SPEC.md#phase-2--discovery) | **Done** (2026-10-31) — built, unit-tested (176 tests), and the live exit checks passed against the sandbox; four findings (L1–L4) fixed on the way. See [Phase 2 — execution](#phase-2--execution) | See spec |
 | [3 — Solution shaping](SPEC.md#phase-3--solution-shaping) | **Done** (2026-10-31) — built, unit-tested (207 tests), and the cold-start workflow (§9.1) ran end to end on the sandbox; two findings (P1, P2) for the Phase 4 skills. See [Phase 3 — execution](#phase-3--execution) | See spec |
 | [4 — Agent skills and scripts](SPEC.md#phase-4--agent-skills-and-scripts) | **In progress** (2026-10-31) — five companion skills and their scripts built; script self-tests pass (35 + 11). Live exit checks: I31 verified; scenarios 1–4 pass; scenario 5 desk-checked; scenario 6 partial — the imported flow did not fire (E13). Findings E1–E13. See [Phase 4 — execution](#phase-4--execution) | See spec |
-| [5 — Release](SPEC.md#phase-5--release) | **In progress** (2026-10-31) — built: setup wizard (§8.7) with embedded skills and prompts, GitHub workflow, nuspec, icons, README; repository pages describe the plugin as built; 245 tests. Remaining, a person's: nuget.org trusted-publishing policy, Tool Library install, the wizard's live checks. Column-3 guide changes wait for the release. See [Phase 5 — execution](#phase-5--execution) | See spec |
+| [5 — Release](SPEC.md#phase-5--release) | **Done** (2026-11-03) — published in the XrmToolBox Tool Library. Still to follow the release: the column-3 guide changes. See [Phase 5 — execution](#phase-5--execution) | See spec |
+| [6 — Planned enhancements](SPEC.md#phase-6--planned-enhancements) | **Built; live exit checks pending** (2026-11-05) — scoped approvals and the Active Approvals window, `update_web_resources`, plug-in components in the selectors, the skill changes and the docs, as version 1.2026.11.2. Built and unit-tested (383 tests). Live: `update_web_resources` verified in 6a.4; the rest of the exit checks have not run. Ships in 1.2026.11.2 with Phase 6a — see [Release 1.2026.11.2 — status](#release-12026112--status). See [Phase 6 — execution](#phase-6--execution) | See spec |
+| [6a — Refinements to 1.2026.11.2](#phase-6a--refinements) | **In progress** (2026-11-08) — follow-up tasks on the unreleased 1.2026.11.2 build, ahead of its release. Done: 6a.1 Tool Library icons, 6a.3 spike S12 (2026-11-09), 6a.4 live test of `update_web_resources` with L5 and L6 fixed (2026-11-09). Built, live check pending: 6a.2 call log on disk (2026-11-09) and 6a.5 panel and window refinements (2026-11-11; 423 tests). S7 and S8 moved on to Phase 8 (2026-11-10). Same version; no bump. What ships and what is still to check: [Release 1.2026.11.2 — status](#release-12026112--status) | See [spec](SPEC.md#phase-6a--refinements) |
+| [6b — Power Pages spikes](SPEC.md#phase-6b--power-pages-spikes) | **Not started** (2026-11-10; widened 2026-11-11, D18). Spikes S13–S18 ahead of Phase 7a: site components in a WIP, what a direct update writes, when the site shows a change, `pac pages upload` against the environment, code sites, and the standard data model. Needs a data-free environment with three sites: enhanced-model and standard-model sites from a starter template, and a code site from a Microsoft sample. Writes go through a throwaway spike tool, `spike_write_site_component`, in a Debug build from a spike branch that is never merged (the person's choice, 2026-11-10) | See spec |
+| [7 — Plug-in authoring](SPEC.md#phase-7--plug-in-authoring) | **Not started** (2026-11-03) — split from Phase 6 after field use (U10): registration through a WIP, `pac plugin push`, step mirroring and switching, custom API rebinding. Spike S9 done; S12 moved to [Phase 6a](#phase-6a--refinements) (2026-11-08) and run there (2026-11-09) — [result](#6a3--spike-s12-2026-11-09). Deferred at the person's choice | See spec |
+| [7a — Power Pages authoring](SPEC.md#phase-7a--power-pages-authoring) | **Not started** (2026-11-10). Reopens D13 at the person's choice (D17), for three kinds of site (D18): the enhanced data model (full authoring), the standard data model (new components and maintenance) and code sites (full authoring). Site components in WIPs and the selectors, `update_site_components` on both data models, checks before `pac pages upload` and `upload-code-site`, rules N1–N6, open question Q15. Provisional until Phase 6b; independent of Phase 7 | See spec |
+| [8 — Promotion and Git integration spikes](SPEC.md#phase-8--promotion-and-git-integration-spikes) | **Not started** (2026-11-10) — spikes S7 and S8, moved from Phase 6a at the person's choice. They need a build environment with the promotion pipeline (S7) and Dataverse Git integration (S8), and neither will be ready before Phase 7 | See spec |
 
 Status values: *Not started* · *In progress* · *Blocked* (say on what) · *Done*.
+
+---
+
+## Phase 6 — preparation
+
+### Direct updates in development — analysis, 2026-11-03
+
+Raised in field use: solution export and import are the slowest part of the edit loop. The person asked whether four kinds of component could be updated in development directly, still held by WIPs but without the import round trip. Each was weighed on its own. Decisions D10–D14; spec [§6.8](SPEC.md#68-direct-update-tools-phase-6) and [§9.11](SPEC.md#911-direct-updates-in-development).
+
+| Component | Platform facts | Complexity | Decision |
+|---|---|---|---|
+| Web resources | One `webresource` row each: content, then `PublishXmlRequest` for just those IDs. `get_component_state` already gives the version for the overwrite check. No PAC command updates a web resource | Low | **Build** `update_web_resources` (D10) |
+| Plug-in assemblies | `pac plugin push` already updates a registered assembly in seconds. A per-developer side-loaded build — the same source compiled under `<Assembly>.<initials>` in Debug, the shared name in Release — cannot be pushed over the shared assembly, because Dataverse matches assemblies by name. The slow, error-prone part is the steps: disabling the shared steps, re-creating them on the side-loaded assembly with their images, and undoing it | Push: low. Step work: medium–high | **Push with PAC after G5; build tools for the steps** (D11) |
+| Custom APIs | The main operation is `customapi.plugintypeid`, not a step, and it can be changed after creation. Steps on a custom API's message are ordinary steps | Low | **Build** `rebind_custom_apis` (D12) |
+| Power Pages | Standard data model: site configuration is `adx_*` records, not solution components. `pac pages upload` already uploads only what changed, from the manifest of the last download. The gap is concurrency with design-studio edits | Low as a skill; high as a write tool | **Not pursued** (D13) |
+| PCF | `pac pcf push --incremental` sends changed files as entity updates; `--solution-unique-name` puts the control in the WIP instead of `PowerAppsTools_<prefix>` | None for the plugin | **Guidance only** (D14) |
+
+Cross-cutting points that shaped the tools:
+
+- **The overwrite check moves into the tool.** Each item carries the baselined version; the tool refuses a mismatch before the dialog and again just before writing.
+- **Files by path, not content.** The host is on the person's machine. A DLL or bundle as base64 through MCP would cost tokens for nothing. Paths are resolved against the organization's **File root** (D15), and the dialog shows each file's size and SHA-256.
+- **A targeted publish avoids X11.** `update_web_resources` publishes only what it wrote, unlike `--publish-changes` on import (P2).
+- **Approval volume.** An edit-and-push loop raises many Write dialogs; Phase 6's scoped Write approvals make these tools practical.
+
+### Findings — 2026-11-03
+
+| # | Finding | Change |
+|---|---|---|
+| U7 | **Imports re-enable disabled steps.** Solution import with plug-in activation enables every step in the imported solution, so a disabled step does not stay disabled — reported by the person from field use, where it has already caused problems. The edit-loop helper passes `--activate-plugins` (`Invoke-EditLoopStep.ps1`), as pipelines commonly do | Rules M1–M7 in SPEC §9.11: mirrors created disabled, switching only by explicit calls, a side-load WIP never imported, open switches re-checked after every import and closed before extract or close-out, retire by deleting |
+| U8 | **Environment manifest tracked in git.** On a client project, the Power Pages environment manifest (`<org-url>-manifest.yml`) is committed. Microsoft says to git-ignore it; tracked, each developer's delta upload is computed against another's download | Recorded in SPEC §9.11 (Power Pages, not pursued); raise with the project, not a plugin change |
+| U9 | **Step mirroring also serves version changes.** A major or minor version change registers a new assembly beside the old one; mirroring the steps to it is the same operation as for a side-load | `mirror_steps` takes any target assembly; version-change flow in SPEC §9.11 (§9.10 since U10) |
+| U10 | **Plug-in authoring does not work as specified.** The person tested another agent (not Claude) adding plug-ins to an existing assembly with `pac plugin push`. The push did not register the new plug-in types; steps were missing from the solutions exported; after import, the steps were not created. The quirks need a spike before anything is built or put in a skill | Plug-in authoring moved to SPEC Phase 7, starting with spike S12: §9.10 (now with side-loading, version change and M1–M7), the step tools in §6.9, G1–G5. The plug-in edits on this branch's skills removed — `plugin-registration.md`, the G rules, the plug-in rows in edit loop and shaping; `d365ce-planning` plans registration as manual again. The research queries and the allow-list (U6) stay |
+
+### Spikes S9–S11 — 2026-11-03
+
+On a data-free trial environment the person provided for spikes. Its URL stays out of this file (R7).
+
+**Method.** S9 and S10 ran through a throwaway SDK console in the session scratchpad, with its own interactive sign-in. A minimal plug-in assembly was registered twice: as `Spike.S9.Plugins` and, compiled under a suffixed name, as `Spike.S9.Plugins.XY` — the side-load pattern. Its step plug-in throws a message naming the assembly that ran and the configuration and image it received; its custom API plug-in returns the assembly name. The person stopped the console's sign-in prompts as outside the design: environment access is through the plugin and PAC profiles only. S11 ran with PAC on the person's profile. The results below are platform behaviour; the tools are still to be verified through the plugin.
+
+**S9 — steps and custom APIs**
+
+| Check | Result |
+|---|---|
+| Same `typename` in two assemblies | Allowed |
+| Create a step with `statecode` 1 and `statuscode` 2 | Refused: *2 is not a valid status code for state code Enabled* — the create treats the step as enabled |
+| Create with `statecode` 1 only | Accepted, but the step is **enabled** — `statecode` is ignored on create |
+| Create then disable | Works; both copies can run for the moment in between |
+| Secure configuration | Readable by a System Administrator; copied to a new `sdkmessageprocessingstepsecureconfig` row |
+| Mirror inputs | After the switch the mirror ran with the same unsecure configuration, secure configuration and pre-image as the original |
+| Step created with `SolutionUniqueName` | Only the step (92, behaviour 0) is added; images and secure configuration are not separate components. Assemblies created the same way are added (91); the custom API was added with an environment-specific type code (10038 there) |
+| Export | The step XML has no state element. It carries configuration, images and the plug-in type; the secure configuration is never exported |
+| Import, step disabled, no activation (T1) | Disabled |
+| Import, activation (T2) | Original enabled; the mirror, not in the solution, untouched |
+| Import, step enabled in the environment, no activation (T3, T5, T6) | **Disabled** — also with a zip exported while the step was enabled |
+| Import with activation while a switch is open (T4) | Original enabled, mirror still enabled: **both run** |
+| Custom API rebinding | `plugintypeid` changed by update; the next call ran the other assembly within 0.3–0.7 s, and back the same. `description` is required to create a custom API and its response properties |
+| Import times (one-step solution) | 6.5–15.6 s |
+
+**S10 — web resources**
+
+| Check | Result |
+|---|---|
+| `versionNumber` | Rises on every update — identical content included — and again on publish |
+| Published vs unpublished content | `Retrieve` returns the published content until the publish; `RetrieveUnpublishedRequest` returns the new content at once |
+| Direct update | Update 0.3–0.5 s; targeted `PublishXmlRequest` 2.9–3.8 s |
+| Round trip, one-resource WIP | Export 6.6–8.2 s; import 7.2–12.8 s; publish-all 11.5–31.2 s. Unpack and pack not included |
+
+**S11 — PCF with PAC 2.14.1**
+
+| Check | Result |
+|---|---|
+| `--solution-unique-name` with `--publisher-prefix` | Refused: only one of the two |
+| `--solution-unique-name` for a solution that does not exist | Refused; push does not create it |
+| First push into the named solution | Wrapper solution built and imported, control added to the solution, publish-all; no `PowerAppsTools_new` left. 48 s |
+| `--incremental` after a code change | Only `cc_S11Spike.Probe/bundle.js` updated, then publish-all. 24 s |
+
+**Changes:** SPEC §6.8 (version handling, unpublished comparison, create-then-disable, what the platform adds), §9.11 (import sets every carried step's state; M1–M5 reworded; PCF push guidance), Phase 6 spike table.
+
+**Left in the trial environment.** Solutions `S9Spike`, `S9Import`, `S10Spike` and `S11Spike`. Under them: the two spike assemblies with their types, the original and mirror steps on *Update of account* with images and secure configurations, the custom API `new_S9Api`, the web resource `new_/s10spike/probe.js` and the control `S11Spike.Probe`. Outside any solution: an account named *S9 spike account*. **The original step is enabled and throws on every account name change.** Removing these needs the Plugin Registration Tool or XrmToolBox, not PAC — the person's to do.
+
+### Open for Phase 6
+
+- **Shaping** closed with the build (2026-11-05); see [Phase 6 — execution](#phase-6--execution).
+- **Plug-in components in `add_solution_components`** (person's request, 2026-11-03): assemblies, steps, custom APIs, request parameters and response properties, already registered — not authoring, which stays in Phase 7. Custom API codes are per environment, resolved through `solutioncomponentdefinition`; built, and still to confirm live, with what the platform adds with a custom API. SPEC §6.6.
+- **Q14** — decided: no delete tool; removal stays with the person.
+- **Skill changes** listed in the Phase 6 table. Done with the build (2026-11-05): `agent-companion-wip-edit-loop` (direct web resource updates, PCF push) and `agent-companion-wip-shaping` (plug-in components, the record-read note in `queries.md`).
+
+### Open for Phase 7
+
+- **Spike S12** — run 2026-11-09 in Phase 6a ([result](#6a3--spike-s12-2026-11-09)). Phase 7 starts from it.
+- **Skill changes** listed in the Phase 7 table, including `Get-WipName.ps1`'s `_Sideload` suffix, and the file-by-file instructions from S12 in [SPEC — Skill changes from spike S12](SPEC.md#skill-changes-from-spike-s12).
+
+---
+
+## Phase 6a — refinements
+
+Started 2026-11-08. Follow-up work on the Phase 6 build before 1.2026.11.2 is released. The version stays **1.2026.11.2** in the `.csproj` and the `.nuspec` (the two-file rule is not triggered, because nothing is released yet). Tasks are added here as they come up.
+
+| # | Task | Status |
+|---|---|---|
+| 6a.1 | [Tool Library icon resolution](#6a1--tool-library-icon-resolution) | **Done** (2026-11-08); needs a build, and the 150px file pushed to `main`, to be seen in the Tool Library |
+| 6a.2 | [Automatic call log on disk](#6a2--automatic-call-log-on-disk) — one JSON file per connection and day, full arguments and results ([SPEC](SPEC.md#6a2--automatic-call-log-on-disk)) | **Built** (2026-11-09); unit-tested (416 tests, 0 warnings), not yet run in XrmToolBox. Specified 2026-11-08. Never reported to the agent in any tool response. One global checkbox in Active Approvals asks for the folder when ticked and is saved with the plugin settings. Decided: host calls go to `AgentCompanion-host-yyyyMMdd.json`; two connections with one name get an 8-character connection ID in the file name |
+| 6a.3 | Pending spikes S7, S8 and S12, moved from Phase 0 and Phase 7 ([SPEC](SPEC.md#6a3--pending-spikes)) | **Done** (2026-11-09). [S12 run](#6a3--spike-s12-2026-11-09): registration through a WIP works; U10 was the missing `Customizations.xml` anchors and the type list. S7 and S8 not run; moved on to [Phase 8](SPEC.md#phase-8--promotion-and-git-integration-spikes) (2026-11-10) |
+| 6a.4 | [Live test of `update_web_resources`](#6a4--live-test-of-update_web_resources-2026-11-09) — every web resource type, and that every update is published | **Done** (2026-11-09). Two defects found and fixed: every call failed on a missing `publisherid` (L5), and content written without a publish was never published later (L6). 419 tests |
+| 6a.5 | [Panel and window refinements](#6a5--panel-and-window-refinements-2026-11-11) — the Host group first, a prominent **Active Approvals…**, **Close** at the right of Active Approvals, and modeless windows centred on XrmToolBox ([SPEC](SPEC.md#6a5--panel-and-window-refinements)) | **Built** (2026-11-11); unit-tested (423 tests, 0 warnings), not yet run in XrmToolBox |
+
+### Release 1.2026.11.2 — status
+
+As of 2026-11-11. What the release holds, and what it leaves to later phases, is in the [spec](SPEC.md#what-the-12026112-release-holds); this table tracks how far each part is verified. The last release is 1.2026.10.1; 1.2026.11.1 was never released. The build is on branch `skills/companion-skills-enhancements`, merged with `main`; the merge to `main` publishes it.
+
+| Part | Unit-tested | Live |
+|---|---|---|
+| Scoped approvals and grants, the Active Approvals window, the settings upgrade (Phase 6) | Yes | **Not run** — [Phase 6 exit checks](#exit-checks) 1–5 |
+| `update_web_resources` and the File root | Yes | **Partly** — 6a.4 verified create, update and publish for all 11 types, and `publish: false`; L5 and L6 fixed. Still to run: the rest of exit check 6 (visible in the app, stale `expectedVersion`, the File root prompt and its levels, path refusals, File root changes in Active Approvals) |
+| Plug-in components in the selectors | Yes | **Partly** — S12 (6a.3) added each component on its own through the plugin; the one-call add of exit check 7 has not run |
+| Registration tables on the configuration allow-list (U6) | Yes | No live check recorded |
+| Skill changes (edit loop, shaping) | Script self-tests | No live run recorded beyond the direct update in 6a.4 |
+| 6a.1 Sharper icons | — | **Not checked** in XrmToolBox. The 150px icon the `.nuspec` points at is not on `main` yet; it arrives with the release merge |
+| 6a.2 Call log on disk | Yes | **Not run** — [SPEC 6a.2 check](SPEC.md#6a2--automatic-call-log-on-disk) |
+| 6a.5 Panel and window refinements | Yes | **Not run** — [SPEC 6a.5 check](SPEC.md#6a5--panel-and-window-refinements) |
+
+**Open from earlier phases, not part of this release.** Phase 4: scenario 5 desk-checked only, scenario 6 partial (E13). Phase 5: the column-3 guide changes (I45). The test components left in the trial environment by 6a.3 and 6a.4 are the person's to remove (Q14).
+
+### 6a.1 — Tool Library icon resolution
+
+**Problem.** The plugin's icons looked much lower resolution in XrmToolBox than FetchXML Builder's.
+
+**Finding.** XrmToolBox reads tool icons from the `BigImageBase64` and `SmallImageBase64` metadata on the plugin class, and the Tool Library list also uses the package's `iconUrl`. Decoded from the code of both plugins:
+
+| Source | Agent Companion (before) | FetchXML Builder | Agent Companion (now) |
+|---|---|---|---|
+| `BigImageBase64` | 32×32 | 80×80 | 80×80 |
+| `SmallImageBase64` | 16×16 | 32×32 | 32×32 |
+| nuspec `iconUrl` | 128px | 150px | 150px |
+
+The XrmToolBox convention is 80×80 for Big and 32×32 for Small. The plugin embedded half of that, so XrmToolBox stretched the images. The `iconUrl` difference (128px against 150px) was minor.
+
+**Change.**
+
+- `AgentCompanionPlugin.cs`: `BigImageBase64` now holds `d365-agent-companion-80px.png`; `SmallImageBase64` now holds `d365-agent-companion-32px.png`. Both values were produced by Base64-encoding the PNG files, and their decoded dimensions were checked.
+- `D365AgentCompanionMcp.nuspec`: `iconUrl` now points to `d365-agent-companion-150px.png`.
+- The source PNGs (16, 32, 64, 80, 128, 150 and 256px) stay in the project folder. Only the 32px and 80px files are embedded, so the other files are for packaging and reference.
+
+**Still to check.** Not built or run in this session. After a build, the tool tile and the tool list in XrmToolBox should show the sharper icons. The Tool Library shows the 150px icon only once `d365-agent-companion-150px.png` is on `main`, because the `iconUrl` is a raw.githubusercontent link.
+
+### 6a.2 — Automatic call log on disk
+
+Built on 2026-11-09 from [SPEC 6a.2](SPEC.md#6a2--automatic-call-log-on-disk). Same version, 1.2026.11.2. Unit tests went from 383 to 416, with 0 build warnings in Release.
+
+**What is built.**
+
+| Area | Where |
+|---|---|
+| Settings | `Hosting/HostSettings`: `CallLogToDisk` (default off) and `CallLogFolder` (default not set). Both have defaults, so `SchemaVersion` stays 1 and there is no upgrade mapping |
+| The setting and the writer | `Logging/DiskCallLog`, owned by `CompanionHost` as `DiskLog`: the startup check, `TurnOn` (refuses a missing folder or one inside a Git working tree), `TurnOff` (keeps the folder for the next prompt), the background write queue, file-name resolution, warn-once |
+| The file | `Logging/CallLogFile`: file name, header, entry, the `\n]}\n` trailer, bidi and separator escaping, `Check` (trailer, parse, schema, connection) |
+| The entry | `Logging/DiskLogRecord`: built from the panel's `CallLogEntry`, the call and the `ToolResult` |
+| Hook | `Tools/ToolDispatcher.Log` → `WriteToDisk`, after the panel entry. The active folder is captured when the call is received, so a call running when the log is turned off is still written |
+| Active Approvals | `UI/ActiveApprovalsForm`: the *Call log* row under the token — checkbox, folder or *Off — last folder*, and warnings. Not touched by any Reset |
+| Folder prompt | `UI/CallLogFolderForm`: the rules, the client-data warning, and an inline refusal |
+| Log panel | `UI/LogView.AppendNotice`; each tab's host log shows the startup warning on attach and every warning the writer raises |
+| Tests | `LoggingTests/CallLogFileTests` (6), `LoggingTests/DiskCallLogTests` (22), five call-log tests in `UITests/ActiveApprovalsFormTests`, and a `TempFolder` fake |
+
+**Implementation choices.**
+
+| # | Choice | Why |
+|---|---|---|
+| I60 | Writes are queued on one background task chain and run one at a time | A write must never delay the reply to the agent, and entries must stay in the order calls ended |
+| I61 | A file is fully parsed only the first time this process uses it; later writes check only the trailer | Parsing on every write grows with the file. The trailer check catches truncation and most hand edits; a file changed in the middle with its trailer intact is not caught until XrmToolBox restarts |
+| I62 | A plain-named file that belongs to another connection ID is never appended to; this connection takes its `[id8]` name | The spec's same-name rule looks only at connections bound now. A connection with the same name bound later the same day, after the first tab closed, would otherwise append to the other connection's file |
+| I63 | `result` is `null` on every error, and the error's details are in `outcome.errorDetails` | A failed call has no `structuredContent`. The details (for example from `version_conflict`) are in the call detail, so the file keeps them to stay a superset |
+| I64 | `approval` is `null` where the panel shows `—` | JSON readers should not have to know the dash. `outcomeLine` keeps it |
+| I65 | Warnings go to the host log of every tab, as notice lines that open no detail | The setting is host-wide, so its warnings are too. The host log is the one panel every tab shows |
+| I66 | The checkbox is ticked only after `TurnOn` accepts the folder; the prompt also checks inline and stays open on a refusal | The box never shows ticked for a folder that was refused |
+
+**Observation, not changed.** Arguments are parsed with Newtonsoft's defaults, which turn an ISO-date-shaped string into a date. Such a value is written back in Newtonsoft's ISO form, which can differ in offset or precision from what the agent sent. This already applies to the panel and the call detail, and to what tools receive. No current tool takes a bare date string.
+
+**Still to check — the live check in the spec.** Not run in XrmToolBox. In particular: the folder prompt's layout, the warning line under the checkbox, a startup warning in the host log after the saved folder is renamed, and the files written during an ordinary session in two tabs.
+
+### 6a.3 — Spike S12, 2026-11-09
+
+On the same data-free trial environment as S9–S11; its URL stays out of this file (R7). **Through the plugin (1.2026.11.2) and the person's PAC profile only** (PAC 2.14.1), with the profile checked against `get_connection_info` first: same organization ID, unique name, URL and user. No SDK console. Work folders in the session scratchpad, outside every repository.
+
+**Method.** A fresh strong-named assembly, `Spike.S12.Plugins` 1.0.0.0, with types added by build flags: v1 `StepA` and `ApiPlugin`; v2 adds `StepB`; v3 adds `StepC`. Steps on *Update of contact*, synchronous post-operation, each with its own filtering attribute; `StepA`'s step has a pre-image. WIPs created and shaped with `create_solution` and `add_solution_components` under the default publisher; everything authored in the unpacked export of a WIP, modelled on the export of `S9Spike` (assembly, step, custom API) and, for custom API parameters and properties, on [Microsoft's documented solution-file format](https://learn.microsoft.com/power-apps/developer/data-platform/create-custom-api-solution) — a managed custom API added to a WIP exports as empty stubs (`<customapi uniquename="…"></customapi>`), which give the folder layout only. The re-export of what the import created matched the documented shape exactly.
+
+| Question | Result |
+|---|---|
+| Does `pac plugin push` register new plug-in types? | **No.** v2 pushed over v1: content and `modifiedon` updated, `StepB` and `ApiPlugin` not registered. Plug-in packages (`--type Nuget`) not tested |
+| Does push accept a build that drops a registered type? | **No — the platform refuses:** *PluginType [Spike.S12.StepB] not found in PluginAssembly […] which has a total of [2] plugin/workflow activity types.* The assembly is left unchanged. G2 is a backstop the platform already enforces; the agent's check stops earlier and names the steps in use |
+| Which route registers new types? | **A WIP import with a `PluginType` entry per new type in `.dll.data.xml`**, with a new `PluginTypeId`. The type is created with that ID. It works for a new assembly (created with the authored `PluginAssemblyId`), for an assembly whose content already has the type through push, and in the same import as steps and custom APIs that use the type. **A type in the DLL but not listed in `.dll.data.xml` is not registered** — the import creates exactly the listed types |
+| What makes an import skip components silently? | **A missing anchor node in `Other\Customizations.xml`.** Without `<SolutionPluginAssemblies />` (for `PluginAssemblies\`) and `<SdkMessageProcessingSteps />` (for `SdkMessageProcessingSteps\`), `pac solution pack` prints *Following root components are not defined in customizations: Type='PluginAssembly' … Type='SdkMessageProcessingStep' …*, completes, and puts the files loose in the zip with nothing in `customizations.xml`. The import reports *Solution Imported successfully* and creates nothing; the WIP stays empty. **An export only has the anchors for what the WIP holds:** an empty WIP has neither, a WIP with only the assembly has only `<SolutionPluginAssemblies />`, a WIP with only steps only `<SdkMessageProcessingSteps />`. Adding a step file to an assembly-only WIP's export is dropped the same way. This reproduces U10 |
+| Unregistered plug-in type on a step | **The import fails, not silently:** *SDK Message Processing Steps import: FAILURE: Entity 'plugintype' With Id = 00000000-… Does Not Exist*. Nothing from the failed import was left. With the type added to `.dll.data.xml` the same folder imported and created both |
+| Does an import create a new step? | **Yes**, with the anchor, the step file under `SdkMessageProcessingSteps\{id}.xml` and a `RootComponent` type 92. Created with the authored ID, its image, the message filter resolved from `SdkMessageId` and `PrimaryEntity`, and stage, mode, rank, filtering attributes and configuration as authored. Read back with `query` (G4) |
+| Import flags | Without `--activate-plugins` every carried step is **disabled** — including two that were enabled before the import. With it, every carried step is enabled. Confirms S9 (T1–T3) on steps created by the import |
+| Custom API with a request parameter and a response property | **Created by import** from `customapis\<uniquename>\customapi.xml`, `customapirequestparameters\<name>\customapirequestparameter.xml` and `customapiresponseproperties\<name>\customapiresponseproperty.xml`. **No `RootComponent` and no `Customizations.xml` anchor** — neither the S9 export nor Microsoft's format has one. Bound with `<plugintypeid><plugintypeexportkey>` to a type created in the same import. The custom API's ID is the platform's (not authored). The import added the custom API, the parameter and the property to the WIP as three components (types 10038–10040 here), behaviour 0 |
+| What must a WIP hold for its export to carry them? | **Assembly (91) only:** the DLL and every registered type; no steps. **A step (92) only:** the step and its images; no assembly — the export lists the plug-in type as a missing dependency (type 90). So **each step is held on its own (92)** and the assembly on its own (91). **Custom API:** added with `add_solution_components`, see the next row; its export carries the parameter and property only when they are in the WIP |
+| What the platform adds with each (Phase 6 exit check 7, in part) | Assembly by name: nothing else. Step by ID: nothing else; the image is part of the step. Managed custom API (`ListTables`): nothing else; parameters and properties added one by one. **Unmanaged custom API bound to a plug-in type: the platform also added the plug-in assembly (91), the request parameter and the response property**, all reported as `unexpected`. `add_solution_components` adds non-table components with subcomponents included (behaviour 0); the tool description says *subcomponents always off*, which is true only for tables |
+| Times | Import of the one-assembly WIP 15.9–18.3 s; `pac plugin push` 4.7 s |
+
+**Reading caveat.** `query` over `sdkmessageprocessingstep` returns `plugintypeid` with `_ref.entity` `sdkmessagefilter`; the ID and name are the plug-in type's. `RecordValues` passes `EntityReference.LogicalName` through, so this is how the platform returns it. Read the ID, not the entity.
+
+**What this settles for Phase 7.**
+
+1. Registration through a WIP works, for assemblies, types, steps with images and custom APIs with their parameters and properties, in one import. The field failure (U10) is the anchor and the type list, not the route.
+2. `pac plugin push` stays for a new build whose types are all registered. A build that adds a type takes a WIP import with the type in `.dll.data.xml` — after the push or instead of it.
+3. New rules for §9.10: the anchors before pack, and the pack's *not defined in customizations* line treated as a failure; every type the build adds listed in `.dll.data.xml`; G4's read-back catches a skip that the import reports as a success.
+4. An import of a WIP holding steps sets their state; `--activate-plugins` is a decision per import (M3 already covers a switched original).
+
+**Changes:** SPEC §9.10 (deferral note, the table, G1, G4, new G6 and G7, the closing line), §6a.3 and Phase 7 spike tables. Skill changes stay with Phase 7; what goes into each skill, file by file, is in [SPEC — Skill changes from spike S12](SPEC.md#skill-changes-from-spike-s12) (findings S12.1–S12.11).
+
+### 6a.4 — Live test of `update_web_resources`, 2026-11-09
+
+On the trial environment, through the plugin (1.2026.11.2, rebuilt twice during the test) and the person's PAC profile. One WIP, `WRTest`, under the default publisher; two versions of a file for each of the 11 types the tool maps — `.html` 1, `.css` 2, `.js` 3, `.xml` 4, `.png` 5, `.jpg` 6, `.gif` 7, `.xsl` 9, `.ico` 10, `.svg` 11, `.resx` 12 — under the File root.
+
+**How publishing was checked.** `pac env fetch` over `webresource.content` returns the **published** content (S10), so after each call the SHA-256 of every resource's content was compared with the local files. A control — three resources written with `publish: false` — still read as the old version, with their `versionnumber` risen: the check sees what users get, not what was written.
+
+| Run | Call | Result | Published content |
+|---|---|---|---|
+| — | First call, installed build | `dataverse_error`: *Object reference not set to an instance of an object*, before the dialog; nothing written | — |
+| 1 | Create all 11 (v1) | All `created`, `published: true` | All 11 v1 ✔ |
+| 2 | v2 of html, js, png, `publish: false` | `updated`, `published: false` | Still v1 (control) ✔ |
+| 3 | All 11 to v2, publish on — before the L6 fix | 8 `updated`; html, js, png `unchanged`; top-level `published: true` | 8 v2 ✔; **html, js, png still v1** ✘ |
+| 4 | Run 3 repeated — after the fix | html, js, png `unchanged` with `published: true`, versions risen by the publish; the other 8 `unchanged`, `published: false` | All 11 v2 ✔ |
+| 5 | All 11 back to v1 | All `updated`, `published: true` | All 11 v1 ✔ |
+| — | `.xap` (type 8) | `invalid_argument` before the dialog, listing the accepted extensions | — |
+
+The WIP read back with exactly the 11 resources (behaviour 0) and nothing unexpected after every call. No type behaved differently from another: the platform accepted, stored and published each one, text and binary alike.
+
+**Findings, fixed.**
+
+| # | Defect | Fix |
+|---|---|---|
+| L5 | Every `update_web_resources` call failed in preparation: `SolutionTools.FindSolution` retrieved only `uniquename` and `ismanaged`, and `WebResourceTools.Prefix` dereferenced the missing `publisherid`. The unit tests passed because the fake returned every solution column whatever the query asked for | `FindSolution` also retrieves `publisherid`. `WebResourceData` returns only the columns a query names; with that change alone, the web resource tests failed as live |
+| L6 | An item matching the *unpublished* content was `unchanged` and left out of the publish, so content written earlier with `publish: false` (or in the maker portal) stayed unpublished, while the call reported `published: true`. The unit test for identical content asserted that behaviour | SPEC §6.8 steps 3–4 first: an `unchanged` item whose published content differs is published without being written again; each result gets `published`. Code, dialog text and tool description follow; the fake keeps unpublished and published content apart, as the platform does (an update changes only the unpublished; a publish copies it). Three new tests. The edit-loop skill's direct-update step 5 says how to read `published` |
+
+**Left in the trial environment.** Solution `WRTest` with the 11 web resources `new_/wrtest/*`, published at v1. The test files are in the File root under `wrtest\`. Removing the resources is the person's (Q14).
+
+**Left in the trial environment (S12).** Solutions `S12Shapes` (holds the managed `ListTables` with one parameter and one property), `S12Register` (the assembly, three steps, `new_S12Api`), `S12Carry91` (the assembly) and `S12Carry92` (`StepA`'s step, `new_S12Api` and what the platform added with it). Under them: assembly `Spike.S12.Plugins` with types `StepA`, `StepB`, `StepC` and `ApiPlugin`; the three steps on *Update of contact*, **all disabled**, `StepA`'s with a pre-image; the custom API `new_S12Api` with `Input` and `Echo`. The steps only trace. Removing these needs the Plugin Registration Tool or XrmToolBox — the person's to do.
+
+### 6a.5 — Panel and window refinements, 2026-11-11
+
+Asked for by the person after using the build. Spec first: [§8.1](SPEC.md#81-main-panel) (mockup and notes) and [SPEC 6a.5](SPEC.md#6a5--panel-and-window-refinements); [§8.8](SPEC.md#88-active-approvals-window-phase-6) already showed **Close** at the right. Same version, 1.2026.11.2. Unit tests went from 419 to 423, with 0 build warnings in Release.
+
+**What is built.**
+
+| Area | Where |
+|---|---|
+| Panel order and the button | `AgentCompanionControl.BuildLayout`: the Host group is added before *This tab*; **Active Approvals…** is an accent button at the end of the *Server* row; the *Clients* row keeps **Copy client config** |
+| Builders | `UI/UiBuilder`: `AccentButton` (flat, 2px accent frame, tinted background, bold), `RowWithTrailing` (a wrapping row with one control held at the right) and `ShowCentered` with `CenteredOn` |
+| Active Approvals footer | `UI/ActiveApprovalsForm`: **Close** in its own right-docked slot, hidden while **Reset all** asks |
+| Centred windows | `ShowCentered` replaces `Show(owner)` for the approval dialog and the File root prompt (`AgentCompanionControl`), the Active Approvals window, and the File root prompt it opens. `ActiveApprovalsForm.ShowFor` takes a `Form` owner |
+| Tests | `UiBuilderTests`: the trailing control stays at the right on the first line, wide and narrow; `CenteredOn` with clamping; a modeless window opened over an owner lands centred. `ActiveApprovalsFormTests`: **Close** at the right edge, as tall as **Reset all approvals**, hidden while **Reset all** asks |
+
+**Implementation choices.**
+
+| # | Choice | Why |
+|---|---|---|
+| I67 | `RowWithTrailing` is a small panel that measures and lays out its two parts itself, not a two-column `TableLayoutPanel` | The table measured the wrapping part one control per line, so the *Server* row was twice its height; the same fault `UiBuilder.Group` works around |
+| I68 | `ShowCentered` sets `StartPosition = Manual` and the location on `Load`; a minimized or missing owner falls back to `CenterScreen` | `CenterParent` applies only to `ShowDialog`: a test opening a window with `Show(owner)` found it at Windows' default position, not over the owner. On `Load` the size is final and the window not yet visible |
+| I69 | The accent colours are fixed values in `UiBuilder`, like `WarningColor` | The panel has no theme support to follow |
+
+**Still to check.** The [SPEC 6a.5 check](SPEC.md#6a5--panel-and-window-refinements), in XrmToolBox. The layouts were checked as images rendered from a test, not inside XrmToolBox.
+
+---
+
+## Phase 6 — execution
+
+Built on 2026-11-05 from [SPEC Phase 6](SPEC.md#phase-6--planned-enhancements), in this order, with the build and the unit tests run after each step: grants and settings, dispatcher authorization, File root and `update_web_resources`, plug-in components, the windows, then skills and documents. Version **1.2026.11.2** in the `.csproj` and the `.nuspec`. Unit tests went from 251 to 383, with 0 build warnings.
+
+### What is built
+
+| Area | Where | Spec |
+|---|---|---|
+| Scopes, kinds, identity | `Approvals/ApprovalScope` (adds `Tenant`; `Always` stays the name and is labelled *global*), `ApprovalKind` (adds `RecordRead`, `Write`), `ConnectionIdentity` (organization, environment and tenant IDs), `Grant` (immutable, with `Matches`, `IsStale`, `Covers`, `WithIdentity`) | §7 Phase 6 |
+| The grant store | `Approvals/ApprovalStore` — `Allow`, `Find` (broadest wins), `FillIdentity`, `Stale`, `RevokeEnvironment`, `Remove`, `ClearGlobal`, `ClearTenant`, `ClearEnvironment`, `ClearAll`, `EndSession` | §7, §8.8 |
+| Settings | `Hosting/HostSettings` (`SchemaVersion`, `FileRoots`), `PersistedGrant` (+ `EnvironmentId`, `TenantId`), `PersistedFileRoot`, `HostSettingsStore.Upgrade` (version 0 → 1: drops what the new rules do not allow, never the token, port, limits or setup version) | §7 Saved settings |
+| Identity at bind | `BoundConnection.EnvironmentId`/`TenantId`/`Identity`, `ConnectionRegistry.Complete` (new overload), `CompanionHost.CompleteBinding` (fills the IDs into matching grants); the control reads `CrmServiceClient.EnvironmentId` and `TenantId` | §7 Identity |
+| Authorization | `Tools/ToolDispatcher` — the grant kind follows the tool and the inspection (record query → `RecordRead`); the offered decisions follow the tier; a decision the dialog did not offer is a denial; a publisher is never a grant | §7, R2 |
+| Active Approvals | `Approvals/ApprovalTree` (the tree in one pure function), `UI/ActiveApprovalsForm` (one window, in-window confirmations, live), `UI/TokenControl` moved into it | §8.8 |
+| File root | `Files/FileRoot`, `FileRootStore`, `FilePathResolver`, `IFileRootPrompt` with `FileRootRequest`/`FileRootChoice`, `UI/FileRootForm`; `ToolExecution.RequireFileRoot` | §6.8 |
+| `update_web_resources` | `Tools/WebResourceTools`; new error codes `version_conflict`, `managed_component`, `not_in_solution` | §6.8 |
+| Plug-in components | `Tools/ComponentSelector` (selectors by name and by `componentTable`; codes from `solutioncomponentdefinition`), `ComponentNames.PluginRows`, `SolutionShapingTools` (accepted types, labels, per-environment type names in the read-back) | §6.6 |
+| Panel and dialogs | `AgentCompanionControl` (File root, Reads, Records and Writes rows; **Active Approvals…**; no Record queries box, no Always settings), `UI/ApprovalForm` (every scope, disabled Per tenant with its reason, warnings) | §8.1, §8.2 |
+| Skills and documents | `agent-companion-wip-edit-loop`, `agent-companion-wip-shaping`, the tooling README, `.nuspec` release notes, INSTRUCTIONS.md (R2 and the fixed safety behaviour reworded), CLAUDE.md, the root README | Phase 6 table |
+
+### Implementation choices
+
+| # | Choice | Why |
+|---|---|---|
+| I46 | `Grant` is immutable and compares by value; learning an ID replaces the grant in the store | The store's change detection stays a sequence comparison, and a filled-in grant is saved once |
+| I47 | The labels in the log and in `get_connection_info` say `global` for the enum's `Always`; `devEnvironmentScope` no longer has `always` | The enum name stays so saved grants load; what people read says Global |
+| I48 | Two grants of one kind and reach replace each other; a narrower grant is kept beside a broader one | A tab's **Revoke** is then exactly "this tab's grants for its environment", and the window shows what exists |
+| I49 | `ApprovalKind.Allows(scope)` is the one rule for what a kind may reach; `Allow` throws on a violation and a saved grant that breaks it is dropped on load | A hand-edited or downgraded file cannot widen a Write grant or the dev-environment confirmation |
+| I50 | An environment's key in the tree is its environment ID, else `org:<organization ID>`; a grant from a v1 file lists under **No tenant** until a connection fills its IDs in, then moves under its tenant | §8.8 asks for exactly this, and it needs no migration step |
+| I51 | The tree puts a tenant's environments in alphabetical order and orders tenants by their first environment's name; a bound environment is listed when no File root covers it | §8.8 |
+| I52 | The File root is resolved in preparation through a delegate the dispatcher gives `ToolExecution`; the person is asked on the background thread that runs preparation, with the approval timeout and the call's cancellation | The prompt precedes the approval dialog and still appears when a Write grant would skip that dialog |
+| I53 | `FilePathResolver` checks, in order: valid path, inside the root (a separator-terminated prefix, so a sibling folder `repo2` is outside `repo`), no reparse point on any segment, the file exists | A link can lead outside while the path text stays inside |
+| I54 | `update_web_resources` also returns `publishError` (null when none) and the read-back's `unexpected`; a failed publish does not fail the call, because the writes already happened | Throwing would hide that the content was written |
+| I55 | The web resource type comes from the file extension; an existing resource of another type, an unknown extension, a file over `maxuploadfilesize` and a duplicate name in one call are `invalid_argument` before the dialog | §6.8 step 1 |
+| I56 | `ComponentNames.PluginRows` names assemblies and steps beside `RowBacked`, which stays the list `get_component_state` accepts | Adding 91 and 92 to `RowBacked` would have made `get_component_state` accept types it has no version for |
+| I57 | The Active Approvals window re-renders on any store change and rebuilds its rows; a confirmation is one string in the form (`global`, `tenant:<id>`, `env:<key>`, `all`, `clear:…`) | Nothing else in the window holds state, so a change from another tab cannot leave it half-updated |
+| I58 | `AlwaysSettingsForm` and the panel's **Always settings…** are deleted; a Global read or record-read grant shows a warning on every tab | Global is chosen in the dialog and managed in Active Approvals |
+| I59 | Test seams: `ActiveApprovalsForm`'s constructor is internal; `FakeInstance` answers File root prompts; `WebResourceData` is a synthetic environment where `versionnumber` rises on every update and publish (S10); `ShapingData` gained plug-in rows | UI tests build forms without showing them; `Button.PerformClick` does nothing on a hidden control, so the tests call `OnClick` by reflection |
+
+### What the build found
+
+| # | Finding | Change |
+|---|---|---|
+| B1 | **The publish request was malformed.** The first version of `PublishXmlRequest`'s XML used `$"{{{id:D}}}"`, which .NET reads as a format string `D}`: the unit test of a failed publish showed `Format String can be only "D"…` where the publish should have been. Fixed by building the braces by concatenation | `WebResourceTools.PublishXml`; covered by `CreatesANewResourceInTheWip_AndPublishesJustIt`, which reads the XML back |
+| B2 | **A test fixture hid a stowaway.** The first read-back test put the extra component in the WIP from the start, so it was in the snapshot and never reported. The fixture now adds it only after something is written | `WebResourceData`; the read-back test passes for the right reason |
+
+### Exit checks
+
+**Done as unit tests** (all synthetic, R7): every scope and kind and who each reaches, tenant grants across two environments of one tenant and not another, the Per tenant option unavailable without a tenant ID, Write grants that skip the dialog but not the reason, the dev-environment confirmation or the log pair, a decision the dialog did not offer denied, revoke and reset, Stale grants, ID fill-in at bind, the settings upgrade (grants kept, the *always* dev-environment confirmation dropped, token, port and limits untouched), the tree order, the File root levels and precedence, the path checks including a junction, the File root prompt before the dialog and with a Write grant, cancel and timeout, `update_web_resources` end to end (create, update, unchanged, publish true and false, a failed publish, version conflicts at preparation and while the dialog is open, managed, not in solution, prefix, extension, size, duplicate names, read-back), and plug-in components by name, version, ID and `componentTable`, with the numeric 10000 refusal.
+
+**Still to run** — the spec's Phase 6 exit, live, through the plugin and the person's PAC profile only (the endpoint was not reachable in this session, and the windows have not been shown inside XrmToolBox):
+
+1. In XrmToolBox, with grants of every scope for two environments in one tenant and one in another, the Active Approvals window lists them in §8.8's order; **Revoke** and **Reset** take effect on the next call; the main panel no longer shows the token. The windows rendered correctly to images in a test harness, but not in XrmToolBox.
+2. A Write call approved *Per environment* runs the next Write to that environment without a dialog and with its log line pair; Write and the dev-environment confirmation offer nothing broader; a publisher creation still prompts every time.
+3. A Read granted *Per tenant* covers a second environment of that tenant bound afterwards, and not the environment in the other tenant. **Check that `CrmServiceClient.EnvironmentId` and `TenantId` are filled for the connection types in use** (OAuth, certificate, client secret): where they are not, the connection reports no tenant and Per tenant is unavailable, which is the designed fallback but should be known.
+4. A record query prompts on its own even with a Read grant; a `RecordRead` grant covers no other read.
+5. A v1 settings file loads: Read grants kept, IDs filled at the next binding, an *always* dev-environment confirmation dropped, token unchanged. A grant whose environment ID no longer matches shows *Stale* and is not applied.
+6. On the sandbox: a web resource edit is written, published and visible in the app without an import; a stale `expectedVersion` is refused; with no File root the first call prompts, and Cancel fails it with `denied_by_user`; a tenant File root serves a second environment without a prompt, and an environment File root takes precedence; `..`, an absolute path outside the root and a path through a junction are refused before the dialog; the File root is shown, changed and cleared in Active Approvals, and a change applies from the next call. *6a.4 (2026-11-09) verified the write and the publish for every web resource type; the rest is still to run.*
+7. On the sandbox, with an assembly, two of its steps (one with an image) and a custom API with a request parameter and a response property registered beforehand: all added by name, unique name or ID in one call; the read-back shows what the platform added with each — **record it here**; an export of the WIP carries the steps with their image and the custom API with its parameter and property. This also answers part of spike S12. *S12 (2026-11-09) recorded what the platform adds with each component added on its own ([6a.3](#6a3--spike-s12-2026-11-09)); the one-call add of all of them is still to run.*
 
 ---
 
@@ -63,6 +393,23 @@ Exit criterion (SPEC §11 Phase 5). Use the data-free sandbox and a fresh agent 
 7. **Update.** Bump the version in the `.csproj` and `.nuspec` (two-file rule), rebuild and redeploy: the **Plugin updated** page names both versions, once. **Skip** records the version; set it back and repeat with **Done**. An agent following the page's prompts ends with the new skills and the endpoint registered, and no other skill changed.
 8. **Tool Library.** A person adds the nuget.org trusted-publishing policy for `Lspiguel.Xrm.D365AgentCompanionMcp`; the merge to `main` publishes; install from the Tool Library, open, uninstall — no locked file; install again.
 9. **README.** The tool table and settings match `tools/list` and the panel.
+
+### Field use — 2026-11-02
+
+A planning session on a client project, with another vendor's agent in a code editor, the plugin connected and the companion skills installed. The plan was for two plug-in steps and one column's required level, delivered through WIPs promoted to a build environment. Findings, each written back into the spec and the skills:
+
+| # | Finding | Change |
+|---|---|---|
+| U1 | The agent researched from repository files only and wrote "confirm in the environment" as open points, though the read tools were available. The client listed them as deferred tools — names only — and no skill tied research to the plugin. "Use the MCP to verify" became a plan step until the person said *now* | K7: `d365ce-planning` reads the environment through the plugin when it is connected; `agent-companion-context` gains a research section and planning triggers |
+| U2 | The agent read every companion skill and still wrote close-out B into the plan, and put "establish the delivery context" into a later task. T3 was tied to the first Write call, which a planning session never reaches | §9.8: the context is established while planning; T3: in a plan the steps are the task list |
+| U3 | The agent argued that promotion contradicts R11 and rewrote the person's promotion task into an extract from development. It ignored earlier WIPs in development named `… - PROMOTED`, and the person's own statement of the strategy | R11 says what *downstream* means; T1: the person's statement is a source; §9.8: earlier WIPs are evidence |
+| U4 | `d365ce-planning` defined agentic tasks as repository file edits, so a column change and plug-in registration were planned as manual | K7 and §9.10: registration through a WIP is agentic when the tooling can carry it out. **Reversed by U10:** registration is manual until Phase 7; a column change through a WIP stays agentic |
+| U5 | The project names WIPs `<initials> <work item> <Group>`, so the leftover and reconcile searches for `_Agent_WIP_` would miss them | §9.5: a project's own naming convention wins and is searched for |
+| U6 | The query for steps on a table joined `sdkmessagefilter`, `sdkmessage` and `plugintype`, outside the configuration allow-list, so it was flagged as touching records and would fail with record queries off | §6.5: the plug-in and custom API registration tables joined the allow-list; `FetchXmlQuery`, the `query` description and tests (251 pass); version 1.2026.11.1 |
+
+**Not verified live:** §9.10 — a new build of an existing assembly, a new step with an image, and a new custom API authored in an unpacked WIP and imported with PAC CLI. `Test-UnpackedSolution.ps1` checks no packager anchors for these types yet. Field use then contradicted it (U10), and it moved to Phase 7.
+
+The skills and the allow-list changed; the version is bumped to 1.2026.11.1 (two-file rule).
 
 ---
 
@@ -549,7 +896,7 @@ Left as is: PAC CLI 2.14.1 (updated by the person); Claude Code 2.1.72 on the PA
 
 ## Decisions
 
-Raised by the desk research and the live spikes. All closed.
+Raised by the desk research, the live spikes and field use. All closed.
 
 | # | Decision | Outcome | Applied |
 |---|---|---|---|
@@ -562,6 +909,15 @@ Raised by the desk research and the live spikes. All closed.
 | D7 | **Fallback for handshake-era clients** | **Dual-era host**: 2026-07-28 primary; 2025-11-25 and 2025-06-18 through `initialize`, with in-memory sessions | [SPEC §6.1](SPEC.md#61-protocol-surface), §6.2, §14 |
 | D8 | **Stable bearer token and clearer 401** | Token kept across restarts, DPAPI-protected in the plugin settings, changed only by **Regenerate**; plain-text `401` body; README guidance for OAuth prompts | [SPEC §5](SPEC.md#host) (Authentication, H4), §6.2, §7, §11 |
 | D9 | **Cancelling a call when the client goes away** (Phase 1) | **Whitespace keep-alive**: a `tools/call` reply not ready within 2 s is committed as `200` with a chunked `application/json` body, and a space is written every 2 s until the JSON follows. A failed write cancels a queued or pending call and withdraws its dialog (`cancelled_by_client`, log only). A running call completes. `notifications/cancelled` does the same in handshake sessions. Chosen over SSE keep-alive comments, which would have amended the no-SSE rule, and over no detection | [SPEC §6.1](SPEC.md#61-protocol-surface), §6.2, §10, §11 |
+| D10 | **Web resources updated directly** (Phase 6) | `update_web_resources`: create or update from local files in a WIP, overwrite check inside the tool, targeted publish, files by path under the organization's **File root** (D15) | [SPEC §6.8](SPEC.md#68-direct-update-tools-phase-6), §9.11, §11 |
+| D11 | **Assemblies and steps** (Phase 7 since U10) | A new build of a registered assembly goes through `pac plugin push` after G5. Three separate step tools: `mirror_steps` only mirrors, and always creates disabled; `disable_steps` and `enable_steps` switch, on purpose. The person's choice over one combined switch tool, so that which copy runs is never a side effect. Side-load WIP named `…_Assemblies_Sideload`, never imported (M2) | [SPEC §6.9](SPEC.md#69-plug-in-step-tools-phase-7), §9.5, §9.10 (G5, M1–M7) |
+| D12 | **Custom APIs** (Phase 7 since U10) | `rebind_custom_apis` — a custom API's main operation is its `plugintypeid`, which mirroring cannot cover; steps on its message use `mirror_steps` | [SPEC §6.9](SPEC.md#69-plug-in-step-tools-phase-7) |
+| D13 | **Power Pages** | Not pursued for now, at the person's choice: standard-model configuration is records outside solutions, and `pac pages upload` already uploads changes in place. A read-only drift check is the candidate if the topic returns. Revised by D17: reopened as Phase 7a | [SPEC §9.11](SPEC.md#911-direct-updates-in-development) |
+| D14 | **PCF** | Guidance only: build, raise the patch version, `pac pcf push --solution-unique-name <WIP>` (then `--incremental`), publish when the change does not show | [SPEC §9.11](SPEC.md#911-direct-updates-in-development) |
+| D15 | **File root** (Phase 6, 2026-11-04) | The person's choice, replacing the per-tab *File roots* list: there is one File root per organization, the root of the git repository holding the source files the agent works on. A file path from the agent is either relative, read as File root + path, or absolute and checked to lie inside the root. Both forms are normalized first, and links on the path are refused. When a file-taking call prepares with no File root set, the plugin prompts the person, explaining these rules. The File root is shown and edited in the Active Approvals window, and returned by `get_connection_info`. Revised by D16: set per environment or per tenant instead of per organization | [SPEC §6.8](SPEC.md#file-root), §6.5, §7, §10, §11 |
+| D16 | **Scopes and grants** (Phase 6, 2026-11-04) | The person's choice. A client project usually has one repository and many environments, and organization and environment are effectively 1:1, so grants are scoped by reach:<br>• **Scopes:** one enum — Once, Session, Environment, a new Tenant, and Global, which keeps the enum name `Always` so saved grants still load.<br>• **Kinds:** Read, a new `RecordRead` that replaces the per-connection Record queries switch, a new `Write`, and the dev-environment confirmation. Write and dev env go no further than Environment, and the *always* dev-env confirmation is withdrawn. Publisher creation stays once per call.<br>• **Identity:** grants record organization, environment and tenant IDs (`CrmServiceClient.EnvironmentId` / `TenantId`). The organization ID alone is accepted and the others are filled in when a connection reports them. Any known mismatch makes a grant *Stale*.<br>• **File root:** set at Environment or Tenant level, asked in the prompt; Tenant is pre-selected.<br>• **Settings file:** gains `SchemaVersion` and an upgrade mapping. Enum and element names are unchanged. An upgrade may drop grants, never the token or host settings. Losing grants on a downgrade is accepted.<br>• **Active Approvals window:** one tree instead of a section per scope. Global comes first, then each tenant with its grants and then its environments; each environment shows its environment grants, then its session grants. Environments without a tenant come last. Environments are in alphabetical order and tenants follow the name of their first environment. File roots sit under the tenant or environment they belong to. **Reset** applies to Global, to a tenant together with its environments, or to one environment | [SPEC §7](SPEC.md#phase-6--scopes-and-grants), §5 (C8), §6.2, §6.5, §6.8, §8.1, §8.2, §8.6, §8.8, §10, §11, §12 |
+| D17 | **Power Pages reopened** (2026-11-10) | The person's choice: Power Pages authoring becomes Phase 7a, with spikes S13–S16 in a new Phase 6b. D13's first premise holds only for the standard data model: on the enhanced data model, the default for new sites, site components are solution-aware `powerpagecomponent` rows that a WIP can hold. Proposed: `update_site_components`, with the overwrite check against `versionnumber`, and D13's drift check before `pac pages upload`. Revises D13. | [SPEC §9.11](SPEC.md#power-pages--reopened-for-phase-7a), Phase 6b, Phase 7a |
+| D18 | **Power Pages coverage** (2026-11-11) | The person's choice, after the first draft of Phase 7a left two kinds of site at "guidance only". Phase 7a covers: the **enhanced data model, template-based** — full authoring, updating and maintenance; the **standard data model** — adding new components, and maintenance; **single-page application (code) sites** — full authoring, updating and maintenance. Full authoring stops short of what stays with the person: provisioning and activating sites, domains, identity provider secrets, deleting components (X3) and migrating a site. Standard-model components are tracked in the WIP ledger, since no solution can hold them (N5). Spikes S17 (code sites) and S18 (standard model) added, and S13–S16 widened (server logic, a second language, forms, lists, permissions and roles, creation routes, site creation with `pac pages clone`). Q15 raised: stale bundle deletion by `upload-code-site` | [SPEC Phase 6b](SPEC.md#phase-6b--power-pages-spikes), [Phase 7a](SPEC.md#phase-7a--power-pages-authoring), §6.3, §12, §13 |
 
 ---
 
@@ -904,3 +1260,16 @@ Spike solutions left in the sandbox: `AgentSpikeS2A`, `AgentSpikeS2B`, `AgentSpi
 | 2026-10-31 | Icons wired into the plugin: the 16 px and 32 px PNGs as base64 `SmallImageBase64` / `BigImageBase64`, as the exporter does. Release build 0 warnings, 207 tests pass. Phase 5: GitHub workflow specified after the exporter's — same jobs, triggers also on `skills/agent-companion-*/**`, plus a step for the skills' script self-tests; nuget.org trusted-publishing policy for the new package ID is a person's step |
 | 2026-10-31 | Spec §8.7: the wizard records the plugin version it was completed for; after an update a one-time **Plugin updated** page offers an optional reinstall of the skills and the MCP configuration through agent prompts (**Skip** or **Done** record the new version). Phase 5 bullet and exit updated; README gained a *Plugin upgrades* section |
 | 2026-10-31 | Phase 5 built. Setup wizard (§8.7): version gate on `SetupCompletedVersion`, three pages and the **Plugin updated** page laid over the main panel, seven prompts as text resources, the five companion skills embedded from `skills/` and exported one zip per skill; **Copy client config** shared with the MCP prompts and now names the endpoint and token. GitHub workflow `build-and-pack-d365-agent-companion-mcp.yml`, with the skills' script self-tests (11 and 31 pass locally). INSTRUCTIONS.md, CLAUDE.md, root README and matrix describe the plugin as built, release in progress; column-3 guides wait for the release. Release build 0 warnings; 245 tests pass. Choices I37–I45 recorded; live exit checks next |
+| 2026-11-03 | Phase 6 prepared in the spec from field use: direct updates in development analysed per component (notes, *Phase 6 — preparation*). D10–D14 decided: `update_web_resources`; `pac plugin push` after G5 for a registered assembly; `mirror_steps` (always disabled), `disable_steps`, `enable_steps`; `rebind_custom_apis`; PCF guidance only; Power Pages not pursued. U7 (imports re-enable disabled steps) gave rules M1–M7. SPEC §3, §6.2, §6.3, §6.8 (new), §7, §9.5 (`_Sideload`), §9.10 (G5), §9.11 (new), Phase 6 (S9–S11, exit), §12, Q14, references 5–7. Nothing built |
+| 2026-11-03 | Phase 5 done: the plugin is published in the XrmToolBox Tool Library. Q14 decided: no delete tool. Spikes S9–S11 run on a trial environment (S9, S10 through a throwaway SDK console — its sign-in prompts stopped by the person as outside the design; S11 through PAC). Key results: steps cannot be created disabled; an import sets every carried step enabled with activation and disabled without, with no state in the export; custom API rebinding is immediate; web resource version rises on every update and on publish; direct update ≈ 3.5 s against 25–50 s for a round trip; `pac pcf push` publishes all and needs an existing solution. Spec §6.8, §9.11, Phase 5 status, Phase 6 note and spike table updated. Spike components left in the trial environment for the person to remove |
+| 2026-11-03 | Plug-in authoring moved to a new Phase 7 after field use (U10): `pac plugin push` did not register new plug-in types, and steps were neither exported nor created by import. Spec: §3 (registration is a person's until Phase 7), §6.9 (step tools, split from §6.8), §7, §9.5 (`_Sideload` is Phase 7), §9.10 (Phase 7 notice; side-loading, version change and M1–M7 moved in from §9.11), §9.11, Phase 4 row, K7, Phase 6 (S9 and the step rows out), Phase 7 (new: field findings, enhancements, S9 and S12, exit), §12. W7 and X1 back to their wording without plug-in assemblies (G3 is Phase 7). Skills: the plug-in edits of this branch removed; research queries kept |
+| 2026-11-03 | Phase 6 gains plug-in components in `add_solution_components` (person's request): plug-in assembly 91 by name and version, step 92 by ID, custom API, request parameter and response property by `componentTable` with codes resolved per environment; registration stays a person's (Phase 7). Spec §6.6 (selectors, table, behaviour), §9.10 notice, Phase 6 table, skill-change row and exit |
+| 2026-11-04 | Phase 6 gains the **File root** (D15, person's choice): one per organization, the root of the git repository holding the source files; `update_web_resources` paths are relative to it or absolute inside it, normalized, links refused; prompted on first use, shown and edited in Active Approvals, returned by `get_connection_info`. Replaces the per-tab *File roots* list. Spec §6.8, §6.5, §7, §10, §11 and the Phase 6 exit |
+| 2026-11-04 | Phase 6 **scopes and grants** specified (D16, person's choice): Tenant scope added and *Always* shown as Global; `RecordRead` and `Write` grants replace the **Record queries** switch; Write and dev-environment confirmation go no further than Environment and the *always* confirmation is withdrawn; grants record organization, environment and tenant IDs and go *Stale* on a mismatch; settings file gains `SchemaVersion` and an upgrade mapping; File root now set at Environment or Tenant level (revises D15). Spec §7 (new *Phase 6 — scopes and grants*), §5 (C8), §6.2, §6.5, §6.8, §8.1, §8.2, §8.6, §10, §11, §12 |
+| 2026-11-04 | **Active Approvals** restructured as one tenant tree: Global first, then each tenant with its grants and environments, each environment with its environment grants then session grants, environments without a tenant last, alphabetical order; File roots shown under the tenant or environment they belong to; **Reset** for Global, a tenant with its environments, or one environment, plus **Reset all approvals**, each confirmed in the window. Spec §8.8 (layout), Phase 6 table and exit |
+| 2026-11-05 | Phase 6 build version set to **1.2026.11.2**: assembly and NuGet package versions aligned (`.csproj`, `.nuspec`), noted in the Phase 6 section of the spec. Nothing built yet |
+| 2026-11-05 | Phase 6 built (version 1.2026.11.2). Grants and settings first: `ApprovalScope.Tenant`, `ApprovalKind.RecordRead` and `Write`, `ConnectionIdentity`, an immutable `Grant`, the store with `Allow`, `FillIdentity`, `Stale` and the revoke and reset calls, `HostSettings.SchemaVersion` with an upgrade mapping and `FileRoots`. Then the dispatcher (grant kind by tool and inspection, offered decisions by tier, an unoffered decision is a denial), `get_connection_info` (environment and tenant IDs, `recordReadScope`, `writeScope`, `fileRoot`, `fileRootScope`; `recordQueriesEnabled` gone) and `query` (no `tool_disabled`). Then the File root (store, `FilePathResolver`, the prompt before the dialog) and `update_web_resources`; plug-in components in `ComponentSelector` and `SolutionShapingTools`. Then the windows: `ActiveApprovalsForm` with the tree, `FileRootForm`, `ApprovalForm` scopes, the panel; `AlwaysSettingsForm` deleted. The unit tests found and fixed a malformed publish request (B1). 251 → 383 tests, 0 warnings. Skills (edit loop, shaping), README, `.nuspec`, INSTRUCTIONS.md (R2 and the fixed safety behaviour reworded), CLAUDE.md, root README and SPEC updated. No live check run: see [Phase 6 — execution](#phase-6--execution) |
+| 2026-11-08 | Phase 6a opened for refinements to the unreleased 1.2026.11.2: 6a.1 Tool Library icons done; 6a.2 call log on disk specified; spikes S7, S8 and S12 moved into 6a.3 |
+| 2026-11-09 | 6a.2 built (416 tests). Spike S12 run (6a.3). 6a.4 live test of `update_web_resources` on all 11 types: L5 and L6 found and fixed, §6.8 steps 3–4 changed first (419 tests) |
+| 2026-11-10 | S7 and S8 moved on to Phase 8. Phase 6b (Power Pages spikes) and Phase 7a (Power Pages authoring) added; D13 reopened (D17) |
+| 2026-11-11 | Phase 6b widened (D18). 6a.5 built: the Host group first, a prominent **Active Approvals…**, **Close** at the right of Active Approvals, modeless windows centred on their owner; §8.1 mockup brought up to date (no Token row). 423 tests, 0 warnings. `queries.md` names 1.2026.11.2, not the unreleased 1.2026.11.1. Release scope written into the spec ([what the 1.2026.11.2 release holds](SPEC.md#what-the-12026112-release-holds)) and its verification status here ([Release 1.2026.11.2 — status](#release-12026112--status)); `.nuspec` release notes completed |

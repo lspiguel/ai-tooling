@@ -13,6 +13,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
     using System.Threading.Tasks;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Approvals;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Common;
+    using Lspiguel.Xrm.D365AgentCompanionMcp.Files;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Hosting;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Logging;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Mcp;
@@ -58,7 +59,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         public async Task<ToolResult> CallAsync(McpToolCall call, CancellationToken cancellation)
         {
             var tool = this.byName[call.Name];
-            var state = new CallState(call, tool, this.host.RunningToken, cancellation);
+            var state = new CallState(call, tool, this.host.RunningToken, cancellation) { LogFolder = this.host.DiskLog.ActiveFolder };
             if (tool.Tier != ToolTier.Host && call.Arguments?[InputSchema.Connection]?.Type == JTokenType.String)
             {
                 state.Binding = this.host.Registry.Find((string)call.Arguments[InputSchema.Connection]!);
@@ -89,9 +90,55 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         private static ToolException Stopping() =>
             new ToolException(ToolErrorCodes.ServerStopping, "The host is stopping; the call did not run. Wait for the person.");
 
-        private static ApprovalDecision[] OptionsFor(ToolTier tier) => tier == ToolTier.Read
-            ? new[] { ApprovalDecision.AllowOnce, ApprovalDecision.AllowSession, ApprovalDecision.AllowEnvironment }
-            : new[] { ApprovalDecision.AllowOnce };
+        /// <summary>The decisions a dialog offers (SPEC 7, 8.2): Read and record reads reach as far as Global, Write stops at one environment, a publisher is once.</summary>
+        private static ApprovalDecision[] OptionsFor(ToolTier tier, bool tenantKnown)
+        {
+            switch (tier)
+            {
+                case ToolTier.Read:
+                    return tenantKnown
+                        ? new[] { ApprovalDecision.AllowOnce, ApprovalDecision.AllowSession, ApprovalDecision.AllowEnvironment, ApprovalDecision.AllowTenant, ApprovalDecision.AllowGlobal }
+                        : new[] { ApprovalDecision.AllowOnce, ApprovalDecision.AllowSession, ApprovalDecision.AllowEnvironment, ApprovalDecision.AllowGlobal };
+                case ToolTier.Write:
+                    return new[] { ApprovalDecision.AllowOnce, ApprovalDecision.AllowSession, ApprovalDecision.AllowEnvironment };
+                default:
+                    return new[] { ApprovalDecision.AllowOnce };
+            }
+        }
+
+        private static ApprovalScope? ScopeOf(ApprovalDecision decision)
+        {
+            switch (decision)
+            {
+                case ApprovalDecision.AllowOnce:
+                    return ApprovalScope.Once;
+                case ApprovalDecision.AllowSession:
+                    return ApprovalScope.Session;
+                case ApprovalDecision.AllowEnvironment:
+                    return ApprovalScope.Environment;
+                case ApprovalDecision.AllowTenant:
+                    return ApprovalScope.Tenant;
+                case ApprovalDecision.AllowGlobal:
+                    return ApprovalScope.Always;
+                default:
+                    return null;
+            }
+        }
+
+        private static string Recommendation(ToolTier tier, bool devConfirmed)
+        {
+            switch (tier)
+            {
+                case ToolTier.Read:
+                    return devConfirmed
+                        ? "Recommended for a development environment: Per tenant when the tenant holds only the project's development and test environments, otherwise Per environment."
+                        : "Not confirmed as development - recommended: Session only. Global only with a reason.";
+                case ToolTier.Write:
+                    return "Recommended: Per environment, for the development environment you confirmed. Every Write call still needs a reason and is logged.";
+                default:
+                    return string.Empty;
+            }
+        }
 
         private static async Task<PreparedCall> PrepareAsync(ToolDefinition tool, ToolExecution execution)
         {
@@ -168,7 +215,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                         if (continuation == null && tool.Prepare != null)
                         {
                             // Resolution runs in the queue, before the dialog, so the dialog shows names (SPEC §6.6).
-                            state.Prepared = await PrepareAsync(tool, new ToolExecution(this.host, binding, arguments)).ConfigureAwait(false);
+                            var fileRoot = new Func<IReadOnlyList<string>, FileRoot>(paths => this.ResolveFileRoot(state, binding, paths, waiting.Token));
+                            state.Prepared = await PrepareAsync(tool, new ToolExecution(this.host, binding, arguments, null, fileRoot)).ConfigureAwait(false);
                         }
 
                         state.Approval = continuation != null ? "page" : await this.AuthorizeAsync(state, binding, waiting.Token).ConfigureAwait(false);
@@ -224,41 +272,56 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         private async Task<string> AuthorizeAsync(CallState state, BoundConnection binding, CancellationToken waiting)
         {
             var tool = state.Tool;
+            var identity = binding.Identity;
+
+            // A query that touches records is its own grant; a publisher is never a grant (R3).
+            ApprovalKind? kind = null;
             if (tool.Tier == ToolTier.Read)
             {
-                var grant = this.host.Approvals.Find(ApprovalKind.ReadApproval, binding.OrganizationId);
+                kind = state.Inspection.TouchesRecords ? ApprovalKind.RecordRead : ApprovalKind.ReadApproval;
+            }
+            else if (tool.Tier == ToolTier.Write)
+            {
+                kind = ApprovalKind.Write;
+            }
+
+            if (kind.HasValue)
+            {
+                var grant = this.host.Approvals.Find(kind.Value, identity);
                 if (grant != null)
                 {
                     return grant.Scope.ToLabel();
                 }
             }
 
-            var decision = await this.PromptAsync(state, binding, waiting).ConfigureAwait(false);
-            switch (decision)
+            var (decision, offered) = await this.PromptAsync(state, binding, kind, waiting).ConfigureAwait(false);
+            var scope = Array.IndexOf(offered, decision) >= 0 ? ScopeOf(decision) : null;
+            if (!scope.HasValue)
             {
-                case ApprovalDecision.AllowSession:
-                    this.host.Approvals.GrantForOrganization(ApprovalKind.ReadApproval, ApprovalScope.Session, binding.OrganizationId, binding.OrganizationFriendlyName, binding.Owner.TabLabel);
-                    return ApprovalScope.Session.ToLabel();
-                case ApprovalDecision.AllowEnvironment:
-                    this.host.Approvals.GrantForOrganization(ApprovalKind.ReadApproval, ApprovalScope.Environment, binding.OrganizationId, binding.OrganizationFriendlyName, binding.Owner.TabLabel);
-                    return ApprovalScope.Environment.ToLabel();
-                case ApprovalDecision.AllowOnce:
-                    return ApprovalScope.Once.ToLabel();
-                default:
-                    throw new ToolException(ToolErrorCodes.DeniedByUser, "The person denied the call. Do not retry it without new instructions.");
+                throw new ToolException(ToolErrorCodes.DeniedByUser, "The person denied the call. Do not retry it without new instructions.");
             }
+
+            if (scope != ApprovalScope.Once && kind.HasValue)
+            {
+                this.host.Approvals.Allow(kind.Value, scope.Value, identity, binding.Owner.TabLabel);
+            }
+
+            return scope.Value.ToLabel();
         }
 
-        private async Task<ApprovalDecision> PromptAsync(CallState state, BoundConnection binding, CancellationToken waiting)
+        private async Task<(ApprovalDecision Decision, ApprovalDecision[] Offered)> PromptAsync(CallState state, BoundConnection binding, ApprovalKind? kind, CancellationToken waiting)
         {
             var timeout = TimeSpan.FromSeconds(this.host.Settings.Read(s => s.ApprovalTimeoutSeconds));
             var arguments = (JObject)state.Call.Arguments!.DeepClone();
             arguments.Remove(InputSchema.Reason);
             var devConfirmed = this.host.DevEnvironmentScope(binding) != null;
+            var tenantKnown = binding.TenantId != Guid.Empty;
+            var offered = OptionsFor(state.Tool.Tier, tenantKnown);
             var request = new ApprovalRequest
             {
                 Tool = state.Tool.Name,
                 Tier = state.Tool.Tier,
+                Kind = kind ?? ApprovalKind.ReadApproval,
                 ConnectionName = binding.ConnectionName,
                 OrganizationName = binding.OrganizationFriendlyName,
                 Arguments = arguments.ToString(Formatting.Indented),
@@ -266,12 +329,9 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 TouchesRecords = state.Inspection.TouchesRecords,
                 Summary = state.Prepared?.Summary ?? string.Empty,
                 Confirmation = state.Prepared?.Confirmation,
-                Recommendation = state.Tool.Tier != ToolTier.Read
-                    ? string.Empty
-                    : devConfirmed
-                        ? "Recommended for a development environment: Allow for this environment."
-                        : "Not confirmed as development — recommended: Allow for this session.",
-                Options = OptionsFor(state.Tool.Tier),
+                Recommendation = Recommendation(state.Tool.Tier, devConfirmed),
+                TenantDisabledReason = state.Tool.Tier == ToolTier.Read && !tenantKnown ? "this connection reports no tenant ID" : null,
+                Options = offered,
                 DeadlineUtc = this.clock.UtcNow + timeout,
             };
 
@@ -280,7 +340,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             {
                 try
                 {
-                    return await binding.Owner.PromptAsync(request, linked.Token).ConfigureAwait(false);
+                    return (await binding.Owner.PromptAsync(request, linked.Token).ConfigureAwait(false), offered);
                 }
                 catch (OperationCanceledException) when (timer.IsCancellationRequested && !waiting.IsCancellationRequested)
                 {
@@ -291,6 +351,57 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                     throw this.Classify(state, binding);
                 }
             }
+        }
+
+        /// <summary>
+        /// Finds the File root for a call that takes files, asking the person when none is set (SPEC 6.8). Runs in
+        /// preparation, before any approval dialog, and even when a Write grant would skip that dialog: a File root is a setting, not an approval.
+        /// </summary>
+        private FileRoot ResolveFileRoot(CallState state, BoundConnection binding, IReadOnlyList<string> paths, CancellationToken waiting)
+        {
+            var identity = binding.Identity;
+            var existing = this.host.FileRoots.Find(identity);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var timeout = TimeSpan.FromSeconds(this.host.Settings.Read(s => s.ApprovalTimeoutSeconds));
+            var tenantKnown = identity.TenantId != Guid.Empty;
+            var request = new FileRootRequest
+            {
+                ConnectionName = binding.ConnectionName,
+                OrganizationName = binding.OrganizationFriendlyName,
+                TenantAvailable = tenantKnown,
+                PreselectedLevel = tenantKnown ? ApprovalScope.Tenant : ApprovalScope.Environment,
+                Paths = paths,
+                DeadlineUtc = this.clock.UtcNow + timeout,
+            };
+
+            FileRootChoice? choice;
+            using (var timer = new CancellationTokenSource(timeout))
+            using (var linked = CancellationTokenSource.CreateLinkedTokenSource(waiting, timer.Token))
+            {
+                try
+                {
+                    choice = binding.Owner.PromptFileRootAsync(request, linked.Token).GetAwaiter().GetResult();
+                }
+                catch (OperationCanceledException) when (timer.IsCancellationRequested && !waiting.IsCancellationRequested)
+                {
+                    throw new ToolException(ToolErrorCodes.DeniedNoResponse, $"Nobody chose a File root within {timeout.TotalSeconds:0} seconds. Nothing was written. Do not retry without new instructions.");
+                }
+                catch (OperationCanceledException)
+                {
+                    throw this.Classify(state, binding);
+                }
+            }
+
+            if (choice == null || string.IsNullOrWhiteSpace(choice.Path) || (choice.Level != ApprovalScope.Tenant && choice.Level != ApprovalScope.Environment) || (choice.Level == ApprovalScope.Tenant && !tenantKnown))
+            {
+                throw new ToolException(ToolErrorCodes.DeniedByUser, "The person did not choose a File root. Nothing was written. Do not retry without new instructions.");
+            }
+
+            return this.host.FileRoots.Set(choice.Level, identity, choice.Path);
         }
 
         private async Task<JObject> ExecuteAsync(ToolDefinition tool, BoundConnection binding, JObject arguments, Pager? continuation, string? cursor, PreparedCall? prepared)
@@ -377,6 +488,32 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             {
                 this.host.LogHostCall(entry);
             }
+
+            this.WriteToDisk(state, result, entry, duration);
+        }
+
+        /// <summary>
+        /// Queues the call for the call log on disk when the person has it on (SPEC 6a.2). Nothing here can fail the
+        /// call or change its result: the write runs in the background, and a failure is a warning in the plugin window.
+        /// </summary>
+        private void WriteToDisk(CallState state, ToolResult result, CallLogEntry entry, TimeSpan duration)
+        {
+            if (this.host.DiskLog.ActiveFolder == null && state.LogFolder == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var binding = state.Binding;
+                var sharedName = binding != null && this.host.Registry.Bound().Any(b => !ReferenceEquals(b, binding) && string.Equals(b.ConnectionName, binding.ConnectionName, StringComparison.OrdinalIgnoreCase));
+                var record = DiskLogRecord.Create(binding, sharedName, state.Call, state.Tool.Tier.ToString(), entry, result, duration);
+                this.host.DiskLog.Write(record, state.LogFolder);
+            }
+            catch (Exception ex)
+            {
+                this.host.DiskLog.ReportFailure(ex);
+            }
         }
 
         /// <summary>What the dispatcher knows about one call as it runs.</summary>
@@ -405,6 +542,9 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             public CallInspection Inspection { get; set; } = CallInspection.None;
 
             public PreparedCall? Prepared { get; set; }
+
+            /// <summary>Gets or sets the call log folder that was active when the call was received, or <c>null</c>.</summary>
+            public string? LogFolder { get; set; }
         }
     }
 }

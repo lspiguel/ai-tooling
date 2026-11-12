@@ -1,6 +1,6 @@
 ---
 name: agent-companion-wip-edit-loop
-description: Used together with the Agent Companion MCP - the XrmToolBox plugin that gives a coding agent person-approved access to Dynamics 365 CE / Dataverse environments - and needs a plugin tab bound to the development environment. Runs the local edit loop for a shaped WIP solution - PAC export and unpack (XML layout) into a work folder outside every repository, a baseline of component versions, local edits to forms, views, ribbon diffs, sitemaps, web resources and metadata, offline validation of forms, ribbon references and the customization schema, the pre-import overwrite check against the baseline, then pack and import one WIP at a time in transport order. Use when a WIP solution created through the Agent Companion MCP holds its components and they need editing, or when an edited WIP is ready to validate and import.
+description: Used together with the Agent Companion MCP - the XrmToolBox plugin that gives a coding agent person-approved access to Dynamics 365 CE / Dataverse environments - and needs a plugin tab bound to the development environment. Runs the local edit loop for a shaped WIP solution - PAC export and unpack (XML layout) into a work folder outside every repository, a baseline of component versions, local edits to forms, views, ribbon diffs, sitemaps, web resources and metadata, offline validation of forms, ribbon references and the customization schema, the pre-import overwrite check against the baseline, then pack and import one WIP at a time in transport order; and, for web resource content and PCF controls, the direct updates in development that skip the import round trip. Use when a WIP solution created through the Agent Companion MCP holds its components and they need editing, or when an edited WIP is ready to validate and import.
 ---
 
 # The WIP edit loop with the Agent Companion MCP
@@ -98,7 +98,7 @@ Edit in `src\` only, and only the components the change needs.
 | View | `Entities\<Table>\SavedQueries\{savedqueryid}.xml` | FetchXML and layout XML must agree on columns |
 | Ribbon (classic only, R4) | `Entities\<Table>\RibbonDiff.xml`; the application ribbon in `Other\Customizations.xml` | The export holds only the diff. Read the base with `get_entity_ribbon` or `get_application_ribbon`, concatenate every page in order, save it as `ribbon-<table>.xml`. Ask for `form`, `homepageGrid` and `subGrid` one at a time when the whole ribbon times out |
 | Sitemap, app module | `AppModuleSiteMaps\`, `AppModules\` | |
-| Web resource | `WebResources\…` with its `.data.xml` | Edit the source copy if the project keeps one, then copy it in |
+| Web resource | `WebResources\…` with its `.data.xml` | From plugin 1.2026.11.2, **update the content directly, without this loop** — see [Direct updates in development](#direct-updates-in-development). Use the loop only for a web resource that travels with other edits in the same import |
 | Table and column metadata | `Entities\<Table>\Entity.xml` | Only for a table added as `metadata`, or a column in the WIP |
 
 **Anything new authored here** — a column added to `Entity.xml`, a new web resource — is a new component with no transport home. Add it to the ledger as **placement**: the WIP can no longer end as in place (W10), and the next read-back after import will show it. Tell the person.
@@ -190,6 +190,27 @@ Re-import `export.zip`. It is an unmanaged import of whole documents too: run th
 
 ---
 
+## Direct updates in development
+
+Exporting, unpacking, packing and importing a WIP takes 25–50 seconds before PAC's own unpack and pack; updating a web resource directly takes about 3.5 seconds. From plugin 1.2026.11.2, edit a web resource's **content** with `update_web_resources` instead of the loop. The WIP still records the work.
+
+**Web resources — `update_web_resources`.**
+
+1. The resource is in the story's **Resources** WIP (added with `add_solution_components`), and its content changed in the project's source file.
+2. Baseline it: `get_component_state` gives its `versionNumber` — pass it as `expectedVersion`. The tool re-checks it before the dialog and again just before writing; a mismatch is `version_conflict`, naming who changed it. Re-baseline, merge, or ask the person. Never retry with the new version without looking at what changed.
+3. Pass **paths, not content**: relative to the File root (`get_connection_info.settings.fileRoot`, set per environment or per tenant) or absolute inside it. The first call on an environment with no File root asks the person to choose one; do not choose it for them. A path outside it, or through a link, is refused before the dialog.
+4. A new resource is created in the WIP under the WIP publisher's prefix: `name` must start with `<prefix>_`.
+5. The tool publishes just what it wrote. `versionAfter` is read after that publish: it is the baseline for the next call. Identical content is reported `unchanged` and not written; if that content was written earlier but never published (a call with `publish: false`, or the maker portal), it is published with the others. With `publish` on, every item then serves its file: `published: true` for those this call published, and `unchanged` with `published: false` for those that already did. A `failed` or `notAttempted` item, or a `publishError`, means that change is not live.
+6. Read the WIP back (R1). `managed_component` means a first-party resource: do not customize it. `not_in_solution` means add it to the WIP first.
+
+Registering a script on a form, a command or an app is **not** covered: those are edits to a form, ribbon diff or app module and stay in this loop.
+
+**PCF controls — push, not import.** Build the control, raise the **patch** version, then `pac pcf push --solution-unique-name <WIP>` (the WIP must exist; the option excludes `--publisher-prefix`) and, for later changes, add `--incremental`. A first push takes about 48 seconds, an incremental one about 24. Every push publishes all customizations, so in a shared development environment tell the person first (X11). If the change does not show, hard-refresh the browser.
+
+**Not covered.** Plug-in assemblies, steps and custom APIs stay with the Plugin Registration Tool; Power Pages site content goes through `pac pages upload`, whose environment manifest must stay out of git.
+
+---
+
 ## Guardrails — what a person confirms
 
 | Moment | The person confirms |
@@ -198,6 +219,7 @@ Re-import `export.zip`. It is an unmanaged import of whole documents too: run th
 | After validation | The blast radius shows only the intended files |
 | Overwrite check | Passed — or the difference was merged on their decision |
 | Before each import | Import now is acceptable; in a shared environment, others' pending changes will be published (X11) |
+| A direct web resource update | Each path, size and SHA-256 in the dialog is the file intended, and the WIP is the story's Resources WIP |
 | After import | The read-back is as expected and the change behaves as intended |
 
 [^1]: Microsoft Learn — *Edit the customizations XML file with schema validation*, <https://learn.microsoft.com/power-apps/developer/model-driven-apps/edit-customizations-xml-file-schema-validation> (checked 2026-10-31). Supports: the schema bundle and its download, and that CustomizationsSolution.xsd references the other files in the same folder.

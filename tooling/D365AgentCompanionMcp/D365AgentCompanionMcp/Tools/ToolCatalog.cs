@@ -38,6 +38,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             SolutionShapingTools.AddSolutionComponentsTool(),
             SolutionShapingTools.RemoveSolutionComponentTool(),
             PublisherTools.CreatePublisherTool(),
+            WebResourceTools.UpdateWebResourcesTool(),
         };
     }
 }

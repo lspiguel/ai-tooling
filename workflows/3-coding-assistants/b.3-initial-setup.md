@@ -231,7 +231,7 @@ Please refer to each skill's instructions for install. [Skills](/skills/) on thi
 
 Treat a skill as a dependency, not as documentation. It is instruction text an agent will follow while holding your credentials and your permissions, so it warrants the scrutiny any other dependency gets: take it from a named, identifiable publisher; pin a tag or a commit rather than tracking a moving branch; read the whole `SKILL.md` together with any `references/` files and any scripts it ships before first use; and diff it against the version you already trust before accepting an update. Read specifically for what the skill *assumes it may do* — install CLI tools, register MCP servers, run shell commands, reach the network, or write to a live environment — because those assumptions are rarely stated in the summary and are the entire risk surface. Installing manually helps here: nothing updates behind you, so the version you reviewed is the version that runs. A skill that fails this reading is not a skill to fix; it is a skill to leave uninstalled.
 
-Skills also change what an agent does with content it reads back from an environment. That risk is separate and is covered in [Prompt injection](/docs/security.md).
+Skills also change what an agent does with content it reads back from an environment. That risk is separate and is covered in [Prompt injection](/docs/security-prompt-injection.md).
 
 ### 12.4 Before you rely on a skill
 

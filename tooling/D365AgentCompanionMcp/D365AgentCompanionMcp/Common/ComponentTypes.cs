@@ -42,6 +42,12 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Common
         /// <summary>Model-driven app.</summary>
         public const int AppModule = 80;
 
+        /// <summary>Plug-in assembly.</summary>
+        public const int PluginAssembly = 91;
+
+        /// <summary>Plug-in step.</summary>
+        public const int SdkMessageProcessingStep = 92;
+
         private static readonly Dictionary<int, string> Names = new Dictionary<int, string>
         {
             [1] = "Entity",

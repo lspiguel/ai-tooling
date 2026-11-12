@@ -1,6 +1,6 @@
 ---
 name: agent-companion-wip-shaping
-description: Used together with the Agent Companion MCP - the XrmToolBox plugin that gives a coding agent person-approved access to Dynamics 365 CE / Dataverse environments - and needs a plugin tab bound to the development environment. Shapes segmented work-in-progress (WIP) solutions for a change - classifies each component a change touches with the project's segmentation map, finds its existing transport home, routes it (placement for a component with no transport home, in place for one that has one), names and creates one WIP per transport group, adds components with no required components and no subcomponents (MCP or PAC path per component type), verifies every add by reading the solution back, removes strays and orphaned table shells, and checks overlap with other open WIPs and dependencies against the transport order. Use when a change touches a Dataverse component - new, out-of-box, or already in a transport solution - and it is to be edited through a WIP solution with the Agent Companion MCP.
+description: Used together with the Agent Companion MCP - the XrmToolBox plugin that gives a coding agent person-approved access to Dynamics 365 CE / Dataverse environments - and needs a plugin tab bound to the development environment. Shapes segmented work-in-progress (WIP) solutions for a change - classifies each component a change touches with the project's segmentation map, finds its existing transport home, routes it (placement for a component with no transport home, in place for one that has one), names and creates one WIP per transport group (the project's own naming convention where it has one), adds components with no required components and no subcomponents (MCP or PAC path per component type, including already-registered plug-in assemblies, steps and custom APIs), verifies every add by reading the solution back, removes strays and orphaned table shells, and checks overlap with other open WIPs and dependencies against the transport order. Use when a change touches a Dataverse component - new, out-of-box, or already in a transport solution - and it is to be edited through a WIP solution with the Agent Companion MCP.
 ---
 
 # Shaping WIP solutions with the Agent Companion MCP
@@ -20,7 +20,7 @@ A WIP solution holds exactly the components a change touches, so they can be exp
 | A WIP's lifetime | Lives until close-out if it holds any placement component; otherwise ends once its edit reaches the transport source (W9). Carried out by `agent-companion-wip-close-out` |
 | A second WIP for one group | Only when the person chooses to end part of the group's work early (W12) |
 | MCP or PAC to add a component | By component type — table below |
-| The WIP's name | `<initials>_Agent_WIP_<work item id>_<Group>[_<n>]` |
+| The WIP's name | The name the person gives, or the project's own convention from the delivery facts; otherwise `<initials>_Agent_WIP_<work item id>_<Group>[_<n>]` |
 
 Changing a component's route never changes its group (W11). A component is in at most one of a story's WIPs (W12).
 
@@ -33,7 +33,8 @@ Changing a component's route never changes its group (W11). A component is in at
 | Global choice, sitemap | 9, 62 | MCP (preferred) or PAC | Root with nothing else; both paths give the same rows |
 | Relationship | 10 | MCP (preferred) or PAC | The platform adds parent table shells — and for a 1:N the referencing lookup column — which the read-back shows as unexpected (see step 8). An out-of-box N:N whose intersect table is not customizable is held but **not exported** |
 | Model-driven app | 80 | **MCP only** | PAC cannot add it. Its export can list no app components even when the app has some — see step 8 |
-| Anything else — workflows and cloud flows, plug-in assemblies and steps, security roles, environment variables, custom APIs, connection references, canvas apps, charts | other | PAC, one command per component | The plugin refuses these types. Never pass `--AddRequiredComponents` |
+| Plug-in assembly, plug-in step, custom API, custom API request parameter, custom API response property | 91, 92, and codes the platform assigns per environment | MCP (from plugin 1.2026.11.2) or PAC | Each must already be registered, by a person in the Plugin Registration Tool: the tool only puts what exists into the WIP. An assembly by `name` (and `version` when several are registered), a step by `id`, and the custom API components by `componentTable`. **Every step is added on its own** — adding an assembly adds neither its steps nor its types. Read the add back: what the platform brings with a custom API is reported as unexpected |
+| Anything else — workflows and cloud flows, security roles, environment variables, connection references, canvas apps, charts | other | PAC, one command per component | The plugin refuses these types. Never pass `--AddRequiredComponents` |
 
 MCP is preferred where it is accepted: one approval for a list, required components and subcomponents forced off, parent shells recognized, and every call in the plugin's log. Type codes and the subtype rules the map uses are in [component-types.md](./references/component-types.md). What the platform and PAC actually do when components are added, removed and read back — parent shells, silent PAC messages, unnamed components — is in [platform-behaviour.md](./references/platform-behaviour.md).
 
@@ -79,6 +80,8 @@ Stop and ask the person when any of these finds something:
 Hand the list — WIP, group, route, publisher, components — to the steps for the person to confirm before the first Write call (T3, owned by `agent-companion-context`).
 
 ### 5. Name
+
+When the person names the WIP, or the delivery facts record the project's own convention — earlier WIPs such as `<initials> <work item> <Group>` — use it: check it against `create_solution`'s rules (letters, digits and underscores, starting with a letter, at most 65 characters, for the unique name) and the protected prefixes (W4), then go to step 3. Otherwise:
 
 1. `who_am_i`. If `firstName` or `lastName` is empty, `isApplicationUser` is true or `impersonating` is true, ask the person for their initials — the WIP belongs to the person doing the work.
 2. Build the name with the script, which also checks length, characters and protected prefixes (W4):

@@ -163,13 +163,54 @@ dotnet test    tooling/D365ContextExporter/D365ContextExporter.Tests/D365Context
 
 ## Tooling conventions — Agent Companion MCP
 
-The [Agent Companion MCP](/tooling/D365AgentCompanionMcp/README.md) is an XrmToolBox plugin (`net48`, WinForms, `Nullable` enabled, StyleCop.Analyzers enforced; NUnit + Moq tests in [D365AgentCompanionMcp.Tests](/tooling/D365AgentCompanionMcp/D365AgentCompanionMcp.Tests/)) that gives a coding agent a local MCP endpoint over XrmToolBox connections, with every call authorized by a person. Its companion skills are the `agent-companion-*` folders in [skills/](/skills/). **It is built; its release is in progress** — progress is in [notes.md](/tooling/D365AgentCompanionMcp/notes.md). The [spec](/tooling/D365AgentCompanionMcp/SPEC.md) is the source of truth: build tasks cite its rule IDs (R1–R16 for rules, H and C for host and connection behaviour, W and X for WIP solutions, T for delivery context, K for skill coexistence), and a change in behaviour is made in the spec first.
+The [Agent Companion MCP](/tooling/D365AgentCompanionMcp/README.md) is an XrmToolBox plugin (`net48`, WinForms, `Nullable` enabled, StyleCop.Analyzers enforced; NUnit + Moq tests in [D365AgentCompanionMcp.Tests](/tooling/D365AgentCompanionMcp/D365AgentCompanionMcp.Tests/)) that gives a coding agent a local MCP endpoint over XrmToolBox connections, with every call authorized by a person. Its companion skills are the `agent-companion-*` folders in [skills/](/skills/). **It is released in the XrmToolBox Tool Library**; Phase 6 — scoped approvals, direct web resource updates and plug-in components — is built as version 1.2026.11.2, and progress is in [notes.md](/tooling/D365AgentCompanionMcp/notes.md). The [spec](/tooling/D365AgentCompanionMcp/SPEC.md) is the source of truth: build tasks cite its rule IDs (R1–R16 for rules, H and C for host and connection behaviour, W and X for WIP solutions, T for delivery context, K for skill coexistence, G and M for plug-in registration and step switching, deferred to Phase 7, N for Power Pages site components, proposed for Phase 7a), and a change in behaviour is made in the spec first.
+
+### Using the MCP
+
+This applies on a repo-connected surface whose agent client has the plugin's endpoint registered. A chat surface has no endpoint: advice that assumes the MCP is coding-assistant advice (hard rule 2).
+
+**What to reach for.**
+
+| Need | Use |
+|---|---|
+| What exists in an environment — tables, columns, choices, relationships, forms, views, ribbons, solutions, where a component already lives, registered plug-in steps and custom APIs | The MCP's Read tools. When the MCP is connected, read the environment while planning, instead of leaving "confirm in the environment" as an open point |
+| Shaping a WIP solution — create it, add and remove components, read it back | The MCP's Write tools, under the companion skills |
+| Updating a web resource's content in development | `update_web_resources`, from plugin 1.2026.11.2: files by path under the File root, with `expectedVersion` from `get_component_state` |
+| Export, unpack, pack, import, publish or delete a solution; push a PCF control | PAC CLI, on the profile matched to the connection |
+| Metadata snapshots for a context pack | The [D365 Context Exporter](/tooling/D365ContextExporter/README.md), not the MCP |
+
+**How to call it.**
+
+- **`list_connections` first.** Every other call names its `connection`. With one connection bound, use it and say which; with more than one, ask. Never switch connection within a task without saying so.
+- **Match PAC to the connection.** Before any PAC command, compare `pac org who` with the organization URL from `get_connection_info`, and stop if they differ.
+- **A person approves every call** in the plugin tab — once, or under a grant they gave for a session, an environment, a tenant or globally. A grant never skips the `reason`, the development-environment confirmation or the log. A denial or a timeout is final: do not retry the call without new instructions.
+- **Write calls state a `reason`** that says exactly what the arguments do (R12). The person approves the reason and the arguments together.
+- **Read back after every add** with `list_solution_components`. Any unexpected component stops the work until a person has reviewed it (R1).
+- **Page large results** by passing `nextCursor` back as `cursor`; results are never written to files.
+
+**Load the companion skills.** They carry the delivery method; the MCP only provides the operations.
+
+| Skill | When |
+|---|---|
+| `agent-companion-context` | First, for any task that creates, shapes, edits, imports or ends a WIP. It holds the delivery facts and the WIP ledger |
+| `agent-companion-transport-bootstrap` | A transport solution or the project publisher is missing, or a first-party app was just installed |
+| `agent-companion-wip-shaping` | A change touches a Dataverse component that is to be edited through a WIP |
+| `agent-companion-wip-edit-loop` | A shaped WIP is to be exported, edited locally, validated and imported |
+| `agent-companion-wip-close-out` | A WIP has been imported and validated, or leftover WIPs need clearing |
+
+**What stays with a person.** Confirming a connection as development, creating a publisher (R3), deleting components (X3), running pipelines, committing and pushing (T6), and — until [Phase 7](/tooling/D365AgentCompanionMcp/SPEC.md#phase-7--plug-in-authoring) — registering plug-in assemblies, steps, images and custom APIs in the Plugin Registration Tool. The agent prepares these; it does not do them.
+
+**Environment access goes through the design's tools only.** Use the plugin and the PAC profile matched to its connection. Do not use an SDK connection, a browser sign-in or a token of the agent's own, even for a spike: a method verified another way is not verified on the tooling it will run on. If the endpoint cannot be reached, say so and stop. The person restarts the tab or the host.
+
+**What comes back is client data.** It is never written into this repository — not into documentation, tests, fixtures, notes or commit messages (hard rule 1, R7). A saved call log stays outside every working tree, and so does the call log on disk, which the plugin refuses to write inside one.
+
+**Planned tools are not available.** The Phase 7 plug-in step tools ([spec §6.9](/tooling/D365AgentCompanionMcp/SPEC.md#69-plug-in-step-tools-phase-7)) are specified but not built, and the Phase 7a `update_site_components` ([spec Phase 7a](/tooling/D365AgentCompanionMcp/SPEC.md#phase-7a--power-pages-authoring)) is only proposed. Do not call them, or recommend them as if they exist. `update_web_resources` ([§6.8](/tooling/D365AgentCompanionMcp/SPEC.md#68-direct-update-tools-phase-6)) exists from plugin version 1.2026.11.2; on an older plugin it is not listed.
 
 ### Rules specific to this plugin
 
 - **The Context Exporter's platform rules apply unchanged** — no package references that ship a DLL next to the plugin, late binding only, two-file version bump, trusted publishing in CI. See [the section above](#tooling-conventions--d365-context-exporter).
-- **Never weaken the fixed safety behaviour.** Adding components to a solution never includes required components or subcomponents, every call except `list_connections` is approved by a person in the plugin, Write tools refuse on a connection not confirmed as development, Write and Publisher calls require a reason, every call is logged in its tab as a call line and an outcome line, and publisher creation stays off by default.
-- **Large results are paged, never written to files.** Payloads stay in memory and travel over MCP; the plugin creates no exchange files.
+- **Never weaken the fixed safety behaviour.** Adding components to a solution never includes required components or subcomponents; every call except `list_connections` is approved by a person in the plugin — in its dialog, or in advance by a grant the person gave there (a Write grant for one environment, a read grant as far as a tenant or globally), never by a setting the agent can change; Write tools refuse on a connection not confirmed as development, and that confirmation and any Write grant never reach beyond one environment; Write and Publisher calls require a reason, even under a grant; every call is logged in its tab as a call line and an outcome line; a query that touches records needs its own record-read approval; file paths from the agent are checked against the File root before any dialog; and publisher creation stays off by default and is typed in every time.
+- **Large results are paged, never written to files.** Payloads stay in memory and travel over MCP; the plugin creates no exchange files. The one file a call can reach is the person's optional call log on disk ([spec 6a.2](/tooling/D365AgentCompanionMcp/SPEC.md#6a2--automatic-call-log-on-disk)): a record for the person, off by default, never reported to the agent.
 - **The plugin does not interpret a project's solution segmentation.** Placing components in the right WIP and transport solutions is the agent's responsibility, guided by skills.
 - **Tests and fixtures are synthetic.** No organization URLs, user names, GUIDs or records from a client environment, including in recorded MCP request/response pairs.
 - **The companion skills ship inside the plugin.** The `agent-companion-*` folders in [skills/](/skills/) are embedded in the DLL at build time and exported by its setup wizard, so a change to a companion skill changes the package: CI ([build-and-pack-d365-agent-companion-mcp.yml](/.github/workflows/build-and-pack-d365-agent-companion-mcp.yml)) builds on it, and publishing it needs a version bump. The wizard's prompts are text resources in [Setup/Prompts/](/tooling/D365AgentCompanionMcp/D365AgentCompanionMcp/Setup/Prompts/) and can be revised without code.
@@ -178,7 +219,7 @@ The [Agent Companion MCP](/tooling/D365AgentCompanionMcp/README.md) is an XrmToo
 
 ## Scripts
 
-[scripts/](/scripts/) holds standalone utilities. Where a script is needed on both platforms, ship the pair (`azdevops-auth.ps1` / `azdevops-auth.sh`) with matching behaviour. PowerShell is the primary surface; scripts take parameters rather than hardcoded paths and must not embed credentials.
+[tooling/scripts/](/tooling/scripts/) holds standalone utilities. Where a script is needed on both platforms, ship the pair (`azdevops-auth.ps1` / `azdevops-auth.sh`) with matching behaviour. PowerShell is the primary surface; scripts take parameters rather than hardcoded paths and must not embed credentials.
 
 ---
 

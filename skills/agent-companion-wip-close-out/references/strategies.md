@@ -2,7 +2,7 @@
 
 ## Comparison
 
-|  | A — Promote to a build environment | B — Add to transport solutions in development |
+|  | A — Promote to build | B — Consolidate in development |
 |---|---|---|
 | What happens to the WIP | Exported unmanaged by the promotion pipeline, imported into the build environment, copied there into one transport solution, then deleted there; the development WIP is deleted at close-out | Its components are added to the transport solution in development; the WIP is deleted |
 | Source of downstream artifacts | Transport solutions extracted from the build environment | Transport solutions extracted from development |

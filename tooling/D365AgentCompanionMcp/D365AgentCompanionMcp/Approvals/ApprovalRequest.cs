@@ -39,6 +39,12 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Approvals
         /// <summary>Gets a value indicating whether the call reads records rather than configuration.</summary>
         public bool TouchesRecords { get; init; }
 
+        /// <summary>Gets what the grants the dialog offers would cover (SPEC §7): Read, record reads or Write.</summary>
+        public ApprovalKind Kind { get; init; } = ApprovalKind.ReadApproval;
+
+        /// <summary>Gets why <i>Per tenant</i> is disabled — the connection reports no tenant ID — or <c>null</c> when it can be chosen.</summary>
+        public string? TenantDisabledReason { get; init; }
+
         /// <summary>Gets the scope recommended for this environment.</summary>
         public string Recommendation { get; init; } = string.Empty;
 

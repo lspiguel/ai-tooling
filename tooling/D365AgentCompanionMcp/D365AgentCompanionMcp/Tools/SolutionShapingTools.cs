@@ -46,6 +46,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             ComponentTypes.WebResource,
             ComponentTypes.SiteMap,
             ComponentTypes.AppModule,
+            ComponentTypes.PluginAssembly,
+            ComponentTypes.SdkMessageProcessingStep,
         };
 
         private const string UniqueName = "uniqueName";
@@ -86,7 +88,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         public static ToolDefinition AddSolutionComponentsTool() => ToolDefinition.Simple(
             AddSolutionComponents,
             ToolTier.Write,
-            "Adds existing components to an unmanaged solution, in order, with required components and subcomponents always off (R1). Tables are added metadata-only (default) or as a shell; any table in a solution exports its whole unmanaged ribbon diff. A column, form or view added alone brings its table as a parent shell, reported in results, not as unexpected. Reads the solution back: any entry in unexpected stops the workflow until a person reviews it. The first failure stops the run; later entries are notAttempted. Accepted types: table 1, column 2, global option set 9, relationship 10, view 26, form 60, web resource 61, sitemap 62, app module 80. Requires reason; approved once.",
+            "Adds existing components to an unmanaged solution, in order, with required components and subcomponents always off (R1). Tables are added metadata-only (default) or as a shell; any table in a solution exports its whole unmanaged ribbon diff. A column, form or view added alone brings its table as a parent shell, reported in results, not as unexpected. Reads the solution back: any entry in unexpected stops the workflow until a person reviews it. The first failure stops the run; later entries are notAttempted. Accepted types: table 1, column 2, global option set 9, relationship 10, view 26, form 60, web resource 61, sitemap 62, app module 80, plug-in assembly 91 (by name, and version when several are registered), plug-in step 92 (by id); a custom API, request parameter or response property by componentTable, because its type code differs per environment. Plug-in components must already be registered by a person: adding an assembly does not add its steps, so each step is added on its own. Requires reason; approved once (or under a Write grant).",
             InputSchema.ForConnection()
                 .String(SolutionUniqueName, "An unmanaged solution.", required: true, minLength: 1)
                 .ObjectArray(Components, "1–50 component selectors, added in this order.", ComponentSelector.Schema(), 1, 50)
@@ -166,6 +168,37 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
 
             return solution;
         }
+
+        /// <summary>The <c>ComponentType</c> object for a component the read-back found; a code the platform assigns per environment is named by its table.</summary>
+        /// <param name="service">The service.</param>
+        /// <param name="code">The component type code.</param>
+        /// <param name="perEnvironment">Table names already looked up for codes of 10000 and above, kept for the call.</param>
+        /// <returns>The object.</returns>
+        internal static JObject TypeJson(IOrganizationService service, int code, Dictionary<int, string> perEnvironment)
+        {
+            if (code < ComponentSelector.FirstEnvironmentSpecificType)
+            {
+                return ComponentTypes.ToJson(code);
+            }
+
+            if (!perEnvironment.TryGetValue(code, out var table))
+            {
+                var query = new QueryExpression("solutioncomponentdefinition") { ColumnSet = new ColumnSet("primaryentityname"), TopCount = 1 };
+                query.Criteria.AddCondition("solutioncomponenttype", ConditionOperator.Equal, code);
+                table = service.RetrieveMultiple(query).Entities.FirstOrDefault()?.GetAttributeValue<string>("primaryentityname") ?? ComponentTypes.NameOf(code);
+                perEnvironment[code] = table;
+            }
+
+            return new JObject { ["code"] = code, ["name"] = table };
+        }
+
+        /// <summary>The warning lines for the components a call added unexpectedly, as the call log shows them (R1).</summary>
+        /// <param name="result">The call result.</param>
+        /// <returns>One line per unexpected component.</returns>
+        internal static IReadOnlyList<string> UnexpectedWarnings(JObject result) =>
+            ((JArray?)result["unexpected"] ?? new JArray())
+                .Select(u => CallLogFormatter.Unexpected((string)u["componentType"]!["name"]!, (string?)u["name"] ?? (string)u["objectId"]!))
+                .ToList();
 
         private static JObject PublisherSchema() => OutputSchema.Object(("publisherId", OutputSchema.Guid()), ("uniqueName", OutputSchema.String()), ("customizationPrefix", OutputSchema.String()));
 
@@ -268,10 +301,10 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
         private static ComponentSelector ParseSelector(JToken entry, string argument, int index)
         {
             var selector = ComponentSelector.Parse(argument, index, entry);
-            if (!AcceptedTypes.Contains(selector.Type))
+            if (selector.ComponentTable == null && !AcceptedTypes.Contains(selector.Type))
             {
                 var at = argument == Component ? Component : $"{argument}[{index}]";
-                throw ToolException.InvalidArgument(at, $"{at}: type {selector.Type} is not accepted. Accepted: table 1, column 2, global option set 9, relationship 10, view 26, form 60, web resource 61, sitemap 62, app module 80.");
+                throw ToolException.InvalidArgument(at, $"{at}: type {selector.Type} is not accepted. Accepted: table 1, column 2, global option set 9, relationship 10, view 26, form 60, web resource 61, sitemap 62, app module 80, plug-in assembly 91, plug-in step 92, and custom API components by componentTable.");
             }
 
             return selector;
@@ -279,6 +312,21 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
 
         private static List<ComponentSelector> ParseSelectors(JObject arguments, string argument) =>
             ((JArray)arguments[argument]!).Select((entry, index) => ParseSelector(entry, argument, index)).ToList();
+
+        private static string? Label(string? componentTable)
+        {
+            switch (componentTable)
+            {
+                case ComponentSelector.CustomApiTable:
+                    return "CustomAPI";
+                case ComponentSelector.CustomApiRequestParameterTable:
+                    return "CustomAPI request parameter";
+                case ComponentSelector.CustomApiResponsePropertyTable:
+                    return "CustomAPI response property";
+                default:
+                    return null;
+            }
+        }
 
         private static PreparedCall PrepareAddComponents(ToolExecution execution)
         {
@@ -312,7 +360,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 case ComponentTypes.SavedQuery:
                     return $"View          {target.Name}   on {target.Table}   {{{ValueFormats.FormatGuid(target.Id)}}}";
                 default:
-                    return $"{ComponentTypes.NameOf(target.Type),-13} {target.Name}   {{{ValueFormats.FormatGuid(target.Id)}}}";
+                    return $"{target.Label ?? ComponentTypes.NameOf(target.Type),-13} {target.Name}   {{{ValueFormats.FormatGuid(target.Id)}}}";
             }
         }
 
@@ -325,7 +373,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             var targets = selectors.Select(s =>
             {
                 var resolved = s.Resolve(service);
-                return new Target(s.Index, resolved.Type, resolved.Id, resolved.Name, s.Type == ComponentTypes.Attribute ? s.Table : null);
+                return new Target(s.Index, resolved.Type, resolved.Id, resolved.Name, s.Type == ComponentTypes.Attribute ? s.Table : null) { Label = Label(s.ComponentTable) };
             }).ToList();
 
             // Forms and views carry their table; read both in one query per type.
@@ -450,6 +498,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 .ToDictionary(g => g.Key, g => g.First().Index, StringComparer.OrdinalIgnoreCase);
 
             var unexpected = new JArray();
+            var perEnvironment = new Dictionary<int, string>();
             foreach (var component in arrived)
             {
                 var name = names.TryGetValue((component.Type, component.Id), out var found) ? found : null;
@@ -468,7 +517,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
 
                 unexpected.Add(new JObject
                 {
-                    ["componentType"] = ComponentTypes.ToJson(component.Type),
+                    ["componentType"] = TypeJson(service, component.Type, perEnvironment),
                     ["objectId"] = ValueFormats.FormatGuid(component.Id),
                     ["name"] = ValueFormats.NullableString(name),
                     ["rootComponentBehavior"] = SolutionTools.RootBehavior(component.Behavior.HasValue ? new OptionSetValue(component.Behavior.Value) : null),
@@ -506,11 +555,6 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
                 IncludedComponentSettingsValues = table && shell ? Array.Empty<string>() : null,
             };
         }
-
-        private static IReadOnlyList<string> UnexpectedWarnings(JObject result) =>
-            ((JArray?)result["unexpected"] ?? new JArray())
-                .Select(u => CallLogFormatter.Unexpected((string)u["componentType"]!["name"]!, (string?)u["name"] ?? (string)u["objectId"]!))
-                .ToList();
 
         private static PreparedCall PrepareRemoveComponent(ToolExecution execution)
         {
@@ -580,6 +624,9 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             public Guid Id { get; }
 
             public string? Name { get; set; }
+
+            /// <summary>Gets or sets what the dialog calls a component whose type has no fixed name, such as a custom API.</summary>
+            public string? Label { get; set; }
 
             /// <summary>Gets or sets the table of a column, form or view — the parent the platform may add as a shell.</summary>
             public string? Table { get; set; }

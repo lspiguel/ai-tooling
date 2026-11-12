@@ -8,24 +8,29 @@ nuget.exe pack tooling\D365AgentCompanionMcp\D365AgentCompanionMcp\D365AgentComp
 <package>
   <metadata>
     <id>Lspiguel.Xrm.D365AgentCompanionMcp</id>
-    <version>1.2026.10.1</version>
+    <version>1.2026.11.2</version>
     <title>D365 Agent Companion MCP for XrmToolBox</title>
     <authors>Luciano Spiguel</authors>
     <owners>Luciano Spiguel</owners>
     <projectUrl>https://github.com/lspiguel/ai-tooling</projectUrl>
-    <iconUrl>https://raw.githubusercontent.com/lspiguel/ai-tooling/refs/heads/main/tooling/D365AgentCompanionMcp/D365AgentCompanionMcp/d365-agent-companion-128px.png</iconUrl>
+    <iconUrl>https://raw.githubusercontent.com/lspiguel/ai-tooling/refs/heads/main/tooling/D365AgentCompanionMcp/D365AgentCompanionMcp/d365-agent-companion-150px.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>XrmToolBox plugin that gives a local coding agent person-approved Dataverse operations over MCP</summary>
     <description>
       XrmToolBox plugin that exposes a local Model Context Protocol (MCP) endpoint over XrmToolBox connections, so a coding agent such as GitHub Copilot, Cursor or Claude Code can discover components and shape small, segmented work-in-progress solutions - the operations PAC CLI cannot perform. Every call is approved by a person in the plugin tab and logged there. Components are always added without required components or subcomponents. Solution export, local editing and import stay with PAC CLI and the agent-companion skills.
     </description>
     <releaseNotes>
-      First release.
+      Scoped approvals, direct web resource updates and plug-in components.
 
-      - One local MCP endpoint per XrmToolBox process; one plugin tab per connection, where every call is approved and logged.
-      - Discovery tools: connections, publishers, solutions and their components, tables, relationships, choices, ribbons, FetchXML queries, component state and required components.
-      - Solution shaping: create solutions, add and remove components with required components and subcomponents always off, and gated publisher creation.
-      - First-run setup wizard, with setup prompts for the agent and an export of the agent-companion skills.
+      - Approvals reach as far as you choose: once, session only, per environment, per tenant, or global. Record reads and Write calls are grants of their own, and Write and the development-environment confirmation stop at one environment. A new Active Approvals window lists every grant and File root as one tenant tree, with Revoke, Reset and Stale marking; the bearer token moved there.
+      - New tool update_web_resources: create or update web resources from local files in a work-in-progress solution, with the overwrite check inside the tool and a targeted publish, about 3.5 seconds instead of a solution round trip. Files are passed by path under a File root set per environment or per tenant.
+      - add_solution_components, remove_solution_component and get_required_components accept registered plug-in assemblies, steps, custom APIs and their request parameters and response properties.
+      - The Record queries switch is gone: a query that touches records is approved on its own. The settings file is upgraded on first load; the always dev-environment confirmation is withdrawn.
+      - The agent-companion skills cover direct web resource updates, the PCF push path and the plug-in components.
+      - Optional call log on disk: a Write call log to disk checkbox in Active Approvals writes every call and its outcome, in full, to one JSON file per connection and day in a folder you choose. A folder inside a Git working tree is refused. Off by default, and never reported to the agent.
+      - The plug-in and custom API registration tables are configuration tables for the query tool, so research on registered steps and custom APIs runs under a read approval.
+      - Panel: the host section is on top and Active Approvals stands out at its top right. Approval, publisher creation and File root dialogs and the Active Approvals window open centred on XrmToolBox.
+      - Sharper icons in XrmToolBox and the Tool Library.
     </releaseNotes>
     <copyright>Copyright 2026- Luciano Spiguel</copyright>
     <tags>XrmToolBox MCP AI Agent D365 Dataverse Solutions ALM</tags>

@@ -6,10 +6,11 @@
 namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
 {
     using Lspiguel.Xrm.D365AgentCompanionMcp.Approvals;
+    using Lspiguel.Xrm.D365AgentCompanionMcp.Files;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Logging;
 
-    /// <summary>What the host needs from one open plugin tab (an instance): its approvals and its call log (C8, C9).</summary>
-    internal interface IHostInstance : IApprovalPrompt
+    /// <summary>What the host needs from one open plugin tab (an instance): its approvals, its File root prompt and its call log (C8, C9).</summary>
+    internal interface IHostInstance : IApprovalPrompt, IFileRootPrompt
     {
         /// <summary>Gets a short label for the tab, recorded with the grants it gives.</summary>
         string TabLabel { get; }

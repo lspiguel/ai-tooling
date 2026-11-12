@@ -48,6 +48,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
             settings.ResponseCapCharacters = Clamp(settings.ResponseCapCharacters, MinResponseCap, MaxResponseCap, 40000);
             settings.ApprovalTimeoutSeconds = Clamp(settings.ApprovalTimeoutSeconds, MinApprovalTimeout, MaxApprovalTimeout, 120);
             settings.Grants ??= new List<PersistedGrant>();
+            settings.FileRoots ??= new List<PersistedFileRoot>();
             return settings;
         }
 

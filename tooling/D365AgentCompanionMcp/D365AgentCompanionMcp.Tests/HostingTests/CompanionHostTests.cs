@@ -112,16 +112,16 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.HostingTests
             var tab = new FakeInstance();
             host.Attach(tab);
             var binding = TestHost.Bind(host, tab, Guid.NewGuid(), "11111111-1111-1111-1111-111111111111", new Mock<IOrganizationService>().Object);
-            var other = Guid.NewGuid();
-            host.Approvals.GrantForOrganization(ApprovalKind.ReadApproval, ApprovalScope.Session, binding.OrganizationId, "Org", "tab");
-            host.Approvals.GrantForOrganization(ApprovalKind.ReadApproval, ApprovalScope.Environment, other, "Other", "tab");
-            host.Approvals.GrantForOrganization(ApprovalKind.DevEnvironment, ApprovalScope.Session, binding.OrganizationId, "Org", "tab");
+            var other = new ConnectionIdentity(Guid.NewGuid(), null, Guid.Empty, "Other");
+            host.Approvals.Allow(ApprovalKind.ReadApproval, ApprovalScope.Session, binding.Identity, "tab");
+            host.Approvals.Allow(ApprovalKind.ReadApproval, ApprovalScope.Environment, other, "tab");
+            host.Approvals.Allow(ApprovalKind.DevEnvironment, ApprovalScope.Session, binding.Identity, "tab");
             host.Cursors.Open(binding.ConnectionId, "list_publishers", new Pager(new Mock<IPageSource>().Object, 10));
 
             host.Stop();
 
-            Assert.That(host.Approvals.Find(ApprovalKind.ReadApproval, binding.OrganizationId), Is.Null);
-            Assert.That(host.Approvals.Find(ApprovalKind.DevEnvironment, binding.OrganizationId), Is.Null);
+            Assert.That(host.Approvals.Find(ApprovalKind.ReadApproval, binding.Identity), Is.Null);
+            Assert.That(host.Approvals.Find(ApprovalKind.DevEnvironment, binding.Identity), Is.Null);
             Assert.That(host.Approvals.Find(ApprovalKind.ReadApproval, other)?.Scope, Is.EqualTo(ApprovalScope.Environment));
             Assert.That(host.Cursors.Count, Is.Zero);
             Assert.That(host.Registry.Find(binding.ConnectionId), Is.SameAs(binding), "tabs stay bound across a stop");

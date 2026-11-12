@@ -11,6 +11,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
     using System.Threading;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Approvals;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Common;
+    using Lspiguel.Xrm.D365AgentCompanionMcp.Files;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Logging;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Mcp;
     using Lspiguel.Xrm.D365AgentCompanionMcp.Paging;
@@ -49,6 +50,8 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
             this.Version = version;
             this.Tokens = new TokenStore(settings, protector);
             this.Approvals = new ApprovalStore(settings, clock);
+            this.FileRoots = new FileRootStore(settings);
+            this.DiskLog = new DiskCallLog(settings);
             this.Registry = new ConnectionRegistry();
             this.Cursors = new CursorStore(clock);
             this.Dispatcher = new ToolDispatcher(this, (tools ?? ToolCatalog.Create)(this), clock);
@@ -56,6 +59,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
             this.running.Cancel();
             this.Registry.Changed += (s, e) => this.OnStateChanged();
             this.Approvals.Changed += (s, e) => this.OnStateChanged();
+            this.FileRoots.Changed += (s, e) => this.OnStateChanged();
         }
 
         /// <summary>Raised when the state, port or bound connections change.</summary>
@@ -81,6 +85,12 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
 
         /// <summary>Gets the approval store.</summary>
         public ApprovalStore Approvals { get; }
+
+        /// <summary>Gets the File roots (SPEC §6.8).</summary>
+        public FileRootStore FileRoots { get; }
+
+        /// <summary>Gets <b>Write call log to disk</b> (SPEC 6a.2): a setting of the person's, never reported to the agent.</summary>
+        public DiskCallLog DiskLog { get; }
 
         /// <summary>Gets the connection registry.</summary>
         public ConnectionRegistry Registry { get; }
@@ -237,7 +247,32 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Hosting
         /// <param name="binding">The connection.</param>
         /// <returns>The scope of the confirmation in force.</returns>
         public ApprovalScope? DevEnvironmentScope(BoundConnection binding) =>
-            binding.DevConfirmedOnce ? ApprovalScope.Once : this.Approvals.Find(ApprovalKind.DevEnvironment, binding.OrganizationId)?.Scope;
+            binding.DevConfirmedOnce ? ApprovalScope.Once : this.Approvals.Find(ApprovalKind.DevEnvironment, binding.Identity)?.Scope;
+
+        /// <summary>
+        /// Completes a claimed binding once the identity call has returned, and fills the environment and tenant IDs
+        /// the connection reports into the grants that matched its organization and did not know them (SPEC §7).
+        /// </summary>
+        /// <param name="claimed">The claimed binding.</param>
+        /// <param name="organizationId">The organization ID.</param>
+        /// <param name="environmentId">The environment ID the connection reports, or <c>null</c>.</param>
+        /// <param name="tenantId">The tenant ID the connection reports, or <see cref="Guid.Empty"/>.</param>
+        /// <param name="userId">The user ID.</param>
+        /// <param name="impersonating">Whether the connection impersonates another user.</param>
+        /// <param name="service">The service calls run with.</param>
+        /// <param name="nowUtc">The binding time.</param>
+        /// <param name="conflict">The binding to the same organization, on <see cref="BindOutcome.OrganizationConflict"/>.</param>
+        /// <returns>The outcome.</returns>
+        public BindOutcome CompleteBinding(BoundConnection claimed, Guid organizationId, string? environmentId, Guid tenantId, Guid userId, bool impersonating, Microsoft.Xrm.Sdk.IOrganizationService service, DateTime nowUtc, out BoundConnection? conflict)
+        {
+            var outcome = this.Registry.Complete(claimed, organizationId, environmentId, tenantId, userId, impersonating, service, nowUtc, out conflict);
+            if (outcome == BindOutcome.Bound)
+            {
+                this.Approvals.FillIdentity(claimed.Identity);
+            }
+
+            return outcome;
+        }
 
         /// <summary>Writes a host-log entry to every tab (C10).</summary>
         /// <param name="entry">The entry.</param>

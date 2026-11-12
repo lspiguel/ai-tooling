@@ -32,6 +32,16 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
             [ComponentTypes.AppModule] = ("appmodule", "appmoduleid", "name"),
         };
 
+        /// <summary>
+        /// Plug-in components, named when they are added or listed but not accepted by <c>get_component_state</c>, which
+        /// is for the row-backed types above (SPEC 6.5).
+        /// </summary>
+        public static readonly IReadOnlyDictionary<int, (string Table, string IdColumn, string NameColumn)> PluginRows = new Dictionary<int, (string, string, string)>
+        {
+            [ComponentTypes.PluginAssembly] = ("pluginassembly", "pluginassemblyid", "name"),
+            [ComponentTypes.SdkMessageProcessingStep] = ("sdkmessageprocessingstep", "sdkmessageprocessingstepid", "name"),
+        };
+
         /// <summary>The most values in one <c>In</c> condition.</summary>
         internal const int BatchSize = 200;
 
@@ -75,7 +85,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tools
 
                         break;
                     default:
-                        if (RowBacked.TryGetValue(group.Key, out var row))
+                        if (RowBacked.TryGetValue(group.Key, out var row) || PluginRows.TryGetValue(group.Key, out row))
                         {
                             foreach (var batch in Batches(ids))
                             {

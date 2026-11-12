@@ -1,8 +1,21 @@
 # Delivery facts — where to find them, how to record them
 
-How to settle each fact of the delivery context (T1) before asking the person (T2). Repositories named here are the client project's: `<client>-Context/` (grounding, stories, engagement documents) and `<client>-d365/` (unpacked solutions and source). Read them; do not commit to them — a person does (T6).
+How to settle each fact of the delivery context (T1) before asking the person (T2), and how to record it so the next task starts from it (T5). Repositories named here are the client project's: `<client>-Context/` (grounding, stories, engagement documents) and `<client>-d365/` (unpacked solutions and source). The agent writes the delivery-facts record; a person commits it (T6).
 
 ---
+
+## What the person has said
+
+Read the task, any plan the person wrote or edited, and the conversation before searching elsewhere. A plain statement settles a fact unless the environments or the repositories contradict it:
+
+| The person says | Settles |
+|---|---|
+| "we promote to build", "close-out with build environment", "transport solutions are only consolidated through promotion", "extract from build" | A — promote to build, for the solutions it covers |
+| "add it to the Base solution in dev", "extract from dev" | B — consolidate in development |
+| "use WIP solution `LS 1234 Base`" | The WIP's name; with earlier WIPs, the project's naming convention |
+| "the extract runs every night", "I run the promotion" | The pipeline's trigger; who runs it |
+
+A contradiction — the person says build, but no build environment can be found — is reported with what was found; the statement is not replaced with another answer. Record the statement as `person` in the Source column.
 
 ## Recorded facts
 
@@ -49,10 +62,22 @@ Service connection and variable-group names point at an environment but rarely p
 
 | Source | Close-out strategy available | When an in-place WIP ends |
 |---|---|---|
-| Development | B | At import and validation |
-| Build environment | A | After its promotion |
+| Development | B — consolidate in development | At import and validation |
+| Build environment | A — promote to build | After its promotion |
 
 Strategies C (Git-linked solutions) and D (Power Platform pipelines) are not supported by these skills. If the project uses one, say so and ask how the person wants to proceed.
+
+## Earlier WIPs in development
+
+Unmanaged solutions in development that are neither transport solutions nor this task's WIPs are what earlier stories left behind. `list_solutions` with `managed: "unmanaged"` shows them with their names, descriptions and publishers:
+
+| Seen | Evidence of |
+|---|---|
+| Names ending `- PROMOTED`, or descriptions saying a WIP was promoted | Strategy A for the group the name carries |
+| Names such as `<initials> <work item> <Group>` | The project's WIP naming convention — use it for new WIPs and in leftover and reconcile searches, with `_Agent_WIP_` |
+| None, while the transport solutions keep changing | Probably B, or work done directly in transport solutions — ask |
+
+Evidence is shown to the person with the recommendation; it does not settle the strategy alone.
 
 ## Build environment
 
@@ -89,10 +114,12 @@ Two things I could not settle:
 
 ## Recording
 
-When the person wants confirmed facts kept (T5), write `delivery-facts.md`:
+`delivery-facts.md` is the project's memory of how it delivers. Every task reads it first and leaves it more complete: whenever a fact is settled and not yet recorded, add it; when a recorded fact has changed, update the row and its date (T5). Do it as part of the task, and tell the person in one line what was added or changed. Any skill that settles a fact — the planning skill included — adds it here.
 
-- in `<client>-Context/` when the project has one, in the folder the person names;
+- In `<client>-Context/` when the project has one — at its root unless the person names a folder;
 - otherwise in `<client>-d365/`, next to the segmentation map.
+
+Create the file on the first fact settled if it does not exist.
 
 ```markdown
 # Delivery facts — Agent Companion MCP
@@ -101,15 +128,30 @@ When the person wants confirmed facts kept (T5), write `delivery-facts.md`:
 
 | Fact | Value | Confirmed | Notes |
 |---|---|---|---|
-| Development environment | [ClientName] DEV — <organization URL> | YYYY-MM-DD | |
+| Development environment | [ClientName] DEV — <organization URL>; plugin connection name | YYYY-MM-DD | |
 | Build environment | none / [ClientName] BUILD — <organization URL> | YYYY-MM-DD | Bound read-only |
 | Segmentation map | <path in the repository> | YYYY-MM-DD | |
 | Transport order | Resources, Base, Assemblies, Processes, Apps, Security | YYYY-MM-DD | |
-| Transport source — <solution> | development / build | YYYY-MM-DD | <pipeline file> |
+| Transport source — <solution> | development / build | YYYY-MM-DD | <pipeline file> / person |
+| Close-out strategy — <solution> | A — promote to build / B — consolidate in development | YYYY-MM-DD | person / derived from <source> |
+| WIP naming | `<initials>_Agent_WIP_<id>_<Group>` / `<project pattern>` | YYYY-MM-DD | Earlier WIPs: <examples> |
+| Ending of earlier WIPs | renamed `… - PROMOTED` and kept / deleted | YYYY-MM-DD | |
 | Promotion pipeline | <name> — run by a person | YYYY-MM-DD | Parameters: <names> |
 | Extraction pipeline | <name> — trigger | YYYY-MM-DD | |
 | Protected prefixes | <list> | YYYY-MM-DD | |
 | Shared development environment | yes / no | YYYY-MM-DD | |
 ```
 
-No secrets, tokens or record data. Then hand the file to the person to commit (T6).
+Add a second table for project knowledge a later task would otherwise research again:
+
+```markdown
+## Project knowledge
+
+| Topic | Fact | Confirmed | Source |
+|---|---|---|---|
+| Plug-in assembly | <assembly name> — transport home <solution> | YYYY-MM-DD | query / extract |
+| Live main form — <table> | <form name> (<form id>) | YYYY-MM-DD | person |
+| Convention | <a rule the person stated, e.g. option sets as enums in the business layer> | YYYY-MM-DD | person |
+```
+
+Keep a fact here only if it is stable and will matter again; what one tool call answers in seconds — option values, a column's type — stays in the plan that used it. No secrets, tokens or record data. Then hand the file to the person to commit (T6).

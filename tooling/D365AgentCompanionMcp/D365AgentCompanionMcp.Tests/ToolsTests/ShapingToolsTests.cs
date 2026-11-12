@@ -58,7 +58,7 @@ namespace Lspiguel.Xrm.D365AgentCompanionMcp.Tests.ToolsTests
 
             Assert.That(result.IsError, Is.False, result.Payload.ToString());
             Assert.That(_tab.Requests.Single().Summary, Does.Contain("prefix p1"));
-            Assert.That(_tab.Requests.Single().Options, Is.EqualTo(new[] { ApprovalDecision.AllowOnce }));
+            Assert.That(_tab.Requests.Single().Options, Is.EqualTo(new[] { ApprovalDecision.AllowOnce, ApprovalDecision.AllowSession, ApprovalDecision.AllowEnvironment }));
             var created = _data.Created.Single();
             Assert.That(created.GetAttributeValue<EntityReference>("publisherid").Id, Is.EqualTo(DiscoveryData.PublisherId));
             Assert.That(created["version"], Is.EqualTo("1.0.0.0"));
