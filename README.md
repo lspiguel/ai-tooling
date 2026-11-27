@@ -36,7 +36,7 @@ The full playbook is the **[Activity × Tooling Matrix](workflows/ai-augmented-d
 | **[2] Planning / Design** | [2.1](workflows/1-general-purpose-assistants/2.1-planning.md) | [2.3](workflows/3-coding-assistants/2.3-planning.md) |
 | **[3] Tasking** | [3.1](workflows/1-general-purpose-assistants/3.1-tasking.md) | [3.3](workflows/3-coding-assistants/3.3-tasking.md) |
 | **[4] Implementation / Build** | [4.1](workflows/1-general-purpose-assistants/4.1-implementation.md) | [4.3](workflows/3-coding-assistants/4.3-implementation.md) |
-| **[5] Validation / Peer review** | [5.1](workflows/1-general-purpose-assistants/5.1-validation-peer-review.md) | [5.3](workflows/3-coding-assistants/5.3-validation-peer-review.md) |
+| **[5] Validation / Peer review / Close out** | [5.1](workflows/1-general-purpose-assistants/5.1-validation-peer-review.md) | [5.3](workflows/3-coding-assistants/5.3-validation-peer-review.md) |
 | **[6] Documentation / Information sharing** | [6.1](workflows/1-general-purpose-assistants/6.1-documentation.md) | [6.3](workflows/3-coding-assistants/6.3-documentation.md) |
 
 **Ground rule — human-in-the-loop at every decision point.** AI drafts; a person decides. Every workflow above assumes review gates, not autopilot. Client data handling, assistant-tier selection, and licensing considerations are covered in the matrix's [Considerations](workflows/ai-augmented-d365ce-activity-matrix.md#considerations) section.
