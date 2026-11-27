@@ -26,7 +26,7 @@ The prompts formerly collected in this README have been organized into per-activ
 | [2.1 — Planning / Design](./2.1-planning.md) | Design collaboration sessions: architecture, sequencing, risk register |
 | [3.1 — Tasking](./3.1-tasking.md) | Sprint planning: effort estimation, task checklists with a clear Definition of Done, ADO import scripting |
 | [4.1 — Implementation / Build](./4.1-implementation.md) | General coding help: Power Fx / FetchXML / OData snippets, step-by-step configuration instructions, design rubber-ducking, data migration support, maker-portal copilots |
-| [5.1 — Validation / Peer review](./5.1-validation-peer-review.md) | Test plans and test cases from ACs, UAT scripts, design-doc review, peer review on pull requests, accessibility review |
+| [5.1 — Validation / Peer review / Close out](./5.1-validation-peer-review.md) | Test plans and test cases from ACs, UAT scripts, design-doc review, peer review on pull requests, accessibility review, close-out checklist for WIP solutions |
 | [6.1 — Documentation / Information sharing](./6.1-documentation.md) | User-driven docs: runbooks, changelogs, release notes, user guides, training material, living schema packs |
 
 ---

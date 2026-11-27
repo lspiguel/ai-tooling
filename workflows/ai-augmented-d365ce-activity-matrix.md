@@ -2,7 +2,7 @@
 
 ## How to read this
 
-- **Rows** are the activities a D365 CE practitioner moves through: a grounding layer, two one-time setups, then the iterative loop of specification/intent → planning/design → tasking → implementation/build → validation/peer review → documentation/information sharing.
+- **Rows** are the activities a D365 CE practitioner moves through: a grounding layer, two one-time setups, then the iterative loop of specification/intent → planning/design → tasking → implementation/build → validation/peer review/close-out → documentation/information sharing.
 - **Columns** are *where the AI runs*, per the taxonomy — not which model. The same activity leverages AI differently depending on the type/taxonomy of assistant: the same model (Claude, a GPT) shows up in both columns through different surfaces, and the surface is what determines what it can see and act on.
 - **Cells** name the concrete tool/workflow to reach for, assuming you have that column's tooling available. Each column grounds its assistants through different methods (instructions, boards, context packs, solutions unpacked & code repositories, Dataverse MCP), described once in [The grounding layer](#a-the-grounding-layer) so the cells stay short.
 
@@ -19,7 +19,7 @@
 | **[2] Planning / Design** | **Design collaboration sessions.** Architect & design an implementation fulfilling the requirements — sequencing, dependencies, risk register — with the assistant as a structured-thinking partner; the design artifact is owned by a human. [[2.1]](./1-general-purpose-assistants/2.1-planning.md) | **Plan Mode.** Use Plan Mode to flesh out a detailed implementation plan grounded in the repo, then peer review and collaborate as needed; dependency + sequencing analysis from solution structure; repo-grounded estimation rationale; draft ADRs. [[2.3]](./3-coding-assistants/2.3-planning.md) |
 | **[3] Tasking** | **Sprint planning.** Estimate effort, assign tasks, generate test plans; turn features into task checklists with crisp descriptions and a clear Definition of Done. [[3.1]](./1-general-purpose-assistants/3.1-tasking.md) | **Expand the plan.** Task out & prepare checklists, define unit test conditions; create ADO tasks via the **Azure DevOps CLI** (`az boards`); scaffold branches; emit task-level technical notes grounded in the repo. [[3.3]](./3-coding-assistants/3.3-tasking.md) |
 | **[4] Implementation / Build** | **General coding help.** Prompt for code snippets, samples and step-by-step configuration instructions — Power Fx, JS web resources, FetchXML, OData. Rubber-duck design. Use **maker-portal copilots** (Copilot in Power Apps / Power Automate, generative pages) for low-code. Pro-Code direct implementation is out of current capabilities for **AI Assistants**. [[4.1]](./1-general-purpose-assistants/4.1-implementation.md) | **Agent Mode.** Automated implementation with a human in the loop — the core build: plugins, PCF, web resources, Azure Functions, pipeline YAML; step-by-step configuration instructions where skills and tooling are unavailable. pac CLI for environment gestures. [[4.3]](./3-coding-assistants/4.3-implementation.md) |
-| **[5] Validation / Peer review** | **Test scenarios.** Test plans + UAT scripts; review design docs; peer review on pull requests; cross-check work against the ACs (AI Assistant). [[5.1]](./1-general-purpose-assistants/5.1-validation-peer-review.md) | **Review.** Use **Ask Mode with an adversary reviewer prompt** for automated review (after the human pass) — enforcing StyleCop + naming; check unit-test coverage; peer review on pull requests; test plans + UAT scripts; **Plugin A — Component Snapshot & Drift Tracker** for config drift; security/perf review; ADO/GitHub PR Copilot. [[5.3]](./3-coding-assistants/5.3-validation-peer-review.md) |
+| **[5] Validation / Peer review / Close out** | **Test scenarios & close-out checklist.** Test plans + UAT scripts; review design docs; peer review on pull requests; cross-check work against the ACs (AI Assistant). Draft the **close-out checklist** that takes a story's work-in-progress (WIP) solutions into the transport solutions that ship — by promotion to a build environment (A) or consolidation in development (B). [[5.1]](./1-general-purpose-assistants/5.1-validation-peer-review.md) | **Review.** Use **Ask Mode with an adversary reviewer prompt** for automated review (after the human pass) — enforcing StyleCop + naming; check unit-test coverage; peer review on pull requests; test plans + UAT scripts; **Plugin A — Component Snapshot & Drift Tracker** for config drift; security/perf review; ADO/GitHub PR Copilot. **Close out** the story's WIP solutions with the **Agent Companion MCP** — promote to a build environment (A) or consolidate in development (B), dependencies checked against the transport order, the transport solution read back; a person runs the pipelines. [[5.3]](./3-coding-assistants/5.3-validation-peer-review.md) |
 | **[6] Documentation / Information sharing** | **User-driven docs.** Runbooks, documentation & release notes written with AI assistance; training material; **re-run Context Exporter** so grounding stays true — the schema packs are the living data-model docs. [[6.1]](./1-general-purpose-assistants/6.1-documentation.md) | **Automated docs.** Automated documentation & wiki updates generated from code (technical docs, ADRs); runbook review. [[6.3]](./3-coding-assistants/6.3-documentation.md) |
 
 ---
@@ -83,9 +83,11 @@ Write user stories & ACs: turn raw stakeholder input into the epic → feature �
 
 **General coding help**: snippet-level generation (Power Fx, JS, FetchXML, OData), samples and step-by-step configuration instructions, and design rubber-ducking, plus the **maker-portal copilots** — Copilot in Power Apps / Power Automate, generative pages, row summaries — for genuine low-code build. These produce config inside the platform with HITL review; they can't see or change your repo, so they sit firmly in column-1 territory.
 
-### [5.1] Validation / Peer review
+### [5.1] Validation / Peer review / Close out
 
 **Test scenarios**: test plans, UAT-script and test-scenario generation, design-doc review, peer review on pull requests, and cross-checking an implementation narrative against the requirements doc. Good for catching "this doesn't actually satisfy AC #3."
+
+**Close-out checklist**: once the story is validated, its WIP solutions end. The assistant drafts the checklist from the pasted component list, segmentation map and transport order — where each component lands, the strategy for each destination (A — promote to build, B — consolidate in development; C, D and other mechanisms exist), the order, dependencies that point up the order, deletions left to a person. A person carries it out.
 
 ### [6.1] Documentation / Information sharing
 
@@ -121,9 +123,11 @@ Use **Plan Mode** to flesh out a detailed implementation plan grounded in the re
 - **Agent mode** — synchronous, in-IDE, multi-file edits with you watching. Use for plugins, PCF, refactors.
 - **Coding agent** — asynchronous, cloud, returns a PR. Use for well-specified, self-contained tasks you can review later; budget premium requests (a complex task can burn 10–30).
 
-### [5.3] Validation / Peer review
+### [5.3] Validation / Peer review / Close out
 
 Use **Ask Mode with an adversary reviewer prompt** for automated review: explicit rules (StyleCop, prefixes, no early binding, fixture coverage) give consistent, conventions-aware review — better than ad-hoc prompting. Check unit-test coverage; peer review on pull requests; test plans + UAT scripts. Pair it with **Plugin A (Component Snapshot & Drift Tracker)** to catch the config-level drift that code review can't see (someone changed a form in the sandbox). PR descriptions and self-review come from the coding agent natively.
+
+**Close-out** ends the story's WIP solutions once it is validated. The strategy follows where each destination transport solution is extracted from: **A — promote to build** when a build environment and a promotion pipeline exist, **B — consolidate in development** when transport is extracted from development. C (Git-linked solutions), D (Power Platform pipelines) and other mechanisms exist but are not covered. With the **Agent Companion MCP**, the `agent-companion-wip-close-out` skill checks dependencies against the transport order, adds to transport (B) or prepares and verifies promotions (A), and deletes the WIPs; a person approves every call and runs every pipeline.
 
 ### [6.3] Documentation / Information sharing
 
@@ -141,7 +145,7 @@ Ordered roughly by leverage. Several already exist in your plugin roadmap; this 
 | **`d365-gap-analysis` skill** | [1] Specification | Chains a Context Exporter pack + an Azure DevOps CLI query + the unpacked solution into a structured "new vs existing" report. |
 | **Plugin A — Component Snapshot & Drift Tracker** | [5] Validation, [6] Documentation | Already specced (MVP, no git in MVP). The review row needs it. |
 | **Context Exporter CI refresh** | [6] Documentation | Headless run that commits regenerated packs — your "update grounding" future enhancement, now load-bearing. |
-| **Agent Companion MCP** (XrmToolBox plugin) | [C] Project setup, [4] Implementation | Released in the XrmToolBox Tool Library ([README](../tooling/D365AgentCompanionMcp/README.md), [SPEC](../tooling/D365AgentCompanionMcp/SPEC.md)), with its `agent-companion-*` skills. A local MCP endpoint over XrmToolBox connections that reaches what the Dataverse MCP server does not ([A.iii]): out-of-box components not yet in any solution, and small WIP solutions shaped without required components or subcomponents. Every call is approved by a person. |
+| **Agent Companion MCP** (XrmToolBox plugin) | [C] Project setup, [4] Implementation, [5] Close out | Released in the XrmToolBox Tool Library ([README](../tooling/D365AgentCompanionMcp/README.md), [SPEC](../tooling/D365AgentCompanionMcp/SPEC.md)), with its `agent-companion-*` skills. A local MCP endpoint over XrmToolBox connections that reaches what the Dataverse MCP server does not ([A.iii]): out-of-box components not yet in any solution, and small WIP solutions shaped without required components or subcomponents. Every call is approved by a person. |
 
 ---
 
